@@ -5,15 +5,15 @@ use starknet::ContractAddress;
 
 #[derive(Default, Drop, Serde)]
 pub struct Terms {
-    lender: ContractAddress,
-    borrower: ContractAddress,
-    duration: u32,
-    collateral: Asset,
-    credit: Asset,
-    fixed_interest_amount: u256,
-    accruing_interest_apr: u32,
-    lender_spec_hash: felt252,
-    borrower_spec_hash: felt252
+    pub lender: ContractAddress,
+    pub borrower: ContractAddress,
+    pub duration: u64,
+    pub collateral: Asset,
+    pub credit: Asset,
+    pub fixed_interest_amount: u256,
+    pub accruing_interest_apr: u32,
+    pub lender_spec_hash: felt252,
+    pub borrower_spec_hash: felt252
 }
 
 #[derive(Drop, Serde)]

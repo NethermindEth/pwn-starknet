@@ -18,21 +18,21 @@ pub mod SimpleLoanProposalComponent {
     }
 
     #[derive(Drop)]
-    struct ProposalBase {
-        collateral_address: ContractAddress,
-        collateral_id: felt252,
-        check_collateral_state_fingerprint: bool,
-        collateral_state_fingerprint: felt252,
-        credit_amount: u256,
-        available_credit_limit: u256,
-        expiration: u64,
-        allowed_acceptor: ContractAddress,
-        proposer: ContractAddress,
-        is_offer: bool,
-        refinancing_loan_id: felt252,
-        nonce_space: felt252,
-        nonce: felt252,
-        loan_contract: ContractAddress,
+    pub struct ProposalBase {
+        pub collateral_address: ContractAddress,
+        pub collateral_id: felt252,
+        pub check_collateral_state_fingerprint: bool,
+        pub collateral_state_fingerprint: felt252,
+        pub credit_amount: u256,
+        pub available_credit_limit: u256,
+        pub expiration: u64,
+        pub allowed_acceptor: ContractAddress,
+        pub proposer: ContractAddress,
+        pub is_offer: bool,
+        pub refinancing_loan_id: felt252,
+        pub nonce_space: felt252,
+        pub nonce: felt252,
+        pub loan_contract: ContractAddress,
     }
 
     #[storage]
@@ -97,7 +97,7 @@ pub mod SimpleLoanProposalComponent {
     > of InternalTrait<TContractState> {
         // NOTE: This is the constuctor of the Solidity contract.
         fn _initialize(
-            ref self: TContractState,
+            ref self: ComponentState<TContractState>,
             hub: ContractAddress,
             revoked_nonce: ContractAddress,
             config: ContractAddress,
@@ -107,19 +107,25 @@ pub mod SimpleLoanProposalComponent {
 
         // NOTE: here will we use Poseidon hash function to hash the proposal data.
         fn _get_proposal_hash(
-            self: @TContractState, proposal_type_hash: felt252, encoded_proposal: Array<felt252>
+            self: @ComponentState<TContractState>,
+            proposal_type_hash: felt252,
+            encoded_proposal: Array<felt252>
         ) -> felt252 {
             0
         }
 
-        fn _make_proposal(ref self: TContractState, proposer: ContractAddress) {}
+        fn _make_proposal(
+            ref self: ComponentState<TContractState>,
+            proposal_hash: felt252,
+            proposer: ContractAddress
+        ) {}
 
         fn _accept_proposal(
-            ref self: TContractState,
+            ref self: ComponentState<TContractState>,
             acceptor: ContractAddress,
             refinancing_loan_id: felt252,
             proposal_hash: felt252,
-            proposal_inclusion_proof: Array<u8>,
+            proposal_inclusion_proof: Array<felt252>,
             signature: felt252,
             proposal: ProposalBase
         ) {}

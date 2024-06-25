@@ -5,7 +5,7 @@ pub mod MultiToken {
     use starknet::ContractAddress;
 
 
-    #[derive(Default, Drop, Serde, starknet::Store)]
+    #[derive(Copy, Default, Drop, Serde, starknet::Store)]
     pub enum Category {
         #[default]
         ERC20,
@@ -15,10 +15,10 @@ pub mod MultiToken {
 
     #[derive(Default, Drop, Serde, starknet::Store)]
     pub struct Asset {
-        category: Category,
-        asset_address: ContractAddress,
-        id: felt252,
-        amount: u256
+        pub category: Category,
+        pub asset_address: ContractAddress,
+        pub id: felt252,
+        pub amount: u256
     }
 
     pub mod Err {
