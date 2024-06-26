@@ -130,7 +130,7 @@ mod PwnLoan {
 
             // Method `loan_metadata_uri` not found on type `pwn::token::pwn_loan::IPwnLoadMetadataProviderDispatcher`. Did you import the correct trait and impl?
             // Q: How to fix this?
-            return IPwnLoadMetadataProviderDispatcher { contract_address: self.loan_contract.read(loan_id) }.loan_metadata_uri()
+            return IPwnLoadMetadataProviderDispatcher { contract_address: self.loan_contract.read(loan_id) }.loan_metadata_uri();
         }
 
         // Q: Same as above
