@@ -1,4 +1,5 @@
 use SimpleLoanFungibleProposal::{Proposal, ProposalValues};
+use pwn::loan::lib::signature_checker::Signature;
 use pwn::loan::terms::simple::loan::types::Terms;
 
 #[starknet::interface]
@@ -10,7 +11,7 @@ trait ISimpleLoanFungibleProposal<TState> {
         refinancing_loan_id: felt252,
         proposal_data: Array<felt252>,
         proposal_inclusion_proof: Array<felt252>,
-        signature: felt252
+        signature: Signature,
     ) -> (felt252, Terms);
     fn get_proposal_hash(self: @TState, proposal: Proposal) -> felt252;
     fn encode_proposal_data(
@@ -27,12 +28,13 @@ trait ISimpleLoanFungibleProposal<TState> {
 #[starknet::contract]
 mod SimpleLoanFungibleProposal {
     use pwn::ContractAddressDefault;
-    use pwn::loan::lib::serialization;
+    use pwn::loan::lib::{math, serialization, signature_checker};
     use pwn::loan::terms::simple::proposal::simple_loan_proposal::{
         SimpleLoanProposalComponent, SimpleLoanProposalComponent::ProposalBase
     };
     use pwn::multitoken::library::MultiToken;
     use starknet::ContractAddress;
+    use super::Terms;
 
     component!(
         path: SimpleLoanProposalComponent, storage: simple_loan, event: SimpleLoanProposalEvent
@@ -46,6 +48,8 @@ mod SimpleLoanFungibleProposal {
     // in the Solidity contract offline.
     const PROPOSAL_TYPEHASH: felt252 =
         0x062dbce0eca7d4486c66e0d48cdd72744db07523b68e9e4dad30aa4bee1356;
+    const CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR: u256 =
+        100_000_000_000_000_000_000_000_000_000_000_000_000;
 
     #[derive(Copy, Default, Drop, Serde)]
     pub struct Proposal {
@@ -61,8 +65,7 @@ mod SimpleLoanFungibleProposal {
         fixed_interest_amount: u256,
         accruing_interest_APR: u32,
         duration: u64,
-        auction_start: u64,
-        auction_duration: u64,
+        expiration: u64,
         allowed_acceptor: ContractAddress,
         proposer: ContractAddress,
         proposer_spec_hash: felt252,
@@ -101,10 +104,10 @@ mod SimpleLoanFungibleProposal {
     }
 
     mod Err {
-        fn MIN_COLLATERAL_AMOUNT_NOT_SET() {
+        pub fn MIN_COLLATERAL_AMOUNT_NOT_SET() {
             panic!("Proposal has no minimal collateral amount set");
         }
-        fn INSUFFICIENT_COLLATERAL_AMOUNT(current: u64, limit: u64) {
+        pub fn INSUFFICIENT_COLLATERAL_AMOUNT(current: u256, limit: u256) {
             panic!("Insufficient collateral amount. Current: {}, Limit: {}", current, limit);
         }
     }
@@ -137,9 +140,93 @@ mod SimpleLoanFungibleProposal {
             refinancing_loan_id: felt252,
             proposal_data: Array<felt252>,
             proposal_inclusion_proof: Array<felt252>,
-            signature: felt252
+            signature: signature_checker::Signature
         ) -> (felt252, super::Terms) {
-            (0.try_into().unwrap(), Default::default())
+            let (proposal, proposal_values) = self.decode_proposal_data(proposal_data);
+
+            let mut serialized_proposal = array![];
+            proposal.serialize(ref serialized_proposal);
+            let proposal_hash = self
+                .simple_loan
+                ._get_proposal_hash(PROPOSAL_TYPEHASH, serialized_proposal);
+
+            if proposal.min_collateral_amount == 0 {
+                Err::MIN_COLLATERAL_AMOUNT_NOT_SET();
+            }
+
+            if proposal_values.collateral_amount < proposal.min_collateral_amount {
+                Err::INSUFFICIENT_COLLATERAL_AMOUNT(
+                    proposal_values.collateral_amount, proposal.min_collateral_amount
+                );
+            }
+
+            let credit_amount = self
+                .get_credit_amount(
+                    proposal_values.collateral_amount, proposal.credit_per_collateral_unit
+                );
+
+            let proposal_base = ProposalBase {
+                collateral_address: proposal.collateral_address,
+                collateral_id: proposal.collateral_id,
+                check_collateral_state_fingerprint: proposal.check_collateral_state_fingerprint,
+                collateral_state_fingerprint: proposal.collateral_state_fingerprint,
+                credit_amount: credit_amount,
+                available_credit_limit: proposal.available_credit_limit,
+                expiration: proposal.expiration,
+                allowed_acceptor: proposal.allowed_acceptor,
+                proposer: proposal.proposer,
+                is_offer: proposal.is_offer,
+                refinancing_loan_id: proposal.refinancing_loan_id,
+                nonce_space: proposal.nonce_space,
+                nonce: proposal.nonce,
+                loan_contract: proposal.loan_contract
+            };
+
+            self
+                .simple_loan
+                ._accept_proposal(
+                    acceptor,
+                    proposal_hash,
+                    refinancing_loan_id,
+                    proposal_inclusion_proof,
+                    signature,
+                    proposal_base
+                );
+
+            let loan_terms = Terms {
+                lender: if proposal.is_offer {
+                    proposal.proposer
+                } else {
+                    acceptor
+                },
+                borrower: if proposal.is_offer {
+                    acceptor
+                } else {
+                    proposal.proposer
+                },
+                duration: proposal.duration,
+                collateral: MultiToken::Asset {
+                    category: proposal.collateral_category,
+                    asset_address: proposal.collateral_address,
+                    id: proposal.collateral_id,
+                    amount: proposal_values.collateral_amount,
+                },
+                credit: MultiToken::ERC20(proposal.credit_address, credit_amount),
+                fixed_interest_amount: proposal.fixed_interest_amount,
+                accruing_interest_apr: proposal.accruing_interest_APR,
+                lender_spec_hash: if proposal.is_offer {
+                    proposal.proposer_spec_hash
+                } else {
+                    0
+                },
+                borrower_spec_hash: if proposal.is_offer {
+                    0
+                } else {
+                    proposal.proposer_spec_hash
+                },
+            };
+
+            (proposal_hash, loan_terms)
         }
 
         fn get_proposal_hash(self: @ContractState, proposal: Proposal) -> felt252 {
@@ -177,7 +264,11 @@ mod SimpleLoanFungibleProposal {
         fn get_credit_amount(
             self: @ContractState, collateral_amount: u256, credit_per_collateral_unit: u256
         ) -> u256 {
-            0
+            math::mul_div(
+                collateral_amount,
+                credit_per_collateral_unit,
+                CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR
+            )
         }
     }
 
@@ -202,11 +293,10 @@ mod SimpleLoanFungibleProposal {
             let fixed_interest_high: u128 = (*data.at(13)).try_into().unwrap();
             let accruing_interest_APR: u32 = (*data.at(14)).try_into().unwrap();
             let duration: u64 = (*data.at(15)).try_into().unwrap();
-            let auction_start: u64 = (*data.at(16)).try_into().unwrap();
-            let auction_duration: u64 = (*data.at(17)).try_into().unwrap();
-            let allowed_acceptor: ContractAddress = (*data.at(20)).try_into().unwrap();
-            let proposer: ContractAddress = (*data.at(21)).try_into().unwrap();
-            let loan_contract: ContractAddress = (*data.at(23)).try_into().unwrap();
+            let expiration: u64 = (*data.at(16)).try_into().unwrap();
+            let allowed_acceptor: ContractAddress = (*data.at(17)).try_into().unwrap();
+            let proposer: ContractAddress = (*data.at(18)).try_into().unwrap();
+            let loan_contract: ContractAddress = (*data.at(24)).try_into().unwrap();
 
             Proposal {
                 collateral_category,
@@ -227,19 +317,18 @@ mod SimpleLoanFungibleProposal {
                 fixed_interest_amount: u256 { low: fixed_interest_low, high: fixed_interest_high },
                 accruing_interest_APR,
                 duration,
-                auction_start,
-                auction_duration,
+                expiration,
                 allowed_acceptor,
                 proposer,
-                proposer_spec_hash: *data.at(18),
-                is_offer: if *data.at(19) == 1 {
+                proposer_spec_hash: *data.at(19),
+                is_offer: if *data.at(20) == 1 {
                     true
                 } else {
                     false
                 },
-                refinancing_loan_id: *data.at(20),
-                nonce_space: *data.at(21),
-                nonce: *data.at(22),
+                refinancing_loan_id: *data.at(21),
+                nonce_space: *data.at(22),
+                nonce: *data.at(23),
                 loan_contract,
             }
         }
