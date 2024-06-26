@@ -28,13 +28,13 @@ trait ISimpleLoanFungibleProposal<TState> {
 #[starknet::contract]
 mod SimpleLoanFungibleProposal {
     use pwn::ContractAddressDefault;
-    use pwn::loan::lib::{math, serialization, signature_checker};
+    use pwn::loan::lib::{math, serialization};
     use pwn::loan::terms::simple::proposal::simple_loan_proposal::{
         SimpleLoanProposalComponent, SimpleLoanProposalComponent::ProposalBase
     };
     use pwn::multitoken::library::MultiToken;
     use starknet::ContractAddress;
-    use super::Terms;
+    use super::{Signature, Terms};
 
     component!(
         path: SimpleLoanProposalComponent, storage: simple_loan, event: SimpleLoanProposalEvent
@@ -140,7 +140,7 @@ mod SimpleLoanFungibleProposal {
             refinancing_loan_id: felt252,
             proposal_data: Array<felt252>,
             proposal_inclusion_proof: Array<felt252>,
-            signature: signature_checker::Signature
+            signature: Signature
         ) -> (felt252, super::Terms) {
             let (proposal, proposal_values) = self.decode_proposal_data(proposal_data);
 

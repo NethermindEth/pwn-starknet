@@ -18,6 +18,7 @@ mod loan {
     pub mod lib {
         pub mod fee_calculator;
         pub mod math;
+        pub mod merkle_proof;
         pub mod serialization;
         pub mod signature_checker;
     }
