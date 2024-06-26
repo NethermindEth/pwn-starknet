@@ -16,9 +16,9 @@ mod interfaces {
 mod loan {
     pub mod lib {
         pub mod fee_calculator;
+        pub mod math;
         pub mod serialization;
         pub mod signature_checker;
-        pub mod math;
     }
 
     pub mod terms {

@@ -25,7 +25,7 @@ trait ISimpleLoanDutchAuctionProposal<TState> {
 #[starknet::contract]
 pub mod SimpleLoanDutchAuctionProposal {
     use core::traits::Into;
-use pwn::ContractAddressDefault;
+    use pwn::ContractAddressDefault;
     use pwn::loan::lib::{serialization, math};
     use pwn::loan::terms::simple::proposal::simple_loan_proposal::{
         SimpleLoanProposalComponent, SimpleLoanProposalComponent::ProposalBase
@@ -46,7 +46,7 @@ use pwn::ContractAddressDefault;
     // in the Solidity contract offline.
     const PROPOSAL_TYPEHASH: felt252 =
         0x011b95ba182b3ea59860b7ebc4e42e45c9c9ae5c8f6bd7b8dbbde7415bb396b7;
-    const MINUTE: u64 = 60; 
+    const MINUTE: u64 = 60;
 
     #[derive(Copy, Default, Drop, Serde)]
     pub struct Proposal {
@@ -307,7 +307,9 @@ use pwn::ContractAddressDefault;
                 Err::AUCTION_DURATION_NOT_IN_FULL_MINUTES(proposal.auction_duration);
             }
             if proposal.max_credit_amount <= proposal.min_credit_amount {
-                Err::INVALID_CREDIT_AMOUNT_RANGE(proposal.min_credit_amount, proposal.max_credit_amount);
+                Err::INVALID_CREDIT_AMOUNT_RANGE(
+                    proposal.min_credit_amount, proposal.max_credit_amount
+                );
             }
             if timestamp < proposal.auction_start {
                 Err::AUCTION_NOT_IN_PROGRESS(timestamp, proposal.auction_start);
@@ -322,7 +324,7 @@ use pwn::ContractAddressDefault;
                 timestamp - proposal.auction_start.into() / MINUTE.into(),
                 proposal.auction_duration.into()
             );
-            
+
             if proposal.is_offer {
                 proposal.min_credit_amount + credit_amount_delta
             } else {
