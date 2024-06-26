@@ -279,7 +279,7 @@ pub mod SimpleLoanProposalComponent {
                     contract_address: self
                         .config
                         .read()
-                        .get_state_fingerprint_computer(proposal.collateral_address)
+                        .get_state_fingerprint_computer(proposal.collateral_address).contract_address
                 };
                 if computer.contract_address == starknet::contract_address_const::<0>() {
                     current_fingerprint = computer
