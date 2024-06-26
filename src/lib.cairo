@@ -18,6 +18,7 @@ mod loan {
         pub mod fee_calculator;
         pub mod serialization;
         pub mod signature_checker;
+        pub mod math;
     }
 
     pub mod terms {
