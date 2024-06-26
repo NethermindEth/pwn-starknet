@@ -182,7 +182,7 @@ mod PwnConfig {
 
         fn get_pool_adapter(self: @ContractState, pool: ContractAddress) -> IPoolAdapterDispatcher {
             let pool_adapter = self.pool_adapter_registry.read(pool);
-            
+
             IPoolAdapterDispatcher { contract_address: pool_adapter }
         }
 
