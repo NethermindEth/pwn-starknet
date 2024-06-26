@@ -4,8 +4,7 @@ mod config {
 }
 
 mod hub {
-    pub mod interface;
-    mod pwn_hub;
+    pub mod pwn_hub;
     pub mod pwn_hub_tags;
 }
 

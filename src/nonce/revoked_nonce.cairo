@@ -21,7 +21,7 @@ pub trait IRevokedNonce<TState> {
 
 #[starknet::contract]
 pub mod RevokedNonce {
-    use pwn::hub::interface::{IPwnHubDispatcher, IPwnHubDispatcherTrait};
+    use pwn::hub::pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait};
     use super::{ContractAddress, IRevokedNonce};
 
     #[storage]

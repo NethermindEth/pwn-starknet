@@ -11,7 +11,7 @@ trait ISimpleLoanProposal<TState> {
 pub mod SimpleLoanProposalComponent {
     use core::poseidon::poseidon_hash_span;
     use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
-    use pwn::hub::{pwn_hub_tags, interface::{IPwnHubDispatcher, IPwnHubDispatcherTrait}};
+    use pwn::hub::{pwn_hub_tags, pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait}};
     use pwn::interfaces::fingerprint_computer::{
         IStateFingerpringComputerDispatcher, IStateFingerpringComputerDispatcherTrait
     };

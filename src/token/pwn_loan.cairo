@@ -10,7 +10,7 @@ pub trait IPwnLoan<TState> {
 mod PwnLoan {
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc721::erc721::{ERC721Component, ERC721HooksEmptyImpl};
-    use pwn::hub::interface::{IPwnHubDispatcher, IPwnHubDispatcherTrait};
+    use pwn::hub::pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait};
     use starknet::ContractAddress;
 
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);
