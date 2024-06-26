@@ -1,15 +1,16 @@
 mod config {
-    mod interface;
+    pub mod interface;
     mod pwn_config;
 }
 
 mod hub {
     pub mod interface;
     mod pwn_hub;
-    mod pwn_hub_tags;
+    pub mod pwn_hub_tags;
 }
 
 mod interfaces {
+    pub mod fingerprint_computer;
     pub mod pool_adapter;
 }
 
@@ -49,7 +50,7 @@ mod multitoken {
 }
 
 mod nonce {
-    mod revoked_nonce;
+    pub mod revoked_nonce;
 }
 
 mod token {

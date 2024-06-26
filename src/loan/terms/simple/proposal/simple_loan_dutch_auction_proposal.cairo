@@ -1,4 +1,5 @@
 use SimpleLoanDutchAuctionProposal::{Proposal, ProposalValues};
+use pwn::loan::lib::signature_checker::Signature;
 use pwn::loan::terms::simple::loan::types::Terms;
 
 #[starknet::interface]
@@ -10,7 +11,7 @@ trait ISimpleLoanDutchAuctionProposal<TState> {
         refinancing_loan_id: felt252,
         proposal_data: Array<felt252>,
         proposal_inclusion_proof: Array<felt252>,
-        signature: felt252
+        signature: Signature,
     ) -> (felt252, Terms);
     fn get_proposal_hash(self: @TState, proposal: Proposal) -> felt252;
     fn encoded_proposal_data(
@@ -26,7 +27,7 @@ trait ISimpleLoanDutchAuctionProposal<TState> {
 pub mod SimpleLoanDutchAuctionProposal {
     use core::traits::Into;
     use pwn::ContractAddressDefault;
-    use pwn::loan::lib::{serialization, math};
+    use pwn::loan::lib::{serialization, math, signature_checker};
     use pwn::loan::terms::simple::proposal::simple_loan_proposal::{
         SimpleLoanProposalComponent, SimpleLoanProposalComponent::ProposalBase
     };
@@ -168,7 +169,7 @@ pub mod SimpleLoanDutchAuctionProposal {
             refinancing_loan_id: felt252,
             proposal_data: Array<felt252>,
             proposal_inclusion_proof: Array<felt252>,
-            signature: felt252
+            signature: signature_checker::Signature,
         ) -> (felt252, Terms) {
             let (proposal, proposal_values) = self.decode_proposal_data(proposal_data);
 

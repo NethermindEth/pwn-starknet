@@ -20,7 +20,7 @@ pub trait IRevokedNonce<TState> {
 }
 
 #[starknet::contract]
-mod RevokedNonce {
+pub mod RevokedNonce {
     use pwn::hub::interface::{IPwnHubDispatcher, IPwnHubDispatcherTrait};
     use super::{ContractAddress, IRevokedNonce};
 
@@ -53,7 +53,7 @@ mod RevokedNonce {
     }
 
     pub mod Err {
-        fn NONCE_ALREADY_REVOKED(
+        pub fn NONCE_ALREADY_REVOKED(
             addr: super::ContractAddress, nonce_space: felt252, nonce: felt252
         ) {
             panic!(
@@ -63,7 +63,9 @@ mod RevokedNonce {
                 nonce
             );
         }
-        fn NONCE_NOT_USABLE(addr: super::ContractAddress, nonce_space: felt252, nonce: felt252) {
+        pub fn NONCE_NOT_USABLE(
+            addr: super::ContractAddress, nonce_space: felt252, nonce: felt252
+        ) {
             panic!(
                 "Nonce not usable. Address: {:?}, Nonce Space: {}, Nonce: {}",
                 addr,
