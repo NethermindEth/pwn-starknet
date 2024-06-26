@@ -14,7 +14,7 @@ trait ISimpleLoanDutchAuctionProposal<TState> {
         signature: Signature,
     ) -> (felt252, Terms);
     fn get_proposal_hash(self: @TState, proposal: Proposal) -> felt252;
-    fn encoded_proposal_data(
+    fn encode_proposal_data(
         self: @TState, proposal: Proposal, proposal_values: ProposalValues
     ) -> Array<felt252>;
     fn decode_proposal_data(
@@ -274,7 +274,7 @@ pub mod SimpleLoanDutchAuctionProposal {
             self.simple_loan._get_proposal_hash(PROPOSAL_TYPEHASH, serialized_proposal)
         }
 
-        fn encoded_proposal_data(
+        fn encode_proposal_data(
             self: @ContractState, proposal: Proposal, proposal_values: ProposalValues
         ) -> Array<felt252> {
             let mut serialized_proposal = array![];
