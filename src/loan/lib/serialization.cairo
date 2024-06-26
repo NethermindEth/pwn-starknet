@@ -39,6 +39,7 @@ pub fn serde_decompose(input: Span<felt252>) -> (Span<felt252>, Span<felt252>) {
     (left.span(), right.span())
 }
 
+
 #[cfg(test)]
 mod tests {
     use pwn::loan::terms::simple::proposal::simple_loan_dutch_auction_proposal::SimpleLoanDutchAuctionProposal::{

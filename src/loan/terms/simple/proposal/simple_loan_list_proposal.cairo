@@ -14,7 +14,7 @@ trait ISimpleLoanListProposal<TState> {
         signature: Signature
     ) -> (felt252, Terms);
     fn get_proposal_hash(self: @TState, proposal: Proposal) -> felt252;
-    fn encoded_proposal_data(
+    fn encode_proposal_data(
         self: @TState, proposal: Proposal, proposal_values: ProposalValues
     ) -> Array<felt252>;
     fn decode_proposal_data(
@@ -27,7 +27,7 @@ mod SimpleLoanListProposal {
     use core::array::SpanTrait;
     use core::poseidon::poseidon_hash_span;
     use pwn::ContractAddressDefault;
-    use pwn::loan::lib::{math, serialization, signature_checker, merkle_proof};
+    use pwn::loan::lib::{serialization, merkle_proof};
     use pwn::loan::terms::simple::proposal::simple_loan_proposal::{
         SimpleLoanProposalComponent, SimpleLoanProposalComponent::ProposalBase
     };
@@ -226,7 +226,7 @@ mod SimpleLoanListProposal {
             self.simple_loan._get_proposal_hash(PROPOSAL_TYPEHASH, serialized_proposal)
         }
 
-        fn encoded_proposal_data(
+        fn encode_proposal_data(
             self: @ContractState, proposal: Proposal, proposal_values: ProposalValues
         ) -> Array<felt252> {
             let mut serialized_proposal = array![];
