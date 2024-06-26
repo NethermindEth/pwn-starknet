@@ -8,22 +8,28 @@ trait ISimpleLoanDutchAuctionProposal<TState> {
         ref self: TState,
         acceptor: starknet::ContractAddress,
         refinancing_loan_id: felt252,
-        proposal_data: felt252,
+        proposal_data: Array<felt252>,
         proposal_inclusion_proof: Array<felt252>,
         signature: felt252
     ) -> (felt252, Terms);
     fn get_proposal_hash(self: @TState, proposal: Proposal) -> felt252;
     fn encoded_proposal_data(
         self: @TState, proposal: Proposal, proposal_values: ProposalValues
-    ) -> felt252;
-    fn decode_proposal_data(self: @TState, encoded_data: felt252) -> (Proposal, ProposalValues);
+    ) -> Array<felt252>;
+    fn decode_proposal_data(
+        self: @TState, encoded_data: Array<felt252>
+    ) -> (Proposal, ProposalValues);
     fn get_credit_amount(self: @TState, proposal: Proposal, timestamp: u64) -> u256;
 }
 
 #[starknet::contract]
-mod SimpleLoanDutchAuctionProposal {
+pub mod SimpleLoanDutchAuctionProposal {
+    use core::array::SpanTrait;
+    use core::option::OptionTrait;
     use core::starknet::event::EventEmitter;
+    use core::traits::TryInto;
     use pwn::ContractAddressDefault;
+    use pwn::loan::lib::serialization;
     use pwn::loan::terms::simple::proposal::simple_loan_proposal::{
         SimpleLoanProposalComponent, SimpleLoanProposalComponent::ProposalBase
     };
@@ -159,7 +165,7 @@ mod SimpleLoanDutchAuctionProposal {
             ref self: ContractState,
             acceptor: starknet::ContractAddress,
             refinancing_loan_id: felt252,
-            proposal_data: felt252,
+            proposal_data: Array<felt252>,
             proposal_inclusion_proof: Array<felt252>,
             signature: felt252
         ) -> (felt252, Terms) {
@@ -268,18 +274,113 @@ mod SimpleLoanDutchAuctionProposal {
 
         fn encoded_proposal_data(
             self: @ContractState, proposal: Proposal, proposal_values: ProposalValues
-        ) -> felt252 {
-            0
+        ) -> Array<felt252> {
+            let mut serialized_proposal = array![];
+            proposal.serialize(ref serialized_proposal);
+
+            let mut serialized_proposal_values = array![];
+            proposal_values.serialize(ref serialized_proposal_values);
+
+            serialization::serde_concat(
+                serialized_proposal.span(), serialized_proposal_values.span()
+            )
         }
 
         fn decode_proposal_data(
-            self: @ContractState, encoded_data: felt252
+            self: @ContractState, encoded_data: Array<felt252>
         ) -> (Proposal, ProposalValues) {
-            (Default::default(), Default::default())
+            let (proposal_data, proposal_values_data) = serialization::serde_decompose(
+                encoded_data.span()
+            );
+            let proposal = self.decode_serde_proposal(proposal_data);
+            let proposal_values = self.decode_serde_proposal_values(proposal_values_data);
+
+            (proposal, proposal_values)
         }
 
         fn get_credit_amount(self: @ContractState, proposal: Proposal, timestamp: u64) -> u256 {
             0
+        }
+    }
+
+    #[generate_trait]
+    impl Private of PrivateTrait {
+        fn decode_serde_proposal(self: @ContractState, data: Span<felt252>) -> Proposal {
+            let collateral_category = match *data.at(0) {
+                0 => MultiToken::Category::ERC20,
+                1 => MultiToken::Category::ERC721,
+                2 => MultiToken::Category::ERC1155,
+                _ => panic!("Invalid collateral category"),
+            };
+            let collateral_address: ContractAddress = (*data.at(1)).try_into().unwrap();
+            let collateral_low: u128 = (*data.at(3)).try_into().unwrap();
+            let collateral_high: u128 = (*data.at(4)).try_into().unwrap();
+            let credit_address: ContractAddress = (*data.at(7)).try_into().unwrap();
+            let min_credit_low: u128 = (*data.at(8)).try_into().unwrap();
+            let min_credit_high: u128 = (*data.at(9)).try_into().unwrap();
+            let max_credit_low: u128 = (*data.at(10)).try_into().unwrap();
+            let max_credit_high: u128 = (*data.at(11)).try_into().unwrap();
+            let credit_limit_low: u128 = (*data.at(12)).try_into().unwrap();
+            let credit_limit_high: u128 = (*data.at(13)).try_into().unwrap();
+            let fixed_interest_low: u128 = (*data.at(14)).try_into().unwrap();
+            let fixed_interest_high: u128 = (*data.at(15)).try_into().unwrap();
+            let accruing_interest_APR: u32 = (*data.at(16)).try_into().unwrap();
+            let duration: u64 = (*data.at(17)).try_into().unwrap();
+            let auction_start: u64 = (*data.at(18)).try_into().unwrap();
+            let auction_duration: u64 = (*data.at(19)).try_into().unwrap();
+            let allowed_acceptor: ContractAddress = (*data.at(20)).try_into().unwrap();
+            let proposer: ContractAddress = (*data.at(21)).try_into().unwrap();
+            let loan_contract: ContractAddress = (*data.at(27)).try_into().unwrap();
+
+            Proposal {
+                collateral_category,
+                collateral_address,
+                collateral_id: *data.at(2),
+                collateral_amount: u256 { low: collateral_low, high: collateral_high },
+                check_collateral_state_fingerprint: if *data.at(5) == 1 {
+                    true
+                } else {
+                    false
+                },
+                collateral_state_fingerprint: *data.at(6),
+                credit_address,
+                min_credit_amount: u256 { low: min_credit_low, high: min_credit_high },
+                max_credit_amount: u256 { low: max_credit_low, high: max_credit_high },
+                available_credit_limit: u256 { low: credit_limit_low, high: credit_limit_high },
+                fixed_interest_amount: u256 { low: fixed_interest_low, high: fixed_interest_high },
+                accruing_interest_APR,
+                duration,
+                auction_start,
+                auction_duration,
+                allowed_acceptor,
+                proposer,
+                proposer_specHash: *data.at(22),
+                is_offer: if *data.at(23) == 1 {
+                    true
+                } else {
+                    false
+                },
+                refinancing_loan_id: *data.at(24),
+                nonce_space: *data.at(25),
+                nonce: *data.at(26),
+                loan_contract,
+            }
+        }
+
+        fn decode_serde_proposal_values(
+            self: @ContractState, data: Span<felt252>
+        ) -> ProposalValues {
+            let intended_credit_low: u128 = (*data.at(0)).try_into().unwrap();
+            let intended_credit_high: u128 = (*data.at(1)).try_into().unwrap();
+            let slippage_low: u128 = (*data.at(2)).try_into().unwrap();
+            let slippage_high: u128 = (*data.at(3)).try_into().unwrap();
+
+            ProposalValues {
+                intended_credit_amount: u256 {
+                    low: intended_credit_low, high: intended_credit_high,
+                },
+                slippage: u256 { low: slippage_low, high: slippage_high },
+            }
         }
     }
 }

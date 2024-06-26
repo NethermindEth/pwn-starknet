@@ -16,6 +16,7 @@ mod interfaces {
 mod loan {
     pub mod lib {
         pub mod fee_calculator;
+        pub mod serialization;
         pub mod signature_checker;
     }
 
@@ -28,7 +29,7 @@ mod loan {
             }
 
             pub mod proposal {
-                mod simple_loan_dutch_auction_proposal;
+                pub mod simple_loan_dutch_auction_proposal;
                 mod simple_loan_fungible_proposal;
                 mod simple_loan_list_proposal;
                 mod simple_loan_proposal;

@@ -41,6 +41,9 @@ pub fn serde_decompose(input: Span<felt252>) -> (Span<felt252>, Span<felt252>) {
 
 #[cfg(test)]
 mod tests {
+    use pwn::loan::terms::simple::proposal::simple_loan_dutch_auction_proposal::SimpleLoanDutchAuctionProposal::{
+        Proposal, ProposalValues
+    };
     use super::{serde_concat, serde_decompose};
 
     #[test]
@@ -57,5 +60,20 @@ mod tests {
         let (left, right) = serde_decompose(input.span());
         assert_eq!(left, array![1, 2, 3].span());
         assert_eq!(right, array![4, 5, 6, 7].span());
+    }
+
+    #[test]
+    fn test_serde_struct() {
+        let proposal: Proposal = Default::default();
+        let proposal_values: ProposalValues = Default::default();
+
+        let mut serialized_proposal = array![];
+        proposal.serialize(ref serialized_proposal);
+        println!("serialized_proposal: {:?}", serialized_proposal);
+
+        let mut serialized_proposal_values = array![];
+        proposal_values.serialize(ref serialized_proposal_values);
+        println!("serialized_proposal_values: {:?}", serialized_proposal_values);
+    // serde_concat(serialized_proposal.span(), serialized_proposal_values.span())
     }
 }
