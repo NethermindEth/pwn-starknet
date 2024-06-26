@@ -13,7 +13,7 @@ pub mod MultiToken {
         ERC1155,
     }
 
-    #[derive(Default, Drop, Serde, starknet::Store)]
+    #[derive(Copy, Default, Drop, Serde, starknet::Store)]
     pub struct Asset {
         pub category: Category,
         pub asset_address: ContractAddress,
@@ -44,37 +44,40 @@ pub mod MultiToken {
         }
     }
 
-    // NOTE: here we don't need interal func since we don't have safe transfer on starknet
-    // use pattern matching as above to handle different category
-    pub fn transfer_asset_from(
-        asset: Asset, source: ContractAddress, dest: ContractAddress, is_safe: bool
-    ) {}
+    #[generate_trait]
+    pub impl AssetImpl of AssetTrait {
+        // NOTE: here we don't need interal func since we don't have safe transfer on starknet
+        // use pattern matching as above to handle different category
+        fn transfer_asset_from(
+            self: @Asset, source: ContractAddress, dest: ContractAddress, is_safe: bool
+        ) {}
 
-    pub fn get_transfer_amount(asset: Asset) {}
+        fn get_transfer_amount(asset: @Asset) {}
 
-    //  NOTE: tranferFromCallData not needed
+        //  NOTE: tranferFromCallData not needed
 
-    pub fn permit(
-        asset: Asset,
-        owner: ContractAddress,
-        spender: ContractAddress,
-        amount: u256,
-        permit_data: felt252
-    ) {}
+        fn permit(
+            self: @Asset,
+            owner: ContractAddress,
+            spender: ContractAddress,
+            amount: u256,
+            permit_data: felt252
+        ) {}
 
-    pub fn balance_of(asset: Asset, target: ContractAddress) -> u256 {
-        0
-    }
+        fn balance_of(self: @Asset, target: ContractAddress) -> u256 {
+            0
+        }
 
-    pub fn approve_asset(asset: Asset, target: ContractAddress) {}
+        fn approve_asset(self: @Asset, target: ContractAddress) {}
 
-    // NOTE: we dont't check interface id since no token uses it on Starket
+        // NOTE: we dont't check interface id since no token uses it on Starket
 
-    pub fn check_format(asset: Asset) -> bool {
-        true
-    }
+        fn check_format(self: @Asset) -> bool {
+            true
+        }
 
-    pub fn is_same_as(asset: Asset, other: Asset) -> bool {
-        true
+        fn is_same_as(self: @Asset, other: Asset) -> bool {
+            true
+        }
     }
 }

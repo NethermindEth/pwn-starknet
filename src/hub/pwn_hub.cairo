@@ -12,12 +12,12 @@ pub trait IPwnHub<TState> {
 
 #[starknet::contract]
 mod PwnHub {
+    use openzeppelin::access::ownable::ownable::OwnableComponent;
     use super::ContractAddress;
+
 
     #[storage]
     struct Storage {
-        // NOTE: This is temporarely set to felt252 instead of ByteArray since ByteArray
-        // is not supported as storage key, MUST EXPLORE ALT SOLUTIONS.
         tags: LegacyMap::<(ContractAddress, felt252), bool>,
     }
 

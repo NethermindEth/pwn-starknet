@@ -40,8 +40,13 @@ mod loan {
         }
     }
 
+    mod token {
+        mod pwn_loan;
+    }
+
     mod vault {
         pub mod permit;
+        mod pwn_vault;
     }
 }
 
@@ -51,14 +56,6 @@ mod multitoken {
 
 mod nonce {
     pub mod revoked_nonce;
-}
-
-mod token {
-    mod pwn_loan;
-}
-
-mod vault {
-    mod pwn_vault;
 }
 
 impl ContractAddressDefault of Default<starknet::ContractAddress> {
