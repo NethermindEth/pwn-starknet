@@ -24,12 +24,9 @@ trait ISimpleLoanDutchAuctionProposal<TState> {
 
 #[starknet::contract]
 pub mod SimpleLoanDutchAuctionProposal {
-    use core::array::SpanTrait;
-    use core::option::OptionTrait;
-    use core::starknet::event::EventEmitter;
-    use core::traits::TryInto;
-    use pwn::ContractAddressDefault;
-    use pwn::loan::lib::serialization;
+    use core::traits::Into;
+use pwn::ContractAddressDefault;
+    use pwn::loan::lib::{serialization, math};
     use pwn::loan::terms::simple::proposal::simple_loan_proposal::{
         SimpleLoanProposalComponent, SimpleLoanProposalComponent::ProposalBase
     };
@@ -49,6 +46,7 @@ pub mod SimpleLoanDutchAuctionProposal {
     // in the Solidity contract offline.
     const PROPOSAL_TYPEHASH: felt252 =
         0x011b95ba182b3ea59860b7ebc4e42e45c9c9ae5c8f6bd7b8dbbde7415bb396b7;
+    const MINUTE: u64 = 60; 
 
     #[derive(Copy, Default, Drop, Serde)]
     pub struct Proposal {
@@ -136,6 +134,9 @@ pub mod SimpleLoanDutchAuctionProposal {
                 auction_start
             );
         }
+        pub fn EXPIRED(current_timestamp: u64, expiration: u64) {
+            panic!("Expired. Current timestamp: {}, Expiration: {}", current_timestamp, expiration);
+        }
     }
 
     #[constructor]
@@ -209,7 +210,7 @@ pub mod SimpleLoanDutchAuctionProposal {
                 collateral_state_fingerprint: proposal.collateral_state_fingerprint,
                 credit_amount: credit_amount,
                 available_credit_limit: proposal.available_credit_limit,
-                expiration: proposal.auction_start + proposal.auction_duration + 60,
+                expiration: proposal.auction_start + proposal.auction_duration + MINUTE,
                 allowed_acceptor: proposal.allowed_acceptor,
                 proposer: proposal.proposer,
                 is_offer: proposal.is_offer,
@@ -299,7 +300,34 @@ pub mod SimpleLoanDutchAuctionProposal {
         }
 
         fn get_credit_amount(self: @ContractState, proposal: Proposal, timestamp: u64) -> u256 {
-            0
+            if proposal.auction_duration < MINUTE {
+                Err::INVALID_AUCTION_DURATION(proposal.auction_duration, MINUTE);
+            }
+            if proposal.auction_duration % MINUTE > 0 {
+                Err::AUCTION_DURATION_NOT_IN_FULL_MINUTES(proposal.auction_duration);
+            }
+            if proposal.max_credit_amount <= proposal.min_credit_amount {
+                Err::INVALID_CREDIT_AMOUNT_RANGE(proposal.min_credit_amount, proposal.max_credit_amount);
+            }
+            if timestamp < proposal.auction_start {
+                Err::AUCTION_NOT_IN_PROGRESS(timestamp, proposal.auction_start);
+            }
+            if proposal.auction_start + proposal.auction_duration <= timestamp {
+                Err::EXPIRED(timestamp, proposal.auction_start + proposal.auction_duration);
+            }
+
+            let timestamp: u256 = timestamp.into();
+            let credit_amount_delta = math::mul_div(
+                proposal.max_credit_amount - proposal.min_credit_amount,
+                timestamp - proposal.auction_start.into() / MINUTE.into(),
+                proposal.auction_duration.into()
+            );
+            
+            if proposal.is_offer {
+                proposal.min_credit_amount + credit_amount_delta
+            } else {
+                proposal.max_credit_amount - credit_amount_delta
+            }
         }
     }
 
