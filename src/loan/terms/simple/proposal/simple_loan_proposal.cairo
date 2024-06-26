@@ -243,11 +243,7 @@ pub mod SimpleLoanProposalComponent {
             if self
                 .revoked_nonce
                 .read()
-                .is_nonce_usable(
-                    Option::Some(proposal.proposer),
-                    Option::Some(proposal.nonce_space),
-                    proposal.nonce
-                ) {
+                .is_nonce_usable(proposal.proposer, proposal.nonce_space, proposal.nonce) {
                 RevokedNonce::Err::NONCE_NOT_USABLE(
                     proposal.proposer, proposal.nonce_space, proposal.nonce
                 );
