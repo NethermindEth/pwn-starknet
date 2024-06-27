@@ -4,6 +4,8 @@ use starknet::ContractAddress;
 pub trait IPwnLoan<TState> {
     fn mint(ref self: TState, owner: ContractAddress) -> felt252;
     fn burn(ref self: TState, loan_id: felt252);
+    fn name(self: @TState) -> ByteArray;
+    fn symbol(self: @TState) -> ByteArray;
     fn token_uri(self: @TState, loan_id: felt252) -> felt252;
     fn tokenUri(self: @TState, loan_id: felt252) -> felt252;
 }
@@ -116,6 +118,14 @@ mod PwnLoan {
             self.erc721.burn(loan_id.into());
 
             self.emit(LoanBurned { loan_id });
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+            self.erc721.ERC721_name.read()
+        }
+
+        fn symbol(self: @ContractState) -> ByteArray {
+            self.erc721.ERC721_symbol.read()
         }
 
         fn token_uri(self: @ContractState, loan_id: felt252) -> felt252 {
