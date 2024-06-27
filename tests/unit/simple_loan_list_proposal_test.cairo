@@ -1,4 +1,4 @@
-mod pwn_simple_loan_fungible_proposal_test {
+mod pwn_simple_loan_list_proposal_test {
     #[test]
     fn test_should_return_used_credit() {
         assert(true, '');
@@ -40,17 +40,17 @@ mod pwn_simple_loan_fungible_proposal_test {
     }
 
     #[test]
-    fn test_should_return_credit_amount() {
+    fn test_should_accept_any_collateral_id_when_merkle_root_is_zero() {
         assert(true, '');
     }
 
     #[test]
-    fn test_should_fail_when_zero_min_collateral_amount() {
+    fn test_should_pass_when_given_collateral_id_is_whitelisted() {
         assert(true, '');
     }
 
     #[test]
-    fn test_should_fail_when_collateral_amount_less_than_min_collateral_amount() {
+    fn test_should_fail_when_given_collateral_id_is_not_whitelisted() {
         assert(true, '');
     }
 
