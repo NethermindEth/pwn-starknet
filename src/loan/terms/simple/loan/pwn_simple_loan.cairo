@@ -9,7 +9,8 @@ mod PwnSimpleLoan {
         interface::IPwnSimpleLoan
     };
     use pwn::loan::token::pwn_loan::{IPwnLoanDispatcher, IPwnLoanDispatcherTrait};
-    use pwn::loan::vault::permit::Permit;
+    use pwn::loan::vault::permit::{Permit};
+    use pwn::loan::vault::permit;
     use pwn::multitoken::category_registry::{
         IMultitokenCategoryRegistryDispatcher, IMultitokenCategoryRegistryDispatcherTrait
     };
@@ -160,9 +161,20 @@ mod PwnSimpleLoan {
 
     #[generate_trait]
     impl Private of PrivateTrait {
-        fn _check_permit(
-            ref self: ContractState, credit_address: ContractAddress, permit: Permit
-        ) {}
+        fn _check_permit(ref self: ContractState, credit_address: ContractAddress, permit: Permit) {
+            let caller = starknet::get_caller_address();
+            let const_address = starknet::contract_address_const::<'0'>();
+            if (permit.asset != const_address) {
+                if (permit.owner != caller) {
+                    permit::Err::InvalidPermitOwner(current: permit.owner, expected: caller);
+                }
+                if (permit.asset != credit_address) {
+                    permit::Err::InvalidPermitAsset(
+                        current: permit.asset, expected: credit_address
+                    );
+                }
+            }
+        }
 
         fn _check_refinance_loan_terms(
             ref self: ContractState, loan_id: felt252, loan_terms: Terms

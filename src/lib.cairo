@@ -44,7 +44,7 @@ mod loan {
         pub mod pwn_loan;
     }
 
-    mod vault {
+    pub mod vault {
         pub mod permit;
         mod pwn_vault;
     }
