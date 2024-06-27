@@ -180,9 +180,30 @@ mod PwnSimpleLoan {
             ref self: ContractState, loan_id: felt252, loan_terms: Terms
         ) {}
 
-        fn _create_loan(ref self: ContractState, terms: Terms, lender_spec: LenderSpec) {}
+        fn _create_loan(ref self: ContractState, loan_terms: Terms, lender_spec: LenderSpec) {
+            let loan_id = self.loan_token.read().mint(loan_terms.lender);
+            let current_timestamp = starknet::get_execution_info()
+                .unbox()
+                .block_info
+                .unbox()
+                .block_timestamp;
+            let loan = Loan {
+                status: 2,
+                credit_address: loan_terms.credit.asset_address,
+                original_source_of_funds: lender_spec.source_of_funds,
+                start_timestamp: current_timestamp,
+                default_timestamp: current_timestamp + loan_terms.duration,
+                borrower: loan_terms.borrower,
+                original_lender: loan_terms.lender,
+                accruing_interest_APR: loan_terms.accruing_interest_APR,
+                fixed_interest_amount: loan_terms.fixed_interest_amount,
+                principal_amount: loan_terms.credit.amount,
+                collateral: loan_terms.collateral
+            };
+            self.loans.write(loan_id, loan);
+        }
 
-        fn _settle_new_loan(ref self: ContractState, terms: Terms, lender_spec: LenderSpec) {}
+        fn _settle_new_loan(ref self: ContractState, loan_terms: Terms, lender_spec: LenderSpec) {}
 
         fn _settle_loan_refinance(
             ref self: ContractState,

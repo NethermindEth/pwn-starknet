@@ -11,7 +11,7 @@ pub struct Terms {
     pub collateral: Asset,
     pub credit: Asset,
     pub fixed_interest_amount: u256,
-    pub accruing_interest_apr: u32,
+    pub accruing_interest_APR: u32,
     pub lender_spec_hash: felt252,
     pub borrower_spec_hash: felt252
 }
@@ -26,7 +26,7 @@ pub struct ProposalSpec {
 
 #[derive(Drop, Serde)]
 pub struct LenderSpec {
-    source_of_funds: ContractAddress
+    pub source_of_funds: ContractAddress
 }
 
 #[derive(Drop, Serde)]
@@ -39,17 +39,17 @@ pub struct CallerSpec {
 
 #[derive(Drop, Serde, starknet::Store)]
 pub struct Loan {
-    status: u8,
-    credit_address: ContractAddress,
-    original_source_of_funds: ContractAddress,
-    start_timestamp: u64,
-    default_timestamp: u64,
-    borrower: ContractAddress,
-    original_lender: ContractAddress,
-    accruing_interest_APR: u32,
-    fixed_interest_amount: u256,
-    principal_amount: u256,
-    collateral: Asset,
+    pub status: u8,
+    pub credit_address: ContractAddress,
+    pub original_source_of_funds: ContractAddress,
+    pub start_timestamp: u64,
+    pub default_timestamp: u64,
+    pub borrower: ContractAddress,
+    pub original_lender: ContractAddress,
+    pub accruing_interest_APR: u32,
+    pub fixed_interest_amount: u256,
+    pub principal_amount: u256,
+    pub collateral: Asset,
 }
 
 #[derive(Drop, Serde)]

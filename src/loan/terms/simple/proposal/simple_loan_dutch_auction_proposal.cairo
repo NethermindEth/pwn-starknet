@@ -252,7 +252,7 @@ pub mod SimpleLoanDutchAuctionProposal {
                 },
                 credit: MultiToken::ERC20(proposal.credit_address, credit_amount,),
                 fixed_interest_amount: proposal.fixed_interest_amount,
-                accruing_interest_apr: proposal.accruing_interest_APR,
+                accruing_interest_APR: proposal.accruing_interest_APR,
                 lender_spec_hash: if proposal.is_offer {
                     proposal.proposer_specHash
                 } else {
