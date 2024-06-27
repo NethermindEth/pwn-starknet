@@ -75,8 +75,10 @@ mod tests {
         let mut serialized_proposal_values = array![];
         proposal_values.serialize(ref serialized_proposal_values);
 
-        let expected = array![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    
+        let expected = array![
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ];
+
         assert_eq!(serialized_proposal, expected);
     }
 }
