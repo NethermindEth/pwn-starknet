@@ -2,6 +2,7 @@
 mod PwnSimpleLoan {
     use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
     use pwn::hub::pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait};
+    use pwn::loan::terms::simple::loan::error;
     use pwn::loan::terms::simple::loan::{
         types::{
             GetLoanReturnValue, CallerSpec, ExtensionProposal, LenderSpec, Loan, ProposalSpec, Terms
@@ -178,7 +179,27 @@ mod PwnSimpleLoan {
 
         fn _check_refinance_loan_terms(
             ref self: ContractState, loan_id: felt252, loan_terms: Terms
-        ) {}
+        ) {
+            let loan = self.loans.read(loan_id);
+
+            if (loan.credit_address != loan_terms.credit.asset_address
+                || loan_terms.credit.amount == 0) {
+                error::Err::REFINANCE_CREDIT_MISMATCH();
+            }
+
+            if (loan.collateral.category != loan_terms.collateral.category
+                || loan.collateral.asset_address != loan_terms.collateral.asset_address
+                || loan.collateral.id != loan_terms.collateral.id
+                || loan.collateral.amount != loan_terms.collateral.amount) {
+                error::Err::REFINANCE_COLLATERAL_MISMATCH();
+            }
+
+            if (loan.borrower != loan_terms.borrower) {
+                error::Err::REFINANCE_BORROWER_MISMATCH(
+                    currrent_borrower: loan.borrower, new_borrower: loan_terms.borrower
+                );
+            }
+        }
 
         fn _create_loan(ref self: ContractState, loan_terms: Terms, lender_spec: LenderSpec) {
             let loan_id = self.loan_token.read().mint(loan_terms.lender);

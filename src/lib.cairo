@@ -25,6 +25,7 @@ mod loan {
     pub mod terms {
         pub mod simple {
             pub mod loan {
+                mod error;
                 mod interface;
                 mod pwn_simple_loan;
                 pub mod types;

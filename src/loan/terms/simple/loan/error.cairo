@@ -1,4 +1,5 @@
 pub mod Err {
+    use starknet::ContractAddress;
     fn LOAN_NOT_RUNNING() {
         panic!("Loan is not running");
     }
@@ -17,13 +18,17 @@ pub mod Err {
     fn CALLER_NOT_LOAN_TOKEN_HOLDER() {
         panic!("Caller is not the loan token holder");
     }
-    fn REFINANCE_BORROWER_MISMATCH(curr_borrower: ContractAddress, new_borrower: ContractAddress) {
-        panic!("Current borrower is {:?} and new borrower is {:?}", curr_borrower, new_borrower);
+    pub fn REFINANCE_BORROWER_MISMATCH(
+        currrent_borrower: ContractAddress, new_borrower: ContractAddress
+    ) {
+        panic!(
+            "Current borrower is {:?} and new borrower is {:?}", currrent_borrower, new_borrower
+        );
     }
-    fn REFINANCE_CREDIT_MISMATCH() {
+    pub fn REFINANCE_CREDIT_MISMATCH() {
         panic!("Credit is not the same");
     }
-    fn REFINANCE_COLLATERAL_MISMATCH() {
+    pub fn REFINANCE_COLLATERAL_MISMATCH() {
         panic!("Collateral is not the same");
     }
     fn INVALID_LENDER_SPEC_HASH() {
