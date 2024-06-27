@@ -21,16 +21,19 @@ mod PwnLoan {
     use openzeppelin::token::erc721::erc721::ERC721Component::InternalTrait;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc721::erc721::{ERC721Component, ERC721HooksEmptyImpl};
-    use pwn::hub::{pwn_hub_tags, interface::{IPwnHubDispatcher, IPwnHubDispatcherTrait}};
+    use pwn::hub::{pwn_hub_tags, IPwnHubDispatcher, IPwnHubDispatcherTrait};
     use starknet::{ContractAddress, get_caller_address, contract_address_const};
-    use super::IPwnLoadMetadataProviderDispatcher;
+    use super::{IPwnLoadMetadataProviderDispatcher, IPwnLoadMetadataProviderDispatcherTrait};
     use super::IERC5646Dispatcher;
 
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
 
     #[abi(embed_v0)]
-    impl ERC721MixinImpl = ERC721Component::ERC721MixinImpl<ContractState>;
+    impl ERC721Impl = ERC721Component::ERC721Impl<ContractState>;
+    #[abi(embed_v0)]
+    impl ERC721CamelOnlyImpl = ERC721Component::ERC721CamelOnlyImpl<ContractState>;
+    impl ERC721MetadataImpl = ERC721Component::ERC721MetadataImpl<ContractState>;
     impl ERC721InternalImpl = ERC721Component::InternalImpl<ContractState>;
 
     #[storage]
@@ -49,7 +52,7 @@ mod PwnLoan {
     enum Event {
         LoanMinted: LoanMinted,
         LoanBurned: LoanBurned,
-        #[flat]   // Q: Why these are flattened while the above are not?
+        #[flat]
         ERC721Event: ERC721Component::Event,
         #[flat]
         SRC5Event: SRC5Component::Event,
@@ -103,13 +106,13 @@ mod PwnLoan {
 
             self.erc721.mint(owner, loan_id.into());
 
-            Event::LoanMinted(LoanMinted {
+            self.emit(LoanMinted{
                 loan_id,
                 loan_contract: caller,
                 owner,
-            });
+            })
 
-            return loan_id;
+            loan_id
         }
 
         fn burn(ref self: ContractState, loan_id: felt252) {
@@ -120,17 +123,17 @@ mod PwnLoan {
             self.loan_contract.write(loan_id, contract_address_const::<0>());
             self.erc721.burn(loan_id.into());
 
-            Event::LoanBurned(LoanBurned { loan_id });
+            self.emit(LoanBurned { loan_id });
         }
 
         // Impl item function `IPwnLoanImpl::token_uri` is not a member of trait `IPwnLoan`.
         // Q: Where should this function be placed?
         fn token_uri(self: @ContractState, loan_id: felt252) -> felt252 {
-            self.erc721._require_owned(loan_id.into());
+            self.erc721._require_owned(loan_id);
 
             // Method `loan_metadata_uri` not found on type `pwn::token::pwn_loan::IPwnLoadMetadataProviderDispatcher`. Did you import the correct trait and impl?
             // Q: How to fix this?
-            return IPwnLoadMetadataProviderDispatcher { contract_address: self.loan_contract.read(loan_id) }.loan_metadata_uri();
+            IPwnLoadMetadataProviderDispatcher { contract_address: self.loan_contract.read(loan_id) }.loan_metadata_uri()
         }
 
         // Q: Same as above
@@ -143,7 +146,9 @@ mod PwnLoan {
 
             // Method `get_state_fingerprint` not found on type `pwn::token::pwn_loan::IERC5646Dispatcher`. Did you import the correct trait and impl?
             // Q: How to fix this?
-            return IERC5646Dispatcher { contract_address: _loan_contract }.get_state_fingerprint(loan_id);
+            IERC5646Dispatcher { contract_address: _loan_contract }.get_state_fingerprint(loan_id);
         }
+
+
     }
 }
