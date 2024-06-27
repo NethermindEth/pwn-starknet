@@ -5,16 +5,12 @@ pub trait IPwnLoan<TState> {
     fn mint(ref self: TState, owner: ContractAddress) -> felt252;
     fn burn(ref self: TState, loan_id: felt252);
     fn token_uri(self: @TState, loan_id: felt252) -> felt252;
+    fn tokenUri(self: @TState, loan_id: felt252) -> felt252;
 }
 
 #[starknet::interface]
 pub trait IPwnLoadMetadataProvider<TState> {
     fn loan_metadata_uri(ref self: TState) -> felt252;
-}
-
-#[starknet::interface]
-pub trait IERC5646<TState> {
-    fn get_state_fingerprint(ref self: TState, token_id: felt252) -> felt252;
 }
 
 #[starknet::contract]
@@ -24,7 +20,6 @@ mod PwnLoan {
     use openzeppelin::token::erc721::erc721::{ERC721Component, ERC721HooksEmptyImpl};
     use pwn::hub::{pwn_hub_tags, pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait}};
     use starknet::{ContractAddress, get_caller_address, contract_address_const};
-    use super::{IERC5646Dispatcher, IERC5646DispatcherTrait};
     use super::{IPwnLoadMetadataProviderDispatcher, IPwnLoadMetadataProviderDispatcherTrait};
 
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);
@@ -123,30 +118,22 @@ mod PwnLoan {
             self.emit(LoanBurned { loan_id });
         }
 
-        // Impl item function `IPwnLoanImpl::token_uri` is not a member of trait `IPwnLoan`.
-        // Q: Where should this function be placed?
         fn token_uri(self: @ContractState, loan_id: felt252) -> felt252 {
             self.erc721._require_owned(loan_id.into());
 
-            // Method `loan_metadata_uri` not found on type `pwn::token::pwn_loan::IPwnLoadMetadataProviderDispatcher`. Did you import the correct trait and impl?
-            // Q: How to fix this?
             IPwnLoadMetadataProviderDispatcher {
                 contract_address: self.loan_contract.read(loan_id)
             }
                 .loan_metadata_uri()
         }
-    // // Q: Same as above
-    // fn get_state_fingerprint(self: @ContractState, loan_id: felt252) -> felt252 {
-    //     let _loan_contract = self.loan_contract.read(loan_id);
 
-    //     if _loan_contract == contract_address_const::<0>() {
-    //         return 0; // Q: How to format this to bytes32?
-    //     }
+        fn tokenUri(self: @ContractState, loan_id: felt252) -> felt252 {
+            self.erc721._require_owned(loan_id.into());
 
-    //     // Method `get_state_fingerprint` not found on type `pwn::token::pwn_loan::IERC5646Dispatcher`. Did you import the correct trait and impl?
-    //     // Q: How to fix this?
-    //     IERC5646Dispatcher { contract_address: _loan_contract }.get_state_fingerprint(loan_id);
-    // }
-
+            IPwnLoadMetadataProviderDispatcher {
+                contract_address: self.loan_contract.read(loan_id)
+            }
+                .loan_metadata_uri()
+        }
     }
 }
