@@ -18,9 +18,7 @@ pub trait IPwnLoadMetadataProvider<TState> {
 #[starknet::contract]
 mod PwnLoan {
     use openzeppelin::introspection::src5::SRC5Component;
-    use openzeppelin::token::erc721::erc721::ERC721Component::InternalTrait;
-    use openzeppelin::token::erc721::erc721::{ERC721Component, ERC721HooksEmptyImpl};
-    use openzeppelin::token::erc721::interface::{IERC721_ID, IERC721_METADATA_ID};
+    use openzeppelin::token::erc721::{erc721::{ERC721Component, ERC721HooksEmptyImpl}, interface::IERC721_ID};
     use pwn::hub::{pwn_hub_tags, pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait}};
     use starknet::{ContractAddress, get_caller_address, contract_address_const};
     use super::{IPwnLoadMetadataProviderDispatcher, IPwnLoadMetadataProviderDispatcherTrait};
@@ -32,7 +30,6 @@ mod PwnLoan {
     impl ERC721Impl = ERC721Component::ERC721Impl<ContractState>;
     #[abi(embed_v0)]
     impl ERC721CamelOnlyImpl = ERC721Component::ERC721CamelOnlyImpl<ContractState>;
-    impl ERC721MetadataImpl = ERC721Component::ERC721MetadataImpl<ContractState>;
     impl ERC721InternalImpl = ERC721Component::InternalImpl<ContractState>;
     #[abi(embed_v0)]
     impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
