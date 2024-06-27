@@ -151,7 +151,6 @@ mod PwnLoan {
             }
                 .loan_metadata_uri()
         }
-
-        //Note: IERC5646-getStateFingerprint cannot be integrated. ERC5646 is not supported in Cairo.
+    //Note: IERC5646-getStateFingerprint cannot be integrated. ERC5646 is not supported in Cairo.
     }
 }
