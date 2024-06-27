@@ -45,7 +45,7 @@ pub mod PwnVaultComponent {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         VaultPull: VaultPull,
         VaultPush: VaultPush,
         VaultPushFrom: VaultPushFrom,

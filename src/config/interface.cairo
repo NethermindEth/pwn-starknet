@@ -9,7 +9,9 @@ pub trait IPwnConfig<TState> {
         ref self: TState, owner: ContractAddress, fee: u16, fee_collector: ContractAddress
     );
     fn set_fee(ref self: TState, fee: u16);
+    fn get_fee(self: @TState) -> u16;
     fn set_fee_collector(ref self: TState, fee_collector: ContractAddress);
+    fn get_fee_collector(self: @TState) -> ContractAddress;
     fn set_loan_metadata_uri(
         ref self: TState, loan_contract: ContractAddress, metadata_uri: ByteArray
     );

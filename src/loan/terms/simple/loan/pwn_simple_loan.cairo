@@ -2,6 +2,7 @@
 mod PwnSimpleLoan {
     use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
     use pwn::hub::pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait};
+    use pwn::loan::lib::fee_calculator;
     use pwn::loan::terms::simple::loan::error;
     use pwn::loan::terms::simple::loan::{
         types::{
@@ -12,12 +13,15 @@ mod PwnSimpleLoan {
     use pwn::loan::token::pwn_loan::{IPwnLoanDispatcher, IPwnLoanDispatcherTrait};
     use pwn::loan::vault::permit::{Permit};
     use pwn::loan::vault::permit;
+    use pwn::loan::vault::pwn_vault::PwnVaultComponent;
     use pwn::multitoken::category_registry::{
         IMultitokenCategoryRegistryDispatcher, IMultitokenCategoryRegistryDispatcherTrait
     };
     use pwn::multitoken::library::MultiToken::Asset;
     use pwn::nonce::revoked_nonce::{IRevokedNonceDispatcher, IRevokedNonceDispatcherTrait};
     use starknet::ContractAddress;
+
+    component!(path: PwnVaultComponent, storage: vault, event: VaultEvent);
 
     #[storage]
     struct Storage {
@@ -27,7 +31,9 @@ mod PwnSimpleLoan {
         loan_token: IPwnLoanDispatcher,
         config: IPwnConfigDispatcher,
         revoked_nonce: IRevokedNonceDispatcher,
-        category_registry: IMultitokenCategoryRegistryDispatcher
+        category_registry: IMultitokenCategoryRegistryDispatcher,
+        #[substorage(v0)]
+        vault: PwnVaultComponent::Storage,
     }
 
     #[event]
@@ -38,6 +44,7 @@ mod PwnSimpleLoan {
         LoanClaimed: LoanClaimed,
         LoanExtended: LoanExtended,
         ExtensionProposalMade: ExtensionProposalMade,
+        VaultEvent: PwnVaultComponent::Event
     }
 
     #[derive(Drop, starknet::Event)]
@@ -98,6 +105,8 @@ mod PwnSimpleLoan {
         self.revoked_nonce.write(revoked_nonce_dispatcher);
         self.category_registry.write(category_registry_dispatcher);
     }
+
+    impl IPwnVault = PwnVaultComponent::InternalImpl<ContractState>;
 
     #[abi(embed_v0)]
     impl PwnSimpleLoanImpl of IPwnSimpleLoan<ContractState> {
@@ -224,7 +233,30 @@ mod PwnSimpleLoan {
             self.loans.write(loan_id, loan);
         }
 
-        fn _settle_new_loan(ref self: ContractState, loan_terms: Terms, lender_spec: LenderSpec) {}
+        fn _settle_new_loan(ref self: ContractState, loan_terms: Terms, lender_spec: LenderSpec) {
+            self.vault._pull(loan_terms.collateral, loan_terms.borrower);
+            if (lender_spec.source_of_funds != loan_terms.lender) {
+                self._withdraw_credit_from_pool(loan_terms.credit, loan_terms, lender_spec);
+            }
+
+            let (fee_amount, new_loan_amount) = fee_calculator::calculate_fee_amount(
+                self.config.read().get_fee(), loan_terms.credit.amount
+            );
+
+            let mut credit_helper = loan_terms.credit;
+
+            if (fee_amount > 0) {
+                credit_helper.amount = fee_amount.try_into().unwrap();
+                self
+                    .vault
+                    ._push_from(
+                        credit_helper, loan_terms.lender, self.config.read().get_fee_collector()
+                    );
+            }
+
+            credit_helper.amount = new_loan_amount;
+            self.vault._push_from(credit_helper, loan_terms.lender, loan_terms.borrower);
+        }
 
         fn _settle_loan_refinance(
             ref self: ContractState,
@@ -242,7 +274,7 @@ mod PwnSimpleLoan {
 
         fn _update_repaid_loan(ref self: ContractState, loan_id: felt252) {}
 
-        fn _load_accrued_interest(ref self: ContractState, loan: Loan) -> u256 {
+        fn _loan_accrued_interest(ref self: ContractState, loan: Loan) -> u256 {
             0
         }
 

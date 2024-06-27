@@ -1,6 +1,6 @@
 use pwn::loan::lib::math;
 
-fn calculate_fee_amount(fee: u16, loan_amount: u256) -> (u16, u256) {
+pub fn calculate_fee_amount(fee: u16, loan_amount: u256) -> (u16, u256) {
     if fee == 0 {
         return (0, loan_amount);
     }
