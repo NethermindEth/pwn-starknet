@@ -18,7 +18,9 @@ pub trait IPwnLoadMetadataProvider<TState> {
 #[starknet::contract]
 mod PwnLoan {
     use openzeppelin::introspection::src5::SRC5Component;
-    use openzeppelin::token::erc721::{erc721::{ERC721Component, ERC721HooksEmptyImpl}, interface::IERC721_ID};
+    use openzeppelin::token::erc721::{
+        erc721::{ERC721Component, ERC721HooksEmptyImpl}, interface::IERC721_ID
+    };
     use pwn::hub::{pwn_hub_tags, pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait}};
     use starknet::{ContractAddress, get_caller_address, contract_address_const};
     use super::{IPwnLoadMetadataProviderDispatcher, IPwnLoadMetadataProviderDispatcherTrait};
