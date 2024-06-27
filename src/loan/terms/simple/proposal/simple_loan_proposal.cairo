@@ -11,7 +11,7 @@ trait ISimpleLoanProposal<TState> {
 pub mod SimpleLoanProposalComponent {
     use core::poseidon::poseidon_hash_span;
     use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
-    use pwn::hub::{pwn_hub_tags, interface::{IPwnHubDispatcher, IPwnHubDispatcherTrait}};
+    use pwn::hub::{pwn_hub_tags, pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait}};
     use pwn::interfaces::fingerprint_computer::{
         IStateFingerpringComputerDispatcher, IStateFingerpringComputerDispatcherTrait
     };
@@ -243,11 +243,7 @@ pub mod SimpleLoanProposalComponent {
             if self
                 .revoked_nonce
                 .read()
-                .is_nonce_usable(
-                    Option::Some(proposal.proposer),
-                    Option::Some(proposal.nonce_space),
-                    proposal.nonce
-                ) {
+                .is_nonce_usable(proposal.proposer, proposal.nonce_space, proposal.nonce) {
                 RevokedNonce::Err::NONCE_NOT_USABLE(
                     proposal.proposer, proposal.nonce_space, proposal.nonce
                 );
@@ -284,6 +280,7 @@ pub mod SimpleLoanProposalComponent {
                         .config
                         .read()
                         .get_state_fingerprint_computer(proposal.collateral_address)
+                        .contract_address
                 };
                 if computer.contract_address == starknet::contract_address_const::<0>() {
                     current_fingerprint = computer

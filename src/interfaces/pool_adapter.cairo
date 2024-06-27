@@ -7,13 +7,13 @@ pub trait IPoolAdapter<TState> {
         pool: ContractAddress,
         owner: ContractAddress,
         asset: ContractAddress,
-        amount: u128
+        amount: u256
     );
     fn supply(
         ref self: TState,
         pool: ContractAddress,
         owner: ContractAddress,
         asset: ContractAddress,
-        amount: u128
+        amount: u256
     );
 }

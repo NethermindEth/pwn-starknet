@@ -4,8 +4,7 @@ mod config {
 }
 
 mod hub {
-    pub mod interface;
-    mod pwn_hub;
+    pub mod pwn_hub;
     pub mod pwn_hub_tags;
 }
 
@@ -41,25 +40,23 @@ mod loan {
         }
     }
 
+    mod token {
+        mod pwn_loan;
+    }
+
     mod vault {
         pub mod permit;
+        mod pwn_vault;
     }
 }
 
 mod multitoken {
+    pub mod category_registry;
     pub mod library;
 }
 
 mod nonce {
     pub mod revoked_nonce;
-}
-
-mod token {
-    mod pwn_loan;
-}
-
-mod vault {
-    mod pwn_vault;
 }
 
 impl ContractAddressDefault of Default<starknet::ContractAddress> {
