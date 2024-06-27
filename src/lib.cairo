@@ -41,7 +41,7 @@ mod loan {
     }
 
     mod token {
-        mod pwn_loan;
+        pub mod pwn_loan;
     }
 
     mod vault {

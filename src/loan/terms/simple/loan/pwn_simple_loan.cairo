@@ -6,6 +6,11 @@ mod PwnSimpleLoan {
         },
         interface::IPwnSimpleLoan
     };
+    use pwn::hub::pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait};
+    use pwn::loan::token::pwn_loan::{IPwnLoanDispatcher, IPwnLoanDispatcherTrait};
+    use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
+    use pwn::nonce::revoked_nonce::{IRevokedNonceDispatcher, IRevokedNonceDispatcherTrait};
+    use pwn::multitoken::category_registry::{IMultitokenCategoryRegistryDispatcher, IMultitokenCategoryRegistryDispatcherTrait};
     use pwn::loan::vault::permit::Permit;
     use pwn::multitoken::library::MultiToken::Asset;
     use starknet::ContractAddress;
@@ -14,6 +19,11 @@ mod PwnSimpleLoan {
     struct Storage {
         loans: LegacyMap::<felt252, Loan>,
         extension_proposal_made: LegacyMap::<felt252, bool>,
+        hub: IPwnHubDispatcher,
+        loan_token: IPwnLoanDispatcher,
+        config: IPwnConfigDispatcher,
+        revoked_nonce: IRevokedNonceDispatcher,
+        category_registry: IMultitokenCategoryRegistryDispatcher
     }
 
     #[event]
@@ -70,7 +80,18 @@ mod PwnSimpleLoan {
         config: ContractAddress,
         revoked_nonce: ContractAddress,
         category_registry: ContractAddress
-    ) {}
+    ) {
+        let hub_dispatcher = IPwnHubDispatcher {contract_address: hub};
+        let loan_token_dispatcher = IPwnLoanDispatcher {contract_address: loan_token};
+        let config_dispatcher = IPwnConfigDispatcher {contract_address: config};
+        let revoked_nonce_dispatcher = IRevokedNonceDispatcher {contract_address: revoked_nonce};
+        let category_registry_dispatcher = IMultitokenCategoryRegistryDispatcher {contract_address: category_registry};
+        self.hub.write(hub_dispatcher);
+        self.loan_token.write(loan_token_dispatcher);
+        self.config.write(config_dispatcher);
+        self.revoked_nonce.write(revoked_nonce_dispatcher);
+        self.category_registry.write(category_registry_dispatcher);
+    }
 
     #[abi(embed_v0)]
     impl PwnSimpleLoanImpl of IPwnSimpleLoan<ContractState> {
