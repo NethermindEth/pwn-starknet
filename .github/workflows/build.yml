@@ -1,8 +1,12 @@
 name: Format and Build
 on:
   push:
-  merge_group:
+    branches:
+      - '**'
   pull_request:
+    branches:
+      - '**'
+
 jobs:
   check:
     runs-on: ubuntu-latest
