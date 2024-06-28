@@ -335,12 +335,31 @@ mod PwnSimpleLoan {
             loan.fixed_interest_amount + accured_interest
         }
 
-        fn _settle_loan_claim(ref self: ContractState, loan_id: felt252, defaulted: bool) {}
+        fn _settle_loan_claim(ref self: ContractState, loan_id: felt252, loan_owner: ContractAddress, defaulted: bool) {
+            let loan = self.loans.read(loan_id);
+            let asset = match defaulted {
+                true => loan.collateral,
+                false => loan.collateral
+            };
+            self._delete_loan(loan_id);
+            self.emit(Event::LoanClaimed(LoanClaimed { loan_id: loan_id, defaulted: defaulted }));
+            self.vault._push(asset, loan_owner);
+        }
 
-        fn _delete_loan(ref self: ContractState, loan_id: felt252) {}
+        fn _delete_loan(ref self: ContractState, loan_id: felt252) {
+            self.loan_token.read().burn(loan_id);
+            let mut loan = self.loans.read(loan_id);
+            loan.status = 0;
+            self.loans.write(loan_id, loan);
+        }
 
         fn _get_loan_status(ref self: ContractState, loan_id: felt252) -> u8 {
-            0
+            let loan = self.loans.read(loan_id);
+            let current_timestamp = starknet::get_block_timestamp();
+            if (loan.status == 2 && loan.default_timestamp <= current_timestamp) {
+                return 4;
+            }
+            loan.status
         }
 
         fn _check_valid_asset(ref self: ContractState, asset: Asset) {}
