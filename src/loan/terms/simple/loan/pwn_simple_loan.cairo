@@ -264,13 +264,50 @@ mod PwnSimpleLoan {
             loan_terms: Terms,
             lender_spec: LenderSpec,
             extra: Array<felt252>
-        ) {}
+        ) {
+            let loan = self.loans.read(refinancing_loan_id);
+            // let erc721_dispatcher = ERC721ABIDispatcher {contract_address: self.loan_token.read().contract_address};
+            // let loan_owner = erc721_dispatcher.owner_of();
+            let repayment_amount = self.get_loan_repayment_amount(refinancing_loan_id);
+            let (fee_amount, new_loan_amount) = fee_calculator::calculate_fee_amount(
+                self.config.read().get_fee(), loan_terms.credit.amount
+            );
+        }
 
         fn _withdraw_credit_from_pool(
             ref self: ContractState, credit: Asset, loan_terms: Terms, lender_spec: LenderSpec
-        ) {}
+        ) {
+            let pool_adapter = self.config.read().get_pool_adapter(lender_spec.source_of_funds);
+            let const_address = starknet::contract_address_const::<0>();
+            if (pool_adapter.contract_address == const_address) {
+                error::Err::INVALID_SOURCE_OF_FUNDS(source_of_funds: lender_spec.source_of_funds);
+            }
+            if (credit.amount > 0) {
+                self
+                    .vault
+                    ._withdraw_from_pool(
+                        credit, pool_adapter, lender_spec.source_of_funds, loan_terms.lender
+                    );
+            }
+        }
 
-        fn _check_loan_can_be_repaid(ref self: ContractState, status: u8, default_timestamp: u64) {}
+        fn _check_loan_can_be_repaid(ref self: ContractState, status: u8, default_timestamp: u64) {
+            if (status == 0) {
+                error::Err::NON_EXISTING_LOAN();
+            }
+
+            if (status != 2) {
+                error::Err::LOAN_NOT_RUNNING();
+            }
+            let current_timestamp = starknet::get_execution_info()
+                .unbox()
+                .block_info
+                .unbox()
+                .block_timestamp;
+            if (default_timestamp <= current_timestamp) {
+                error::Err::LOAN_DEFAULTED(default_timestamp);
+            }
+        }
 
         fn _update_repaid_loan(ref self: ContractState, loan_id: felt252) {}
 

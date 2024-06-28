@@ -9,7 +9,9 @@ pub trait IPwnLoan<TState> {
 #[starknet::contract]
 mod PwnLoan {
     use openzeppelin::introspection::src5::SRC5Component;
-    use openzeppelin::token::erc721::erc721::{ERC721Component, ERC721HooksEmptyImpl};
+    use openzeppelin::token::erc721::{
+        erc721::{ERC721Component, ERC721HooksEmptyImpl}, interface::IERC721_ID
+    };
     use pwn::hub::pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait};
     use starknet::ContractAddress;
 
@@ -17,8 +19,13 @@ mod PwnLoan {
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
 
     #[abi(embed_v0)]
-    impl ERC721MixinImpl = ERC721Component::ERC721MixinImpl<ContractState>;
+    impl ERC721Impl = ERC721Component::ERC721Impl<ContractState>;
+    #[abi(embed_v0)]
+    impl ERC721CamelOnlyImpl = ERC721Component::ERC721CamelOnlyImpl<ContractState>;
     impl ERC721InternalImpl = ERC721Component::InternalImpl<ContractState>;
+    #[abi(embed_v0)]
+    impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
+    impl SRC5InternalImpl = SRC5Component::InternalImpl<ContractState>;
 
     #[storage]
     struct Storage {

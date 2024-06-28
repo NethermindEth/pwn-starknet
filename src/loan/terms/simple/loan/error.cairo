@@ -1,6 +1,6 @@
 pub mod Err {
     use starknet::ContractAddress;
-    fn LOAN_NOT_RUNNING() {
+    pub fn LOAN_NOT_RUNNING() {
         panic!("Loan is not running");
     }
     fn LOAN_RUNNING() {
@@ -9,10 +9,10 @@ pub mod Err {
     fn LOAN_REPAID() {
         panic!("Loan is repaid");
     }
-    fn LOAN_DEFAULTED(default_time: u64) {
-        panic!("Loan is defaulted at time {}", default_time);
+    pub fn LOAN_DEFAULTED(default_timestamp: u64) {
+        panic!("Loan is defaulted at time {}", default_timestamp);
     }
-    fn NON_EXISTING_LOAN() {
+    pub fn NON_EXISTING_LOAN() {
         panic!("Loan does not exist");
     }
     fn CALLER_NOT_LOAN_TOKEN_HOLDER() {
@@ -39,6 +39,9 @@ pub mod Err {
     }
     fn INTEREST_APR_OUT_OF_BOUNDS(current: u256, limit: u256) {
         panic!("Interest APR is out of bounds. Current: {}, Limit: {}", current, limit);
+    }
+    pub fn INVALID_SOURCE_OF_FUNDS(source_of_funds: ContractAddress) {
+        panic!("Invalid source of funds. Source of fungs: {:?}", source_of_funds);
     }
     fn INVALID_EXTENSION_CALLER() {
         panic!("Invalid extension caller");
