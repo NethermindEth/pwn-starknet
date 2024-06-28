@@ -5,7 +5,6 @@ use pwn::interfaces::{
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
 };
-
 use starknet::ContractAddress;
 
 #[starknet::interface]
@@ -55,14 +54,6 @@ fn deploy() -> IPwnConfigDispatcher {
     let contract = declare("PwnConfig").unwrap();
     let (contract_address, _) = contract.deploy(@array![]).unwrap();
 
-    // store(
-    //     contract_address, 
-    //     map_entry_address(
-    //         selector!("Ownable_owner"), // Providing variable name
-    //         array![].span(),   // Providing mapping key 
-    //     ),
-    //     array![OWNER().into()].span()
-    // );
     IPwnConfigDispatcher { contract_address }
 }
 

@@ -3,7 +3,7 @@ pub mod config {
     pub mod pwn_config;
 }
 
-mod hub {
+pub mod hub {
     pub mod pwn_hub;
     pub mod pwn_hub_tags;
 }
