@@ -1,3 +1,5 @@
+use pwn::loan::lib::signature_checker::Signature;
+use pwn::loan::terms::simple::loan::types::Terms;
 use starknet::{ContractAddress, ClassHash};
 
 #[starknet::interface]
@@ -5,6 +7,18 @@ trait ISimpleLoanProposal<TState> {
     fn revoked_nonce(ref self: TState, nonce_space: felt252, nonce: felt252);
     // fn accept_proposal(ref self: TState, acceptor: ContractAddress, refinancing_loan_id: felt252, proposal_data: felt252, proposal_inclusion_proof: Array<u8>, signature: felt256) -> (felt252, PwnSimpleLoan);
     fn get_multiproposal_hash(self: @TState, multiproposal: ClassHash) -> felt252;
+}
+
+#[starknet::interface]
+pub trait ISimpleLoanAcceptProposal<TState> {
+    fn accept_proposal(
+        ref self: TState,
+        acceptor: starknet::ContractAddress,
+        refinancing_loan_id: felt252,
+        proposal_data: Array<felt252>,
+        proposal_inclusion_proof: Array<felt252>,
+        signature: Signature
+    ) -> (felt252, Terms);
 }
 
 #[starknet::component]
@@ -202,18 +216,14 @@ pub mod SimpleLoanProposalComponent {
 
             if proposal_inclusion_proof.len() == 0 {
                 if !self.proposal_made.read(proposal_hash) {
-                    if !signature_checker::is_valid_signature_now(
-                        proposal.proposer, proposal_hash, signature
-                    ) {
+                    if !signature_checker::is_valid_signature_now(proposal_hash, signature) {
                         signature_checker::Err::INVALID_SIGNATURE(proposal.proposer, proposal_hash);
                     }
                 }
             } else {
                 // TODO: verify inclusion proof type with the pwn team
                 let multiproposal_hash = 0x0;
-                if !signature_checker::is_valid_signature_now(
-                    proposal.proposer, multiproposal_hash, signature
-                ) {
+                if !signature_checker::is_valid_signature_now(multiproposal_hash, signature) {
                     signature_checker::Err::INVALID_SIGNATURE(
                         proposal.proposer, multiproposal_hash
                     );
