@@ -3,7 +3,7 @@ mod PwnSimpleLoan {
     use openzeppelin::token::erc721::{interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait}};
     use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
     use pwn::hub::pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait};
-    use pwn::loan::lib::fee_calculator;
+    use pwn::loan::lib::{fee_calculator, math};
     use pwn::loan::terms::simple::loan::error;
     use pwn::loan::terms::simple::loan::{
         types::{
@@ -23,6 +23,8 @@ mod PwnSimpleLoan {
     use starknet::ContractAddress;
 
     component!(path: PwnVaultComponent, storage: vault, event: VaultEvent);
+
+    const ACCRUING_INTEREST_APR_DECIMALS: u256 = 100;
 
     #[storage]
     struct Storage {
@@ -213,11 +215,7 @@ mod PwnSimpleLoan {
 
         fn _create_loan(ref self: ContractState, loan_terms: Terms, lender_spec: LenderSpec) {
             let loan_id = self.loan_token.read().mint(loan_terms.lender);
-            let current_timestamp = starknet::get_execution_info()
-                .unbox()
-                .block_info
-                .unbox()
-                .block_timestamp;
+            let current_timestamp = starknet::get_block_timestamp();
             let loan = Loan {
                 status: 2,
                 credit_address: loan_terms.credit.asset_address,
@@ -303,11 +301,7 @@ mod PwnSimpleLoan {
             if (status != 2) {
                 error::Err::LOAN_NOT_RUNNING();
             }
-            let current_timestamp = starknet::get_execution_info()
-                .unbox()
-                .block_info
-                .unbox()
-                .block_timestamp;
+            let current_timestamp = starknet::get_block_timestamp();
             if (default_timestamp <= current_timestamp) {
                 error::Err::LOAN_DEFAULTED(default_timestamp);
             }
@@ -323,7 +317,22 @@ mod PwnSimpleLoan {
         }
 
         fn _loan_accrued_interest(ref self: ContractState, loan: Loan) -> u256 {
-            0
+            if (loan.accruing_interest_APR == 0) {
+                return loan.fixed_interest_amount;
+            }
+            let current_timestamp = starknet::get_block_timestamp();
+            // @note: here the timestamps are all in u64 and the loan.accruing_interest_APR is in u32
+            //        we can change either one and then in order to use mul_div we need everyting in u256
+            let accuring_minutes: u32 = ((current_timestamp - loan.start_timestamp) / 60)
+                .try_into()
+                .unwrap();
+            let interest_amount: u256 = (loan.accruing_interest_APR * accuring_minutes)
+                .try_into()
+                .unwrap();
+            let accured_interest = math::mul_div(
+                loan.principal_amount, interest_amount, ACCRUING_INTEREST_APR_DECIMALS
+            );
+            loan.fixed_interest_amount + accured_interest
         }
 
         fn _settle_loan_claim(ref self: ContractState, loan_id: felt252, defaulted: bool) {}
