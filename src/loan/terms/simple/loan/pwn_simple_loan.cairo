@@ -274,6 +274,60 @@ mod PwnSimpleLoan {
             let (fee_amount, new_loan_amount) = fee_calculator::calculate_fee_amount(
                 self.config.read().get_fee(), loan_terms.credit.amount
             );
+            let fee_amount: u256 = fee_amount.into();
+            let common = if (repayment_amount > new_loan_amount) {
+                new_loan_amount
+            } else {
+                repayment_amount
+            };
+
+            let surplus = if (new_loan_amount > repayment_amount) {
+                new_loan_amount - repayment_amount
+            } else {
+                0
+            };
+
+            let shortage = if (surplus > 0) {
+                0
+            } else {
+                repayment_amount - new_loan_amount
+            };
+
+            let should_transfer_common = loan_terms.lender != loan_owner
+                || (loan.original_lender == loan_owner
+                    && loan.original_source_of_funds != lender_spec.source_of_funds);
+
+            let mut credit_helper = loan_terms.credit;
+
+            if (lender_spec.source_of_funds != loan_terms.lender) {
+                credit_helper.amount = fee_amount + surplus;
+                if (should_transfer_common) {
+                    credit_helper.amount += common;
+                }
+                self._withdraw_credit_from_pool(credit_helper, loan_terms, lender_spec);
+            }
+
+            if (fee_amount > 0) {
+                credit_helper.amount = fee_amount;
+                self
+                    .vault
+                    ._push_from(
+                        credit_helper, loan_terms.lender, self.config.read().get_fee_collector()
+                    );
+            }
+
+            if (should_transfer_common) {
+                credit_helper.amount = common;
+                self.vault._pull(credit_helper, loan_terms.lender);
+            }
+
+            if (surplus > 0) {
+                credit_helper.amount = surplus;
+                self.vault._push_from(credit_helper, loan_terms.lender, loan_terms.borrower);
+            } else if (shortage > 0) {
+                credit_helper.amount = shortage;
+                self.vault._pull(credit_helper, loan_terms.borrower);
+            }
         }
 
         fn _withdraw_credit_from_pool(
@@ -340,7 +394,7 @@ mod PwnSimpleLoan {
             let loan = self.loans.read(loan_id);
             let asset = match defaulted {
                 true => loan.collateral,
-                false => loan.collateral
+                false => loan.collateral // @note: needs to be updated
             };
             self._delete_loan(loan_id);
             self.emit(Event::LoanClaimed(LoanClaimed { loan_id: loan_id, defaulted: defaulted }));
