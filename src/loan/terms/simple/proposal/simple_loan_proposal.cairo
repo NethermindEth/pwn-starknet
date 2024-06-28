@@ -49,6 +49,7 @@ pub mod SimpleLoanProposalComponent {
         pub nonce_space: felt252,
         pub nonce: felt252,
         pub loan_contract: ContractAddress,
+        pub public_key: felt252,
     }
 
     #[storage]
@@ -203,7 +204,7 @@ pub mod SimpleLoanProposalComponent {
             if proposal_inclusion_proof.len() == 0 {
                 if !self.proposal_made.read(proposal_hash) {
                     if !signature_checker::is_valid_signature_now(
-                        proposal.proposer, proposal_hash, signature
+                        proposal.public_key, proposal_hash, signature
                     ) {
                         signature_checker::Err::INVALID_SIGNATURE(proposal.proposer, proposal_hash);
                     }
@@ -212,7 +213,7 @@ pub mod SimpleLoanProposalComponent {
                 // TODO: verify inclusion proof type with the pwn team
                 let multiproposal_hash = 0x0;
                 if !signature_checker::is_valid_signature_now(
-                    proposal.proposer, multiproposal_hash, signature
+                    proposal.public_key, multiproposal_hash, signature
                 ) {
                     signature_checker::Err::INVALID_SIGNATURE(
                         proposal.proposer, multiproposal_hash

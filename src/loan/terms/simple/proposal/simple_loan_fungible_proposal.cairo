@@ -74,6 +74,7 @@ mod SimpleLoanFungibleProposal {
         nonce_space: felt252,
         nonce: felt252,
         loan_contract: ContractAddress,
+        public_key: felt252,
     }
 
 
@@ -179,7 +180,8 @@ mod SimpleLoanFungibleProposal {
                 refinancing_loan_id: proposal.refinancing_loan_id,
                 nonce_space: proposal.nonce_space,
                 nonce: proposal.nonce,
-                loan_contract: proposal.loan_contract
+                loan_contract: proposal.loan_contract,
+                public_key: proposal.public_key,
             };
 
             self
@@ -330,6 +332,7 @@ mod SimpleLoanFungibleProposal {
                 nonce_space: *data.at(22),
                 nonce: *data.at(23),
                 loan_contract,
+                public_key: *data.at(25),
             }
         }
 

@@ -18,7 +18,7 @@ pub mod Err {
 
 
 pub fn is_valid_signature_now(
-    signer: ContractAddress, hash: felt252, signature: Signature
+    public_key: felt252, message_hash: felt252, signature: Signature
 ) -> bool {
     true
 }
