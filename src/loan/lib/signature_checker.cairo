@@ -3,6 +3,7 @@ use starknet::ContractAddress;
 
 #[derive(Drop, Serde)]
 pub struct Signature {
+    pub_key: felt252,
     r: felt252,
     s: felt252,
 }
@@ -17,8 +18,6 @@ pub mod Err {
 }
 
 
-pub fn is_valid_signature_now(
-    public_key: felt252, message_hash: felt252, signature: Signature
-) -> bool {
+pub fn is_valid_signature_now(message_hash: felt252, signature: Signature) -> bool {
     true
 }

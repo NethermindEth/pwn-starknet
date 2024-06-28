@@ -172,7 +172,6 @@ mod SimpleLoanListProposal {
                 nonce_space: proposal.nonce_space,
                 nonce: proposal.nonce,
                 loan_contract: proposal.loan_contract,
-                public_key: proposal.public_key,
             };
 
             self

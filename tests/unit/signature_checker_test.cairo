@@ -1,10 +1,5 @@
 mod is_valid_signature_now {
     #[test]
-    fn test_should_call_eip1271_function_when_signer_is_contract_account() {
-        assert(true, '');
-    }
-
-    #[test]
     fn test_should_fail_when_signer_is_contract_account_when_eip1271_function_returns_wrong_data_length() {
         assert(true, '');
     }
