@@ -37,7 +37,7 @@ pub struct CallerSpec {
     permit_data: felt252,
 }
 
-#[derive(Clone, Drop, Serde, starknet::Store)]
+#[derive(Clone, Drop, Serde, Default, starknet::Store)]
 pub struct Loan {
     pub status: u8,
     pub credit_address: ContractAddress,

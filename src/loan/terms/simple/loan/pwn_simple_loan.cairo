@@ -1,6 +1,7 @@
 #[starknet::contract]
 mod PwnSimpleLoan {
     use openzeppelin::token::erc721::{interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait}};
+    use pwn::ContractAddressDefault;
     use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
     use pwn::hub::pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait};
     use pwn::loan::lib::{fee_calculator, math};
@@ -176,8 +177,7 @@ mod PwnSimpleLoan {
     impl Private of PrivateTrait {
         fn _check_permit(ref self: ContractState, credit_address: ContractAddress, permit: Permit) {
             let caller = starknet::get_caller_address();
-            let const_address = starknet::contract_address_const::<'0'>();
-            if (permit.asset != const_address) {
+            if (permit.asset != Default::default()) {
                 if (permit.owner != caller) {
                     permit::Err::InvalidPermitOwner(current: permit.owner, expected: caller);
                 }
@@ -280,8 +280,7 @@ mod PwnSimpleLoan {
             ref self: ContractState, credit: Asset, loan_terms: Terms, lender_spec: LenderSpec
         ) {
             let pool_adapter = self.config.read().get_pool_adapter(lender_spec.source_of_funds);
-            let const_address = starknet::contract_address_const::<0>();
-            if (pool_adapter.contract_address == const_address) {
+            if (pool_adapter.contract_address == Default::default()) {
                 error::Err::INVALID_SOURCE_OF_FUNDS(source_of_funds: lender_spec.source_of_funds);
             }
             if (credit.amount > 0) {
@@ -350,8 +349,19 @@ mod PwnSimpleLoan {
 
         fn _delete_loan(ref self: ContractState, loan_id: felt252) {
             self.loan_token.read().burn(loan_id);
-            let mut loan = self.loans.read(loan_id);
-            loan.status = 0;
+            let loan = Loan {
+                status: Default::default(),
+                credit_address: Default::default(),
+                original_source_of_funds: Default::default(),
+                start_timestamp: Default::default(),
+                default_timestamp: Default::default(),
+                borrower: Default::default(),
+                original_lender: Default::default(),
+                accruing_interest_APR: Default::default(),
+                fixed_interest_amount: Default::default(),
+                principal_amount: Default::default(),
+                collateral: Default::default(),
+            };
             self.loans.write(loan_id, loan);
         }
 
