@@ -335,7 +335,9 @@ mod PwnSimpleLoan {
             loan.fixed_interest_amount + accured_interest
         }
 
-        fn _settle_loan_claim(ref self: ContractState, loan_id: felt252, loan_owner: ContractAddress, defaulted: bool) {
+        fn _settle_loan_claim(
+            ref self: ContractState, loan_id: felt252, loan_owner: ContractAddress, defaulted: bool
+        ) {
             let loan = self.loans.read(loan_id);
             let asset = match defaulted {
                 true => loan.collateral,
@@ -362,6 +364,15 @@ mod PwnSimpleLoan {
             loan.status
         }
 
-        fn _check_valid_asset(ref self: ContractState, asset: Asset) {}
+        fn _check_valid_asset(ref self: ContractState, asset: Asset) {
+            if (!self.get_is_valid_asset(asset)) {
+                error::Err::INVALID_MULTITOKEN_ASSET(
+                    category: asset.category.into(),
+                    address: asset.asset_address,
+                    id: asset.id,
+                    amount: asset.amount
+                );
+            }
+        }
     }
 }

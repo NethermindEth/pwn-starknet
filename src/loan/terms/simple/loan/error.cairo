@@ -52,7 +52,9 @@ pub mod Err {
     fn INVALID_EXTENSION_DURATION(duration: u64, limit: u64) {
         panic!("Invalid extension duration. Current: {}, Limit: {}", duration, limit);
     }
-    fn INVALID_MULTITOKEN_ASSET(category: u8, address: ContractAddress, id: felt252, amount: u256) {
+    pub fn INVALID_MULTITOKEN_ASSET(
+        category: u8, address: ContractAddress, id: felt252, amount: u256
+    ) {
         panic!(
             "Invalid multi token asset. Category: {}, Address: {:?}, ID: {}, Amount: {}",
             category,
