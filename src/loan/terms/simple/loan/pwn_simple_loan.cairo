@@ -1,5 +1,6 @@
 #[starknet::contract]
 mod PwnSimpleLoan {
+    use openzeppelin::token::erc721::{interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait}};
     use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
     use pwn::hub::pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait};
     use pwn::loan::lib::fee_calculator;
@@ -266,8 +267,11 @@ mod PwnSimpleLoan {
             extra: Array<felt252>
         ) {
             let loan = self.loans.read(refinancing_loan_id);
-            // let erc721_dispatcher = ERC721ABIDispatcher {contract_address: self.loan_token.read().contract_address};
-            // let loan_owner = erc721_dispatcher.owner_of();
+            let erc721_dispatcher = ERC721ABIDispatcher {
+                contract_address: self.loan_token.read().contract_address
+            };
+            // @note: owner_of needs u256 and here the id is in felt252
+            let loan_owner = erc721_dispatcher.owner_of(refinancing_loan_id.try_into().unwrap());
             let repayment_amount = self.get_loan_repayment_amount(refinancing_loan_id);
             let (fee_amount, new_loan_amount) = fee_calculator::calculate_fee_amount(
                 self.config.read().get_fee(), loan_terms.credit.amount
@@ -309,7 +313,14 @@ mod PwnSimpleLoan {
             }
         }
 
-        fn _update_repaid_loan(ref self: ContractState, loan_id: felt252) {}
+        fn _update_repaid_loan(ref self: ContractState, loan_id: felt252) {
+            let mut loan = self.loans.read(loan_id);
+            loan.status = 3;
+            loan.fixed_interest_amount = self._loan_accrued_interest(loan.clone());
+            loan.accruing_interest_APR = 0;
+            self.loans.write(loan_id, loan);
+            self.emit(Event::LoanPaidBack(LoanPaidBack { loan_id: loan_id }));
+        }
 
         fn _loan_accrued_interest(ref self: ContractState, loan: Loan) -> u256 {
             0
