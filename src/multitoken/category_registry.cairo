@@ -9,9 +9,9 @@ pub trait IMultitokenCategoryRegistry<TState> {
 
 #[starknet::contract]
 mod MultiTokenCategoryRegistry {
-    use starknet::{ContractAddress, get_caller_address};
-    use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::access::ownable::OwnableComponent;
+    use openzeppelin::introspection::src5::SRC5Component;
+    use starknet::{ContractAddress, get_caller_address};
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
@@ -64,11 +64,9 @@ mod MultiTokenCategoryRegistry {
     pub const CATEGORY_NOT_REGISTERED: u8 = 255;
 
     #[abi(embed_v0)]
-    impl IMultitokenCategoryRegistry of super::IMultitokenCategoryRegistry<ContractState>  {
+    impl IMultitokenCategoryRegistry of super::IMultitokenCategoryRegistry<ContractState> {
         fn register_category_value(
-            ref self: ContractState,
-            asset_address: ContractAddress, 
-            category: u8
+            ref self: ContractState, asset_address: ContractAddress, category: u8
         ) {
             if get_caller_address() != self.ownable.owner() {
                 panic!("Only owner can register category value");
@@ -80,36 +78,24 @@ mod MultiTokenCategoryRegistry {
 
             self.registered_category.write(asset_address, category + 1);
 
-            self.emit(CategoryRegistered {
-                asset_address,
-                category,
-            });
+            self.emit(CategoryRegistered { asset_address, category, });
         }
 
-        fn unregister_category_value(
-            ref self: ContractState, 
-            asset_address: ContractAddress
-        ) {
+        fn unregister_category_value(ref self: ContractState, asset_address: ContractAddress) {
             self.registered_category.write(asset_address, 0);
 
-            self.emit(CategoryUnregistered {
-                asset_address,
-            });
+            self.emit(CategoryUnregistered { asset_address, });
         }
 
-        fn registered_category_value(
-            self: @ContractState, 
-            asset_address: ContractAddress
-        ) -> u8 {
+        fn registered_category_value(self: @ContractState, asset_address: ContractAddress) -> u8 {
             let category: u8 = self.registered_category.read(asset_address);
 
             if category == 0 {
                 return CATEGORY_NOT_REGISTERED;
             }
-            
+
             category - 1
         }
     }
 }
-
 
