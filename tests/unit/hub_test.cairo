@@ -59,7 +59,7 @@ mod set_tag {
 
         hub.set_tag(OWNER(), 'tag', true);
 
-        assert_eq!(hub.has_tag(OWNER(), 1), true);
+        assert_eq!(hub.has_tag(OWNER(), 'tag'), true);
     }
 
     #[test]
