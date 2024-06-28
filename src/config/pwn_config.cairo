@@ -1,5 +1,5 @@
 #[starknet::contract]
-mod PwnConfig {
+pub mod PwnConfig {
     use core::clone::Clone;
     use openzeppelin::access::ownable::ownable::OwnableComponent;
     use openzeppelin::security::initializable::InitializableComponent;
@@ -25,12 +25,12 @@ mod PwnConfig {
     impl InitializableInternalImpl = InitializableComponent::InternalImpl<ContractState>;
 
     const VERSION: felt252 = '1.2';
-    const MAX_FEE: u16 = 1000; // 10%
+    pub const MAX_FEE: u16 = 1000; // 10%
 
     #[storage]
     struct Storage {
         fee: u16,
-        fee_collectior: ContractAddress,
+        fee_collector: ContractAddress,
         loan_metadata_uri: LegacyMap::<ContractAddress, ByteArray>,
         sf_computer_registry: LegacyMap::<ContractAddress, ContractAddress>,
         pool_adapter_registry: LegacyMap::<ContractAddress, ContractAddress>,
@@ -93,12 +93,6 @@ mod PwnConfig {
         }
     }
 
-    #[constructor]
-    fn constructor(ref self: ContractState) {
-        // NOTE: unsure if we actually need to disable initializalizers her
-        self.ownable.transfer_ownership(starknet::contract_address_const::<0>());
-    }
-
     #[abi(embed_v0)]
     impl PwnConfigImpl of IPwnConfig<ContractState> {
         fn initialize(
@@ -110,9 +104,10 @@ mod PwnConfig {
             assert!(
                 owner != starknet::contract_address_const::<0>(), "Owner cannot be zero address"
             );
-            self.ownable.transfer_ownership(owner);
+            self.ownable.initializer(owner);
             self._set_fee_collector(fee_collector);
             self._set_fee(fee);
+            self.initializable.initialize();
         }
 
         fn set_fee(ref self: ContractState, fee: u16) {
@@ -215,8 +210,8 @@ mod PwnConfig {
                 Err::ZERO_FEE_COLLECTOR();
             }
 
-            let old_fee_collector = self.fee_collectior.read();
-            self.fee_collectior.write(fee_collector);
+            let old_fee_collector = self.fee_collector.read();
+            self.fee_collector.write(fee_collector);
 
             self.emit(FeeCollectorUpdated { old_fee_collector, new_fee_collector: fee_collector });
         }

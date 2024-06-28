@@ -1,6 +1,6 @@
-mod config {
+pub mod config {
     pub mod interface;
-    mod pwn_config;
+    pub mod pwn_config;
 }
 
 mod hub {
@@ -8,7 +8,7 @@ mod hub {
     pub mod pwn_hub_tags;
 }
 
-mod interfaces {
+pub mod interfaces {
     pub mod fingerprint_computer;
     pub mod pool_adapter;
 }
