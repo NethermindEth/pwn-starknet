@@ -17,9 +17,8 @@ mod MultiTokenCategoryRegistry {
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
 
     #[abi(embed_v0)]
-    impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
-    #[abi(embed_v0)]
-    impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
+    impl OwnableMixinImpl = OwnableComponent::OwnableMixinImpl<ContractState>;
+    impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
 
     #[storage]
     struct Storage {
@@ -61,6 +60,11 @@ mod MultiTokenCategoryRegistry {
         }
     }
 
+    #[constructor]
+    fn constructor(ref self: ContractState) {
+        self.ownable.initializer(starknet::get_caller_address());
+    }
+
     pub const CATEGORY_NOT_REGISTERED: u8 = 255;
 
     #[abi(embed_v0)]
@@ -68,9 +72,7 @@ mod MultiTokenCategoryRegistry {
         fn register_category_value(
             ref self: ContractState, asset_address: ContractAddress, category: u8
         ) {
-            if get_caller_address() != self.ownable.owner() {
-                panic!("Only owner can register category value");
-            }
+            self.ownable.assert_only_owner();
 
             if category == CATEGORY_NOT_REGISTERED {
                 Err::RESERVED_CATEGORY_VALUE();
@@ -98,4 +100,3 @@ mod MultiTokenCategoryRegistry {
         }
     }
 }
-
