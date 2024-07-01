@@ -32,17 +32,17 @@ pub mod PwnHub {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         TagSet: TagSet,
         #[flat]
         OwnableEvent: OwnableComponent::Event,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct TagSet {
-        contract: ContractAddress,
-        tag: felt252,
-        has_tag: bool,
+    pub struct TagSet {
+        pub contract: ContractAddress,
+        pub tag: felt252,
+        pub has_tag: bool,
     }
 
     mod Err {

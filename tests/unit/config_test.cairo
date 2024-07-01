@@ -1,4 +1,4 @@
-use pwn::config::pwn_config::PwnConfig::MAX_FEE;
+use pwn::config::pwn_config::{PwnConfig::MAX_FEE, PwnConfig};
 use pwn::interfaces::{
     pool_adapter::IPoolAdapterDispatcher, fingerprint_computer::IStateFingerpringComputerDispatcher
 };
@@ -108,8 +108,8 @@ mod initialize {
 }
 
 mod set_fee {
-    use snforge_std::{spy_events, SpyOn, EventSpy, EventFetcher, Event};
-    use super::{OWNER, FEE_COLLECTOR, ACCOUNT_1, deploy, IPwnConfigDispatcherTrait};
+    use snforge_std::{spy_events, SpyOn, EventSpy, EventAssertions};
+    use super::{OWNER, FEE_COLLECTOR, ACCOUNT_1, deploy, IPwnConfigDispatcherTrait, PwnConfig};
 
     #[test]
     #[should_panic()]
@@ -161,17 +161,25 @@ mod set_fee {
 
         config.set_fee(super::MAX_FEE);
 
-        spy.fetch_events();
-        let (from, event) = spy.events.at(0);
-        assert(from == @config.contract_address, 'Emitted from wrong address');
-        assert(event.keys.at(0) == @selector!("FeeUpdated"), 'Wrong event name');
-        assert(event.data.len() == 2, 'There should be two data');
+        spy
+        .assert_emitted(
+            @array![
+                (
+                    config.contract_address,
+                    PwnConfig::Event::FeeUpdated(
+                        PwnConfig::FeeUpdated {
+                            old_fee: fee, new_fee: super::MAX_FEE
+                        }
+                    )
+                )
+            ]
+        );
     }
 }
 
 mod set_fee_collector {
-    use snforge_std::{spy_events, SpyOn, EventSpy, EventFetcher, Event};
-    use super::{OWNER, FEE_COLLECTOR, ACCOUNT_1, deploy, IPwnConfigDispatcherTrait};
+    use snforge_std::{spy_events, SpyOn, EventSpy, EventAssertions};
+    use super::{OWNER, FEE_COLLECTOR, ACCOUNT_1, deploy, IPwnConfigDispatcherTrait, PwnConfig};
 
     #[test]
     #[should_panic()]
@@ -223,17 +231,24 @@ mod set_fee_collector {
 
         config.set_fee_collector(ACCOUNT_1());
 
-        spy.fetch_events();
-        let (from, event) = spy.events.at(0);
-        assert(from == @config.contract_address, 'Emitted from wrong address');
-        assert(event.keys.at(0) == @selector!("FeeCollectorUpdated"), 'Wrong event name');
-        assert(event.data.len() == 2, 'There should be two data');
+        spy.assert_emitted(
+            @array![
+                (
+                    config.contract_address,
+                    PwnConfig::Event::FeeCollectorUpdated(
+                        PwnConfig::FeeCollectorUpdated {
+                            old_fee_collector: FEE_COLLECTOR(), new_fee_collector: ACCOUNT_1()
+                        }
+                    )
+                )
+            ]
+        );
     }
 }
 
 mod set_loan_metadata_uri {
-    use snforge_std::{spy_events, SpyOn, EventSpy, EventFetcher, Event};
-    use super::{OWNER, FEE_COLLECTOR, ACCOUNT_1, LOAN_CONTRACT, deploy, IPwnConfigDispatcherTrait};
+    use snforge_std::{spy_events, SpyOn, EventSpy, EventAssertions};
+    use super::{OWNER, FEE_COLLECTOR, ACCOUNT_1, LOAN_CONTRACT, deploy, IPwnConfigDispatcherTrait, PwnConfig};
 
     #[test]
     #[should_panic()]
@@ -288,16 +303,24 @@ mod set_loan_metadata_uri {
         super::start_cheat_caller_address(config.contract_address, OWNER());
         config.set_loan_metadata_uri(LOAN_CONTRACT(), meta_uri.clone());
 
-        spy.fetch_events();
-        let (from, event) = spy.events.at(0);
-        assert(from == @config.contract_address, 'Emitted from wrong address');
-        assert(event.keys.at(0) == @selector!("LOANMetadataUriUpdated"), 'Wrong event name');
+        spy.assert_emitted(
+            @array![
+                (
+                    config.contract_address,
+                    PwnConfig::Event::LOANMetadataUriUpdated(
+                        PwnConfig::LOANMetadataUriUpdated {
+                            loan_contract: LOAN_CONTRACT(), new_uri: meta_uri
+                        }
+                    )
+                )
+            ]
+        );
     }
 }
 
 mod set_default_loan_metadata_uri {
-    use snforge_std::{spy_events, SpyOn, EventSpy, EventFetcher, Event};
-    use super::{OWNER, FEE_COLLECTOR, ACCOUNT_1, LOAN_CONTRACT, deploy, IPwnConfigDispatcherTrait};
+    use snforge_std::{spy_events, SpyOn, EventSpy, EventAssertions};
+    use super::{OWNER, FEE_COLLECTOR, ACCOUNT_1, LOAN_CONTRACT, deploy, IPwnConfigDispatcherTrait, PwnConfig};
 
     #[test]
     #[should_panic()]
@@ -343,10 +366,16 @@ mod set_default_loan_metadata_uri {
         super::start_cheat_caller_address(config.contract_address, OWNER());
         config.set_default_loan_metadata_uri(meta_uri.clone());
 
-        spy.fetch_events();
-        let (from, event) = spy.events.at(0);
-        assert(from == @config.contract_address, 'Emitted from wrong address');
-        assert(event.keys.at(0) == @selector!("DefaultLOANMetadataUriUpdated"), 'Wrong event name');
+        spy.assert_emitted(
+            @array![
+                (
+                    config.contract_address,
+                    PwnConfig::Event::DefaultLOANMetadataUriUpdated(
+                        PwnConfig::DefaultLOANMetadataUriUpdated { new_uri: meta_uri }
+                    )
+                )
+            ]
+        );
     }
 }
 

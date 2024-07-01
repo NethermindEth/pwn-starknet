@@ -42,7 +42,7 @@ pub mod PwnConfig {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         FeeUpdated: FeeUpdated,
         FeeCollectorUpdated: FeeCollectorUpdated,
         LOANMetadataUriUpdated: LOANMetadataUriUpdated,
@@ -54,26 +54,26 @@ pub mod PwnConfig {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct FeeUpdated {
-        old_fee: u16,
-        new_fee: u16,
+    pub struct FeeUpdated {
+        pub old_fee: u16,
+        pub new_fee: u16,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct FeeCollectorUpdated {
-        old_fee_collector: ContractAddress,
-        new_fee_collector: ContractAddress,
+    pub struct FeeCollectorUpdated {
+        pub old_fee_collector: ContractAddress,
+        pub new_fee_collector: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct LOANMetadataUriUpdated {
-        loan_contract: ContractAddress,
-        new_uri: ByteArray,
+    pub struct LOANMetadataUriUpdated {
+        pub loan_contract: ContractAddress,
+        pub new_uri: ByteArray,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct DefaultLOANMetadataUriUpdated {
-        new_uri: ByteArray,
+    pub struct DefaultLOANMetadataUriUpdated {
+        pub new_uri: ByteArray,
     }
 
     mod Err {
