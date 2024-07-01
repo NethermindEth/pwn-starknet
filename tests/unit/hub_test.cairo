@@ -1,7 +1,7 @@
 use pwn::hub::pwn_hub::PwnHub;
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
-    cheat_caller_address_global
+    cheat_caller_address_global,
 };
 use starknet::ContractAddress;
 
@@ -41,8 +41,8 @@ mod constructor {
 }
 
 mod set_tag {
-    use snforge_std::{spy_events, SpyOn, EventSpy, EventFetcher, Event};
-    use super::{deploy, ACCOUNT_1, OWNER, IPwnHubDispatcherTrait};
+    use snforge_std::{spy_events, SpyOn, EventSpy, EventAssertions};
+    use super::{deploy, ACCOUNT_1, OWNER, IPwnHubDispatcherTrait, PwnHub};
 
     #[test]
     #[should_panic]
@@ -79,17 +79,23 @@ mod set_tag {
 
         hub.set_tag(OWNER(), 'tag', true);
 
-        spy.fetch_events();
-        let (from, event) = spy.events.at(0);
-        assert(from == @hub.contract_address, 'Emitted from wrong address');
-        assert(event.keys.at(0) == @selector!("TagSet"), 'Wrong event name');
-        assert(event.data.len() == 3, 'There should be 3 data');
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        hub.contract_address,
+                        PwnHub::Event::TagSet(
+                            PwnHub::TagSet { contract: OWNER(), tag: 'tag', has_tag: true }
+                        )
+                    )
+                ]
+            );
     }
 }
 
 mod set_tags {
-    use snforge_std::{spy_events, SpyOn, EventSpy, EventFetcher, Event};
-    use super::{deploy, ACCOUNT_1, OWNER, IPwnHubDispatcherTrait};
+    use snforge_std::{spy_events, SpyOn, EventSpy, EventAssertions};
+    use super::{deploy, ACCOUNT_1, OWNER, IPwnHubDispatcherTrait, PwnHub};
 
     #[test]
     #[should_panic]
@@ -157,17 +163,23 @@ mod set_tags {
         let mut spy = spy_events(SpyOn::One(hub.contract_address));
         hub.set_tags(addresses, tags, true);
 
-        spy.fetch_events();
-        let (from_1, event_1) = spy.events.at(0);
-        let (from_2, event_2) = spy.events.at(1);
-
-        assert(from_1 == @hub.contract_address, 'Emitted from wrong address');
-        assert(event_1.keys.at(0) == @selector!("TagSet"), 'Wrong event name');
-        assert(event_1.data.len() == 3, 'There should be 3 data');
-
-        assert(from_2 == @hub.contract_address, 'Emitted from wrong address');
-        assert(event_2.keys.at(0) == @selector!("TagSet"), 'Wrong event name');
-        assert(event_2.data.len() == 3, 'There should be 3 data');
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        hub.contract_address,
+                        PwnHub::Event::TagSet(
+                            PwnHub::TagSet { contract: OWNER(), tag: 'tag', has_tag: true }
+                        )
+                    ),
+                    (
+                        hub.contract_address,
+                        PwnHub::Event::TagSet(
+                            PwnHub::TagSet { contract: ACCOUNT_1(), tag: 'tag', has_tag: true }
+                        )
+                    )
+                ]
+            );
     }
 }
 

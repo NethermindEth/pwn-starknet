@@ -55,7 +55,7 @@ mod multitoken {
     pub mod library;
 }
 
-mod nonce {
+pub mod nonce {
     pub mod revoked_nonce;
 }
 
