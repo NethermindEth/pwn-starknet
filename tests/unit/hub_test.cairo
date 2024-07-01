@@ -1,7 +1,7 @@
 use pwn::hub::pwn_hub::PwnHub;
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
-    cheat_caller_address_global
+    cheat_caller_address_global,
 };
 use starknet::ContractAddress;
 

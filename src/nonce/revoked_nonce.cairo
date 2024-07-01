@@ -4,8 +4,8 @@ use starknet::ContractAddress;
 pub trait IRevokedNonce<TState> {
     fn revoke_nonce(
         ref self: TState,
-        nonce_space: Option<felt252>,
         owner: Option<ContractAddress>,
+        nonce_space: Option<felt252>,
         nonce: felt252
     );
     fn revoke_nonces(ref self: TState, nonces: Array<felt252>);
@@ -16,7 +16,7 @@ pub trait IRevokedNonce<TState> {
     fn is_nonce_usable(
         self: @TState, owner: ContractAddress, nonce_space: felt252, nonce: felt252
     ) -> bool;
-    fn current_nonce_space(self: @TState) -> felt252;
+    fn current_nonce_space(self: @TState, owner: ContractAddress) -> felt252;
 }
 
 #[starknet::contract]
@@ -34,22 +34,22 @@ pub mod RevokedNonce {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         NonceRevoked: NonceRevoked,
         NonceSpaceRevoked: NonceSpaceRevoked,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct NonceRevoked {
-        owner: ContractAddress,
-        nonce_space: felt252,
-        nonce: felt252,
+    pub struct NonceRevoked {
+        pub owner: ContractAddress,
+        pub nonce_space: felt252,
+        pub nonce: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct NonceSpaceRevoked {
-        owner: ContractAddress,
-        nonce_space: felt252,
+    pub struct NonceSpaceRevoked {
+        pub owner: ContractAddress,
+        pub nonce_space: felt252,
     }
 
     pub mod Err {
@@ -73,17 +73,23 @@ pub mod RevokedNonce {
                 nonce
             );
         }
+        pub fn ADDRESS_MISSING_TAG(addr: super::ContractAddress, access_tag: felt252) {
+            panic!("Address missing tag. Address: {:?}, Tag: {}", addr, access_tag);
+        }
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, hub: ContractAddress, access_tag: felt252) {}
+    fn constructor(ref self: ContractState, hub: ContractAddress, access_tag: felt252) {
+        self.hub.write(IPwnHubDispatcher { contract_address: hub });
+        self.access_tag.write(access_tag);
+    }
 
     #[abi(embed_v0)]
     impl RevokedNonceImpl of IRevokedNonce<ContractState> {
         fn revoke_nonce(
             ref self: ContractState,
-            nonce_space: Option<felt252>,
             owner: Option<ContractAddress>,
+            nonce_space: Option<felt252>,
             nonce: felt252
         ) {
             let caller = starknet::get_caller_address();
@@ -91,12 +97,32 @@ pub mod RevokedNonce {
             match nonce_space {
                 Option::Some(nonce_space) => {
                     match owner {
-                        Option::Some(owner) => { self._revoke_nonce(nonce_space, owner, nonce); },
-                        Option::None => { self._revoke_nonce(nonce_space, caller, nonce); },
+                        Option::Some(owner) => {
+                            let access_tag = self.access_tag.read();
+                            if !self.hub.read().has_tag(caller, access_tag) {
+                                Err::ADDRESS_MISSING_TAG(caller, access_tag);
+                            }
+                            self._revoke_nonce(owner, nonce_space, nonce);
+                        },
+                        Option::None => { self._revoke_nonce(caller, nonce_space, nonce); },
                     }
                 },
                 Option::None => {
-                    self._revoke_nonce(self.nonce_space.read(caller), caller, nonce);
+                    match owner {
+                        Option::Some(owner) => {
+                            let nonce_space = self.nonce_space.read(owner);
+
+                            let access_tag = self.access_tag.read();
+                            if !self.hub.read().has_tag(caller, access_tag) {
+                                Err::ADDRESS_MISSING_TAG(caller, access_tag);
+                            }
+                            self._revoke_nonce(owner, nonce_space, nonce);
+                        },
+                        Option::None => {
+                            let nonce_space = self.nonce_space.read(caller);
+                            self._revoke_nonce(caller, nonce_space, nonce);
+                        },
+                    }
                 },
             }
         }
@@ -108,7 +134,8 @@ pub mod RevokedNonce {
             let len = nonces.len();
             let mut i = 0;
             while i < len {
-                self._revoke_nonce(nonce_space, caller, *nonces.at(i));
+                self._revoke_nonce(caller, nonce_space, *nonces.at(i));
+                i += 1;
             }
         }
 
@@ -142,15 +169,15 @@ pub mod RevokedNonce {
             !self.revoked_nonce.read((owner, nonce_space, nonce))
         }
 
-        fn current_nonce_space(self: @ContractState) -> felt252 {
-            self.nonce_space.read(starknet::get_caller_address())
+        fn current_nonce_space(self: @ContractState, owner: ContractAddress) -> felt252 {
+            self.nonce_space.read(owner)
         }
     }
 
     #[generate_trait]
     impl Private of PrivateTrait {
         fn _revoke_nonce(
-            ref self: ContractState, nonce_space: felt252, owner: ContractAddress, nonce: felt252
+            ref self: ContractState, owner: ContractAddress, nonce_space: felt252, nonce: felt252
         ) {
             if self.revoked_nonce.read((owner, nonce_space, nonce)) {
                 Err::NONCE_ALREADY_REVOKED(owner, nonce_space, nonce);

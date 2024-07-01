@@ -127,7 +127,7 @@ pub mod SimpleLoanProposalComponent {
                 .revoked_nonce
                 .read()
                 .revoke_nonce(
-                    Option::Some(nonce_space), Option::Some(starknet::get_caller_address()), nonce
+                    Option::Some(starknet::get_caller_address()), Option::Some(nonce_space), nonce
                 );
         }
 
@@ -269,8 +269,8 @@ pub mod SimpleLoanProposalComponent {
                     .revoked_nonce
                     .read()
                     .revoke_nonce(
-                        Option::Some(proposal.nonce_space),
                         Option::Some(proposal.proposer),
+                        Option::Some(proposal.nonce_space),
                         proposal.nonce
                     );
             } else if self.credit_used.read(proposal_hash)
