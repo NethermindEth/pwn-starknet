@@ -279,7 +279,13 @@ mod PwnSimpleLoan {
         }
 
         fn get_loan_repayment_amount(self: @ContractState, loan_id: felt252) -> u256 {
-            0
+            let loan = self.loans.read(loan_id);
+
+            if (loan.status == 0) {
+                return 0;
+            }
+
+            loan.principal_amount + self._loan_accrued_interest(loan)
         }
 
         fn get_extension_hash(self: @ContractState, extension: ExtensionProposal) -> felt252 {
@@ -514,7 +520,7 @@ mod PwnSimpleLoan {
             self.emit(Event::LoanPaidBack(LoanPaidBack { loan_id: loan_id }));
         }
 
-        fn _loan_accrued_interest(ref self: ContractState, loan: Loan) -> u256 {
+        fn _loan_accrued_interest(self: @ContractState, loan: Loan) -> u256 {
             if (loan.accruing_interest_APR == 0) {
                 return loan.fixed_interest_amount;
             }
