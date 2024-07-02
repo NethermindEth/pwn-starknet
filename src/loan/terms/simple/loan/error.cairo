@@ -3,7 +3,7 @@ pub mod Err {
     pub fn LOAN_NOT_RUNNING() {
         panic!("Loan is not running");
     }
-    fn LOAN_RUNNING() {
+    pub fn LOAN_RUNNING() {
         panic!("Loan is running");
     }
     fn LOAN_REPAID() {
@@ -15,7 +15,7 @@ pub mod Err {
     pub fn NON_EXISTING_LOAN() {
         panic!("Loan does not exist");
     }
-    fn CALLER_NOT_LOAN_TOKEN_HOLDER() {
+    pub fn CALLER_NOT_LOAN_TOKEN_HOLDER() {
         panic!("Caller is not the loan token holder");
     }
     pub fn REFINANCE_BORROWER_MISMATCH(

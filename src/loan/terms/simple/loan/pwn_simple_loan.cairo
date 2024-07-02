@@ -256,7 +256,29 @@ mod PwnSimpleLoan {
                 );
         }
 
-        fn claim_loan(ref self: ContractState, loan_id: felt252) {}
+        fn claim_loan(ref self: ContractState, loan_id: felt252) {
+            let loan = self.loans.read(loan_id);
+            let caller = starknet::get_caller_address();
+            let loan_token_owner = ERC721ABIDispatcher {
+                contract_address: self.loan_token.read().contract_address
+            }
+                .owner_of(loan_id.try_into().unwrap());
+
+            if (caller != loan_token_owner) {
+                error::Err::CALLER_NOT_LOAN_TOKEN_HOLDER();
+            }
+
+            if (loan.status == 0) {
+                error::Err::NON_EXISTING_LOAN();
+            } else if (loan.status == 3) {
+                self._settle_loan_claim(loan_id: loan_id, loan_owner: caller, defaulted: false);
+            } else if (loan.status == 2
+                && loan.default_timestamp <= starknet::get_block_timestamp()) {
+                self._settle_loan_claim(loan_id: loan_id, loan_owner: caller, defaulted: true);
+            } else {
+                error::Err::LOAN_RUNNING();
+            }
+        }
 
         fn try_claim_repaid_loan(
             ref self: ContractState,
