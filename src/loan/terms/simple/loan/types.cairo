@@ -3,7 +3,7 @@ use pwn::multitoken::library::MultiToken::Asset;
 use starknet::ContractAddress;
 
 
-#[derive(Default, Drop, Serde)]
+#[derive(Clone, Default, Drop, Serde)]
 pub struct Terms {
     pub lender: ContractAddress,
     pub borrower: ContractAddress,
@@ -18,23 +18,23 @@ pub struct Terms {
 
 #[derive(Drop, Serde)]
 pub struct ProposalSpec {
-    proposal_contract: ContractAddress,
-    proposal_data: felt252,
-    proposal_inclusion_proof: Span<felt252>,
-    signature: felt252
+    pub proposal_contract: ContractAddress,
+    pub proposal_data: Span<felt252>,
+    pub proposal_inclusion_proof: Span<felt252>,
+    pub signature: felt252
 }
 
-#[derive(Drop, Serde)]
+#[derive(Clone, Drop, Serde)]
 pub struct LenderSpec {
     pub source_of_funds: ContractAddress
 }
 
 #[derive(Drop, Serde)]
 pub struct CallerSpec {
-    refinancing_loan_id: u256,
-    revoke_nonce: bool,
-    nonce: felt252,
-    permit_data: felt252,
+    pub refinancing_loan_id: felt252,
+    pub revoke_nonce: bool,
+    pub nonce: felt252,
+    pub permit_data: felt252,
 }
 
 #[derive(Clone, Drop, Serde, Default, starknet::Store)]

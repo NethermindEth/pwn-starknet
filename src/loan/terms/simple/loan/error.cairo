@@ -31,13 +31,13 @@ pub mod Err {
     pub fn REFINANCE_COLLATERAL_MISMATCH() {
         panic!("Collateral is not the same");
     }
-    fn INVALID_LENDER_SPEC_HASH() {
+    pub fn INVALID_LENDER_SPEC_HASH() {
         panic!("Invalid lender spec hash");
     }
-    fn INVALID_DURATION() {
+    pub fn INVALID_DURATION() {
         panic!("Invalid duration");
     }
-    fn INTEREST_APR_OUT_OF_BOUNDS(current: u256, limit: u256) {
+    pub fn INTEREST_APR_OUT_OF_BOUNDS(current: u32, limit: u32) {
         panic!("Interest APR is out of bounds. Current: {}, Limit: {}", current, limit);
     }
     pub fn INVALID_SOURCE_OF_FUNDS(source_of_funds: ContractAddress) {

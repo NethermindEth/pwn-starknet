@@ -1,10 +1,24 @@
+use pwn::loan::terms::simple::loan::types::Terms;
 use starknet::{ContractAddress, ClassHash};
+
 
 #[starknet::interface]
 trait ISimpleLoanProposal<TState> {
     fn revoked_nonce(ref self: TState, nonce_space: felt252, nonce: felt252);
     // fn accept_proposal(ref self: TState, acceptor: ContractAddress, refinancing_loan_id: felt252, proposal_data: felt252, proposal_inclusion_proof: Array<u8>, signature: felt256) -> (felt252, PwnSimpleLoan);
     fn get_multiproposal_hash(self: @TState, multiproposal: ClassHash) -> felt252;
+}
+
+#[starknet::interface]
+pub trait ISimpleLoanAcceptProposal<TState> {
+    fn accept_proposal(
+        ref self: TState,
+        acceptor: starknet::ContractAddress,
+        refinancing_loan_id: felt252,
+        proposal_data: Span<felt252>,
+        proposal_inclusion_proof: Span<felt252>,
+        signature: felt252
+    ) -> (felt252, Terms);
 }
 
 #[starknet::component]

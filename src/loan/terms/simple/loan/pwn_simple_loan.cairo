@@ -4,6 +4,7 @@ mod PwnSimpleLoan {
     use pwn::ContractAddressDefault;
     use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
     use pwn::hub::pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait};
+    use pwn::hub::pwn_hub_tags;
     use pwn::loan::lib::{fee_calculator, math};
     use pwn::loan::terms::simple::loan::error;
     use pwn::loan::terms::simple::loan::{
@@ -12,6 +13,10 @@ mod PwnSimpleLoan {
         },
         interface::IPwnSimpleLoan
     };
+    use pwn::loan::terms::simple::proposal::simple_loan_proposal::{
+        ISimpleLoanAcceptProposalDispatcher, ISimpleLoanAcceptProposalDispatcherTrait
+    };
+    use pwn::loan::terms::simple::proposal::simple_loan_proposal;
     use pwn::loan::token::pwn_loan::{IPwnLoanDispatcher, IPwnLoanDispatcherTrait};
     use pwn::loan::vault::permit::{Permit};
     use pwn::loan::vault::permit;
@@ -20,12 +25,15 @@ mod PwnSimpleLoan {
         IMultitokenCategoryRegistryDispatcher, IMultitokenCategoryRegistryDispatcherTrait
     };
     use pwn::multitoken::library::MultiToken::Asset;
+    use pwn::multitoken::library::MultiToken::ERC20;
     use pwn::nonce::revoked_nonce::{IRevokedNonceDispatcher, IRevokedNonceDispatcherTrait};
     use starknet::ContractAddress;
 
     component!(path: PwnVaultComponent, storage: vault, event: VaultEvent);
 
     const ACCRUING_INTEREST_APR_DECIMALS: u256 = 100;
+    const MIN_LOAN_DURATION: u64 = 600;
+    const MAX_ACCRUING_INTEREST_APR: u32 = 160000;
 
     #[storage]
     struct Storage {
@@ -121,10 +129,132 @@ mod PwnSimpleLoan {
             caller_spec: CallerSpec,
             extra: Option<Array<felt252>>
         ) -> felt252 {
-            0
+            let caller = starknet::get_caller_address();
+            if (!self
+                .hub
+                .read()
+                .has_tag(proposal_spec.proposal_contract, pwn_hub_tags::LOAN_PROPOSAL)) {
+                // @note: we shall move these error in a common place?
+                simple_loan_proposal::SimpleLoanProposalComponent::Err::ADDRESS_MISSING_HUB_TAG(
+                    addr: proposal_spec.proposal_contract, tag: pwn_hub_tags::LOAN_PROPOSAL
+                );
+            }
+
+            if (caller_spec.revoke_nonce) {
+                self
+                    .revoked_nonce
+                    .read()
+                    .revoke_nonce(
+                        nonce_space: Option::None,
+                        owner: Option::Some(caller),
+                        nonce: caller_spec.nonce
+                    );
+            }
+
+            if (caller_spec.refinancing_loan_id != 0) {
+                let loan = self.loans.read(caller_spec.refinancing_loan_id);
+                self._check_loan_can_be_repaid(loan.status, loan.default_timestamp);
+            }
+
+            let (proposal_hash, loan_terms) = ISimpleLoanAcceptProposalDispatcher {
+                contract_address: proposal_spec.proposal_contract
+            }
+                .accept_proposal(
+                    acceptor: caller,
+                    refinancing_loan_id: caller_spec.refinancing_loan_id,
+                    proposal_data: proposal_spec.proposal_data,
+                    proposal_inclusion_proof: proposal_spec.proposal_inclusion_proof,
+                    signature: proposal_spec.signature
+                );
+
+            if (caller != loan_terms.lender
+                && loan_terms.lender_spec_hash != self.get_lender_spec_hash(lender_spec.clone())) {
+                // @note: solidity code has current and expected in the error as well, similar to the INTEREST_APR_OUT_OF_BOUNDS error below
+                error::Err::INVALID_LENDER_SPEC_HASH();
+            }
+
+            if (loan_terms.duration < MIN_LOAN_DURATION) {
+                // @note: solidity code has current and limit in the error as well, similar to the INTEREST_APR_OUT_OF_BOUNDS error below
+                error::Err::INVALID_DURATION();
+            }
+
+            if (loan_terms.accruing_interest_APR > MAX_ACCRUING_INTEREST_APR) {
+                error::Err::INTEREST_APR_OUT_OF_BOUNDS(
+                    current: loan_terms.accruing_interest_APR, limit: MAX_ACCRUING_INTEREST_APR
+                );
+            }
+
+            if (caller_spec.refinancing_loan_id == 0) {
+                self._check_valid_asset(loan_terms.credit);
+                self._check_valid_asset(loan_terms.collateral);
+            } else {
+                self
+                    ._check_refinance_loan_terms(
+                        caller_spec.refinancing_loan_id, loan_terms.clone()
+                    );
+            }
+
+            let loan_id = self
+                ._create_loan(loan_terms: loan_terms.clone(), lender_spec: lender_spec.clone());
+
+            self
+                .emit(
+                    Event::LoanCreated(
+                        LoanCreated {
+                            loan_id: loan_id,
+                            proposal_hash: proposal_hash,
+                            proposal_contract: proposal_spec.proposal_contract,
+                            refinancing_loan_id: caller_spec.refinancing_loan_id,
+                            terms: loan_terms.clone(),
+                            lender_spec: lender_spec.clone(),
+                            extra: extra.unwrap()
+                        }
+                    )
+                );
+
+            // @note: abi.decode needs to implemented here.
+            // if (caller_spec.permit_data.len() > 0) {// some abi decode happening here
+            // }
+
+            if (caller_spec.refinancing_loan_id == 0) {
+                self._settle_new_loan(loan_terms, lender_spec);
+            } else {
+                self._update_repaid_loan(caller_spec.refinancing_loan_id);
+                self
+                    ._settle_loan_refinance(
+                        refinancing_loan_id: caller_spec.refinancing_loan_id,
+                        loan_terms: loan_terms,
+                        lender_spec: lender_spec
+                    );
+            }
+
+            loan_id
         }
 
-        fn repay_loan(ref self: ContractState, loan_id: felt252, permit_data: felt252) {}
+        fn repay_loan(ref self: ContractState, loan_id: felt252, permit_data: felt252) {
+            let caller = starknet::get_caller_address();
+            let loan = self.loans.read(loan_id);
+            self._check_loan_can_be_repaid(loan.status, loan.default_timestamp);
+
+            self._update_repaid_loan(loan_id);
+
+            // @note: abi.decode needs to be handled
+
+            let repayment_amount = self.get_loan_repayment_amount(loan_id);
+            self.vault._pull(ERC20(loan.credit_address, repayment_amount), caller);
+
+            self.vault._push(loan.collateral, loan.borrower);
+
+            self
+                .try_claim_repaid_loan(
+                    loan_id,
+                    repayment_amount,
+                    ERC721ABIDispatcher {
+                        contract_address: self.loan_token.read().contract_address
+                    }
+                        .owner_of(loan_id.try_into().unwrap())
+                );
+        }
 
         fn claim_loan(ref self: ContractState, loan_id: felt252) {}
 
@@ -144,7 +274,7 @@ mod PwnSimpleLoan {
             permit_data: felt252
         ) {}
 
-        fn get_lender_spec_hash(self: @ContractState, calladata: Array<felt252>) -> felt252 {
+        fn get_lender_spec_hash(self: @ContractState, calladata: LenderSpec) -> felt252 {
             0
         }
 
@@ -213,7 +343,9 @@ mod PwnSimpleLoan {
             }
         }
 
-        fn _create_loan(ref self: ContractState, loan_terms: Terms, lender_spec: LenderSpec) {
+        fn _create_loan(
+            ref self: ContractState, loan_terms: Terms, lender_spec: LenderSpec
+        ) -> felt252 {
             let loan_id = self.loan_token.read().mint(loan_terms.lender);
             let current_timestamp = starknet::get_block_timestamp();
             let loan = Loan {
@@ -230,6 +362,7 @@ mod PwnSimpleLoan {
                 collateral: loan_terms.collateral
             };
             self.loans.write(loan_id, loan);
+            loan_id
         }
 
         fn _settle_new_loan(ref self: ContractState, loan_terms: Terms, lender_spec: LenderSpec) {
@@ -261,8 +394,7 @@ mod PwnSimpleLoan {
             ref self: ContractState,
             refinancing_loan_id: felt252,
             loan_terms: Terms,
-            lender_spec: LenderSpec,
-            extra: Array<felt252>
+            lender_spec: LenderSpec
         ) {
             let loan = self.loans.read(refinancing_loan_id);
             let erc721_dispatcher = ERC721ABIDispatcher {
@@ -328,6 +460,19 @@ mod PwnSimpleLoan {
                 credit_helper.amount = shortage;
                 self.vault._pull(credit_helper, loan_terms.borrower);
             }
+            let credit_amount = shortage + if (should_transfer_common) {
+                common
+            } else {
+                0
+            };
+            // @note: in solidity this was in try catch? shall we have it in match or something?
+            // like Ok and error?
+            self
+                .try_claim_repaid_loan(
+                    loan_id: refinancing_loan_id,
+                    credit_amount: credit_amount,
+                    loan_owner: loan_owner
+                );
         }
 
         fn _withdraw_credit_from_pool(
@@ -394,7 +539,9 @@ mod PwnSimpleLoan {
             let loan = self.loans.read(loan_id);
             let asset = match defaulted {
                 true => loan.collateral,
-                false => loan.collateral // @note: needs to be updated
+                false => ERC20(
+                    loan.credit_address, self.get_loan_repayment_amount(loan_id)
+                ) // @note: needs to be updated
             };
             self._delete_loan(loan_id);
             self.emit(Event::LoanClaimed(LoanClaimed { loan_id: loan_id, defaulted: defaulted }));

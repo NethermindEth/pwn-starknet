@@ -23,7 +23,7 @@ pub trait IPwnSimpleLoan<TState> {
         signature: felt252,
         permit_data: felt252
     );
-    fn get_lender_spec_hash(self: @TState, calladata: Array<felt252>) -> felt252;
+    fn get_lender_spec_hash(self: @TState, calladata: types::LenderSpec) -> felt252;
     fn get_loan_repayment_amount(self: @TState, loan_id: felt252) -> u256;
     fn get_extension_hash(self: @TState, extension: types::ExtensionProposal) -> felt252;
     fn get_loan(self: @TState, loan_id: felt252) -> types::GetLoanReturnValue;

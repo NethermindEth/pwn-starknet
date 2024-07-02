@@ -35,8 +35,8 @@ mod loan {
                 pub mod simple_loan_dutch_auction_proposal;
                 mod simple_loan_fungible_proposal;
                 mod simple_loan_list_proposal;
-                mod simple_loan_proposal;
-                mod simple_loan_simple_proposal;
+                pub mod simple_loan_proposal;
+                pub mod simple_loan_simple_proposal;
             }
         }
     }
