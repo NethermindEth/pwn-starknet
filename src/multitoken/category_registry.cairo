@@ -101,3 +101,4 @@ mod MultiTokenCategoryRegistry {
     }
 }
 // NOTE: ERC165 supportsInterface is not implemented in this contract
+
