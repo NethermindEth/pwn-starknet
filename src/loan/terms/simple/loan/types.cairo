@@ -54,14 +54,14 @@ pub struct Loan {
 
 #[derive(Drop, Serde)]
 pub struct ExtensionProposal {
-    loanId: felt252,
-    compensationAddress: ContractAddress,
-    compensationAmount: u256,
-    duration: u64,
-    expiration: u64,
-    proposer: ContractAddress,
-    nonceSpace: u256,
-    nonce: felt252,
+    pub loanId: felt252,
+    pub compensationAddress: ContractAddress,
+    pub compensationAmount: u256,
+    pub duration: u64,
+    pub expiration: u64,
+    pub proposer: ContractAddress,
+    pub nonceSpace: u256,
+    pub nonce: felt252,
 }
 
 #[derive(Default, Drop, Serde)]

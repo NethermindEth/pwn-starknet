@@ -285,9 +285,60 @@ mod PwnSimpleLoan {
             loan_id: felt252,
             credit_amount: u256,
             loan_owner: ContractAddress
-        ) {}
+        ) {
+            let caller = starknet::get_caller_address();
+            // let curernt_vault_owner = 
 
-        fn make_extension_proposal(ref self: ContractState, extension: ExtensionProposal) {}
+            let loan = self.loans.read(loan_id);
+
+            if (loan.status != 3 || loan.original_lender != loan_owner) {
+                return;
+            }
+
+            let destination_of_funds = loan.original_source_of_funds;
+
+            let repayment_credit = ERC20(loan.credit_address, credit_amount);
+
+            self._delete_loan(loan_id);
+
+            self.emit(Event::LoanClaimed(LoanClaimed { loan_id: loan_id, defaulted: false }));
+
+            if (credit_amount == 0) {
+                return;
+            }
+
+            if (destination_of_funds == loan_owner) {
+                self.vault._push(repayment_credit, loan_owner);
+            } else {
+                let pool_adapter = self.config.read().get_pool_adapter(destination_of_funds);
+                if (pool_adapter.contract_address == Default::default()) {
+                    error::Err::INVALID_SOURCE_OF_FUNDS(source_of_funds: destination_of_funds);
+                }
+
+                self
+                    .vault
+                    ._supply_to_pool(
+                        repayment_credit, pool_adapter, destination_of_funds, loan_owner
+                    );
+            }
+        }
+
+        fn make_extension_proposal(ref self: ContractState, extension: ExtensionProposal) {
+            let caller = starknet::get_caller_address();
+
+            if (caller != extension.proposer) {
+                error::Err::INVALID_EXTENSION_SINGNER(allowed: extension.proposer, current: caller);
+            }
+
+            let extension_hash = self.get_extension_hash(extension);
+            self.extension_proposal_made.write(extension_hash, true);
+            self
+                .emit(
+                    Event::ExtensionProposalMade(
+                        ExtensionProposalMade { extension_hash: extension_hash }
+                    )
+                );
+        }
 
         fn extend_loan(
             ref self: ContractState,
