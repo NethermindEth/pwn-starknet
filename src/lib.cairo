@@ -13,7 +13,7 @@ pub mod interfaces {
     pub mod pool_adapter;
 }
 
-mod loan {
+pub mod loan {
     pub mod lib {
         pub mod fee_calculator;
         pub mod math;
@@ -33,8 +33,8 @@ mod loan {
             pub mod proposal {
                 pub mod simple_loan_dutch_auction_proposal;
                 mod simple_loan_fungible_proposal;
-                mod simple_loan_list_proposal;
-                mod simple_loan_proposal;
+                pub mod simple_loan_list_proposal;
+                pub mod simple_loan_proposal;
                 mod simple_loan_simple_proposal;
             }
         }
@@ -50,7 +50,7 @@ mod loan {
     }
 }
 
-mod multitoken {
+pub mod multitoken {
     pub mod category_registry;
     pub mod library;
 }
