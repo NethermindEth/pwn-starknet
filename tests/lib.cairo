@@ -12,6 +12,7 @@ mod unit {
     mod simple_loan_simple_proposal_test;
     mod simple_loan_test;
     mod vault_test;
+    mod multitoken_category_registry_test;
 }
 
 mod integration {

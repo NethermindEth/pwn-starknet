@@ -8,7 +8,8 @@ pub trait IMultitokenCategoryRegistry<TState> {
 }
 
 #[starknet::contract]
-mod MultiTokenCategoryRegistry {
+pub mod MultitokenCategoryRegistry {
+    use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use starknet::{ContractAddress, get_caller_address};
@@ -31,7 +32,7 @@ mod MultiTokenCategoryRegistry {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         CategoryRegistered: CategoryRegistered,
         CategoryUnregistered: CategoryUnregistered,
         #[flat]
@@ -41,17 +42,17 @@ mod MultiTokenCategoryRegistry {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct CategoryRegistered {
+    pub struct CategoryRegistered {
         #[key]
-        asset_address: ContractAddress,
+        pub asset_address: ContractAddress,
         #[key]
-        category: u8,
+        pub category: u8,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct CategoryUnregistered {
+   pub struct CategoryUnregistered {
         #[key]
-        asset_address: ContractAddress,
+        pub asset_address: ContractAddress,
     }
 
     pub mod Err {
@@ -68,7 +69,7 @@ mod MultiTokenCategoryRegistry {
     pub const CATEGORY_NOT_REGISTERED: u8 = 255;
 
     #[abi(embed_v0)]
-    impl IMultitokenCategoryRegistry of super::IMultitokenCategoryRegistry<ContractState> {
+    impl IMultitokenCategoryRegistryImpl of super::IMultitokenCategoryRegistry<ContractState> {
         fn register_category_value(
             ref self: ContractState, asset_address: ContractAddress, category: u8
         ) {
@@ -84,6 +85,8 @@ mod MultiTokenCategoryRegistry {
         }
 
         fn unregister_category_value(ref self: ContractState, asset_address: ContractAddress) {
+            self.ownable.assert_only_owner();
+            
             self.registered_category.write(asset_address, 0);
 
             self.emit(CategoryUnregistered { asset_address, });

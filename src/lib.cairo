@@ -50,7 +50,7 @@ mod loan {
     }
 }
 
-mod multitoken {
+pub mod multitoken {
     pub mod category_registry;
     pub mod library;
 }
