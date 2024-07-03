@@ -27,8 +27,6 @@ use snforge_std::{
     spy_events, SpyOn, EventSpy, EventAssertions, cheat_block_timestamp_global
 };
 use starknet::secp256k1::{Secp256k1Point};
-
-use starknet::secp256r1::{Secp256r1Point};
 use starknet::{ContractAddress, testing};
 
 #[starknet::interface]
