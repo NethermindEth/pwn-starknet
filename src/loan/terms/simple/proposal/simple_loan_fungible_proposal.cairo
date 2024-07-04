@@ -179,7 +179,7 @@ mod SimpleLoanFungibleProposal {
                 refinancing_loan_id: proposal.refinancing_loan_id,
                 nonce_space: proposal.nonce_space,
                 nonce: proposal.nonce,
-                loan_contract: proposal.loan_contract
+                loan_contract: proposal.loan_contract,
             };
 
             self

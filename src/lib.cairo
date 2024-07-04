@@ -1,19 +1,19 @@
-mod config {
+pub mod config {
     pub mod interface;
-    mod pwn_config;
+    pub mod pwn_config;
 }
 
-mod hub {
+pub mod hub {
     pub mod pwn_hub;
     pub mod pwn_hub_tags;
 }
 
-mod interfaces {
+pub mod interfaces {
     pub mod fingerprint_computer;
     pub mod pool_adapter;
 }
 
-mod loan {
+pub mod loan {
     pub mod lib {
         pub mod fee_calculator;
         pub mod math;
@@ -34,9 +34,10 @@ mod loan {
             pub mod proposal {
                 pub mod simple_loan_dutch_auction_proposal;
                 mod simple_loan_fungible_proposal;
-                mod simple_loan_list_proposal;
+                pub mod simple_loan_list_proposal;
                 pub mod simple_loan_proposal;
                 pub mod simple_loan_simple_proposal;
+
             }
         }
     }
@@ -51,12 +52,12 @@ mod loan {
     }
 }
 
-mod multitoken {
+pub mod multitoken {
     pub mod category_registry;
     pub mod library;
 }
 
-mod nonce {
+pub mod nonce {
     pub mod revoked_nonce;
 }
 

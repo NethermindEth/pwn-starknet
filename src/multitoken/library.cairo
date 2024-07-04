@@ -23,7 +23,7 @@ pub mod MultiToken {
 
     const CATEGORY_NOT_REGISTERED: u8 = 255;
 
-    #[derive(Copy, Default, Drop, Serde, starknet::Store)]
+    #[derive(Copy, Debug, Default, Drop, Serde, starknet::Store)]
     pub enum Category {
         #[default]
         ERC20,
