@@ -221,7 +221,7 @@ mod PwnSimpleLoan {
                     )
                 );
 
-            // @note: abi.decode needs to implemented here.
+            // @dev: abi.decode needs to implemented here for permit data
             // if (caller_spec.permit_data.len() > 0) {// some abi decode happening here
             // }
 
@@ -247,7 +247,7 @@ mod PwnSimpleLoan {
 
             self._update_repaid_loan(loan_id);
 
-            // @note: abi.decode needs to be handled
+            // @dev: abi.decode needs to be handled for permit data
 
             let repayment_amount = self.get_loan_repayment_amount(loan_id);
             self.vault._pull(ERC20(loan.credit_address, repayment_amount), caller);
