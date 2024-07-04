@@ -52,30 +52,30 @@ pub struct Loan {
     pub collateral: Asset,
 }
 
-#[derive(Drop, Serde)]
+#[derive(Clone, Default, Drop, Serde)]
 pub struct ExtensionProposal {
-    pub loanId: felt252,
-    pub compensationAddress: ContractAddress,
-    pub compensationAmount: u256,
+    pub loan_id: felt252,
+    pub compensation_address: ContractAddress,
+    pub compensation_amount: u256,
     pub duration: u64,
     pub expiration: u64,
     pub proposer: ContractAddress,
-    pub nonceSpace: u256,
+    pub nonce_space: felt252,
     pub nonce: felt252,
 }
 
 #[derive(Default, Drop, Serde)]
 pub struct GetLoanReturnValue {
-    status: u8,
-    start_timestamp: u64,
-    default_timestamp: u64,
-    borrower: ContractAddress,
-    original_lender: ContractAddress,
-    loan_owner: ContractAddress,
-    accruing_interest_APR: u32,
-    fixed_interest_amount: u256,
-    credit: Asset,
-    collateral: Asset,
-    original_source_of_funds: ContractAddress,
-    repayment_amount: u256,
+    pub status: u8,
+    pub start_timestamp: u64,
+    pub default_timestamp: u64,
+    pub borrower: ContractAddress,
+    pub original_lender: ContractAddress,
+    pub loan_owner: ContractAddress,
+    pub accruing_interest_APR: u32,
+    pub fixed_interest_amount: u256,
+    pub credit: Asset,
+    pub collateral: Asset,
+    pub original_source_of_funds: ContractAddress,
+    pub repayment_amount: u256,
 }

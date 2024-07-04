@@ -1,4 +1,6 @@
+use pwn::loan::lib::{fee_calculator, math, signature_checker};
 use pwn::loan::terms::simple::loan::types;
+use pwn::loan::vault::permit::{Permit};
 use pwn::multitoken::library::MultiToken::Asset;
 use starknet::ContractAddress;
 
@@ -20,8 +22,8 @@ pub trait IPwnSimpleLoan<TState> {
     fn extend_loan(
         ref self: TState,
         extension: types::ExtensionProposal,
-        signature: felt252,
-        permit_data: felt252
+        signature: signature_checker::Signature,
+        permit_data: Permit
     );
     fn get_lender_spec_hash(self: @TState, calladata: types::LenderSpec) -> felt252;
     fn get_loan_repayment_amount(self: @TState, loan_id: felt252) -> u256;

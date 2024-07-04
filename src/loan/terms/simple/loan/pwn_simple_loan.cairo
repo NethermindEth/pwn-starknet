@@ -5,7 +5,7 @@ mod PwnSimpleLoan {
     use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
     use pwn::hub::pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait};
     use pwn::hub::pwn_hub_tags;
-    use pwn::loan::lib::{fee_calculator, math};
+    use pwn::loan::lib::{fee_calculator, math, signature_checker};
     use pwn::loan::terms::simple::loan::error;
     use pwn::loan::terms::simple::loan::{
         types::{
@@ -25,7 +25,9 @@ mod PwnSimpleLoan {
         IMultitokenCategoryRegistryDispatcher, IMultitokenCategoryRegistryDispatcherTrait
     };
     use pwn::multitoken::library::MultiToken::Asset;
+    use pwn::multitoken::library::MultiToken::AssetTrait;
     use pwn::multitoken::library::MultiToken::ERC20;
+    use pwn::nonce::revoked_nonce::RevokedNonce;
     use pwn::nonce::revoked_nonce::{IRevokedNonceDispatcher, IRevokedNonceDispatcherTrait};
     use starknet::ContractAddress;
 
@@ -34,6 +36,13 @@ mod PwnSimpleLoan {
     const ACCRUING_INTEREST_APR_DECIMALS: u256 = 100;
     const MIN_LOAN_DURATION: u64 = 600;
     const MAX_ACCRUING_INTEREST_APR: u32 = 160000;
+
+    // @note: duration in seconds
+
+    // @note: 1 day
+    const MIN_EXTENSION_DURATION: u64 = 86400;
+    // @note: 90 days 
+    const MAX_EXTENSION_DURATION: u64 = 86400 * 90;
 
     #[storage]
     struct Storage {
@@ -286,8 +295,9 @@ mod PwnSimpleLoan {
             credit_amount: u256,
             loan_owner: ContractAddress
         ) {
-            let caller = starknet::get_caller_address();
-            // let curernt_vault_owner = 
+            if (starknet::get_caller_address() != starknet::get_contract_address()) {
+                error::Err::CALLER_NOT_VAULT();
+            }
 
             let loan = self.loans.read(loan_id);
 
@@ -343,11 +353,123 @@ mod PwnSimpleLoan {
         fn extend_loan(
             ref self: ContractState,
             extension: ExtensionProposal,
-            signature: felt252,
-            permit_data: felt252
-        ) {}
+            signature: signature_checker::Signature,
+            permit_data: Permit
+        ) {
+            let mut loan = self.loans.read(extension.loan_id);
+            let caller = starknet::get_caller_address();
+
+            if (loan.status == 0) {
+                error::Err::NON_EXISTING_LOAN();
+            }
+
+            if (loan.status == 3) {
+                error::Err::LOAN_REPAID();
+            }
+
+            let extension_hash = self.get_extension_hash(extension.clone());
+
+            if (!self.extension_proposal_made.read(extension_hash)) {
+                if (!signature_checker::is_valid_signature_now(
+                    extension.proposer, extension_hash, signature
+                )) {
+                    signature_checker::Err::INVALID_SIGNATURE(
+                        signer: extension.proposer, digest: extension_hash
+                    );
+                }
+            }
+
+            let current_block_timestamp = starknet::get_block_timestamp();
+
+            if (current_block_timestamp >= extension.expiration) { // revert expired
+            }
+
+            if (!self
+                .revoked_nonce
+                .read()
+                .is_nonce_usable(extension.proposer, extension.nonce_space, extension.nonce)) {
+                RevokedNonce::Err::NONCE_NOT_USABLE(
+                    addr: extension.proposer,
+                    nonce_space: extension.nonce_space,
+                    nonce: extension.nonce
+                );
+            }
+            let loan_owner = ERC721ABIDispatcher {
+                contract_address: self.loan_token.read().contract_address
+            }
+                .owner_of(extension.loan_id.try_into().unwrap());
+
+            if (caller == loan_owner) {
+                if (extension.proposer != loan.borrower) {
+                    error::Err::INVALID_EXTENSION_SINGNER(
+                        allowed: loan.borrower, current: extension.proposer
+                    );
+                }
+            } else if (caller == loan.borrower) {
+                if (extension.proposer != loan_owner) {
+                    error::Err::INVALID_EXTENSION_SINGNER(
+                        allowed: loan_owner, current: extension.proposer
+                    );
+                }
+            } else {
+                error::Err::INVALID_EXTENSION_CALLER();
+            }
+
+            if (extension.duration < MIN_EXTENSION_DURATION) {
+                error::Err::INVALID_EXTENSION_DURATION(
+                    duration: extension.duration, limit: MIN_EXTENSION_DURATION
+                );
+            }
+
+            if (extension.duration > MAX_EXTENSION_DURATION) {
+                error::Err::INVALID_EXTENSION_DURATION(
+                    duration: extension.duration, limit: MAX_EXTENSION_DURATION
+                );
+            }
+
+            self
+                .revoked_nonce
+                .read()
+                .revoke_nonce(
+                    nonce_space: Option::Some(extension.nonce_space),
+                    owner: Option::Some(extension.proposer),
+                    nonce: extension.nonce
+                );
+
+            let original_default_timestamp = loan.default_timestamp;
+            loan.default_timestamp = original_default_timestamp + extension.duration;
+
+            self
+                .emit(
+                    Event::LoanExtended(
+                        LoanExtended {
+                            loan_id: extension.loan_id,
+                            original_default_timestamp: original_default_timestamp,
+                            extended_default_timestamp: loan.default_timestamp
+                        }
+                    )
+                );
+
+            if (extension.compensation_address != Default::default()
+                && extension.compensation_amount > 0) {
+                let compensation = ERC20(
+                    extension.compensation_address, extension.compensation_amount
+                );
+
+                self._check_valid_asset(compensation);
+
+                self._check_permit(extension.compensation_address, permit_data);
+
+                // @dev add _try_permit here.
+                // self._try_p
+
+                self.vault._push_from(compensation, loan.borrower, loan_owner);
+            }
+            self.loans.write(extension.loan_id, loan);
+        }
 
         fn get_lender_spec_hash(self: @ContractState, calladata: LenderSpec) -> felt252 {
+            // posedian hash?
             0
         }
 
@@ -362,19 +484,42 @@ mod PwnSimpleLoan {
         }
 
         fn get_extension_hash(self: @ContractState, extension: ExtensionProposal) -> felt252 {
+            // hash again?
             0
         }
 
         fn get_loan(self: @ContractState, loan_id: felt252) -> GetLoanReturnValue {
-            Default::default()
+            let loan = self.loans.read(loan_id);
+            let loan_owner: ContractAddress = if (loan.status != 0) {
+                ERC721ABIDispatcher { contract_address: self.loan_token.read().contract_address }
+                    .owner_of(loan_id.try_into().unwrap())
+            } else {
+                Default::default()
+            };
+            let loan_return_value = GetLoanReturnValue {
+                status: self._get_loan_status(loan_id),
+                start_timestamp: loan.start_timestamp,
+                default_timestamp: loan.default_timestamp,
+                borrower: loan.borrower,
+                original_lender: loan.original_lender,
+                loan_owner: loan_owner,
+                accruing_interest_APR: loan.accruing_interest_APR,
+                fixed_interest_amount: loan.fixed_interest_amount,
+                credit: ERC20(loan.credit_address, loan.principal_amount),
+                collateral: loan.collateral,
+                original_source_of_funds: loan.original_source_of_funds,
+                repayment_amount: self.get_loan_repayment_amount(loan_id)
+            };
+            loan_return_value
         }
 
         fn get_is_valid_asset(self: @ContractState, asset: Asset) -> bool {
-            true
+            asset.is_valid(Option::Some(self.category_registry.read().contract_address))
         }
 
         fn get_loan_metadata_uri(self: @ContractState) -> ByteArray {
-            Default::default()
+            let this_contract = starknet::get_contract_address();
+            self.config.read().loan_metadata_uri(this_contract)
         }
 
         fn get_state_fingerprint(self: @ContractState) -> felt252 {
@@ -645,7 +790,7 @@ mod PwnSimpleLoan {
             self.loans.write(loan_id, loan);
         }
 
-        fn _get_loan_status(ref self: ContractState, loan_id: felt252) -> u8 {
+        fn _get_loan_status(self: @ContractState, loan_id: felt252) -> u8 {
             let loan = self.loans.read(loan_id);
             let current_timestamp = starknet::get_block_timestamp();
             if (loan.status == 2 && loan.default_timestamp <= current_timestamp) {

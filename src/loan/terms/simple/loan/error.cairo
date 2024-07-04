@@ -3,10 +3,13 @@ pub mod Err {
     pub fn LOAN_NOT_RUNNING() {
         panic!("Loan is not running");
     }
+    pub fn CALLER_NOT_VAULT() {
+        panic!("Caller is not vault");
+    }
     pub fn LOAN_RUNNING() {
         panic!("Loan is running");
     }
-    fn LOAN_REPAID() {
+    pub fn LOAN_REPAID() {
         panic!("Loan is repaid");
     }
     pub fn LOAN_DEFAULTED(default_timestamp: u64) {
@@ -43,13 +46,13 @@ pub mod Err {
     pub fn INVALID_SOURCE_OF_FUNDS(source_of_funds: ContractAddress) {
         panic!("Invalid source of funds. Source of fungs: {:?}", source_of_funds);
     }
-    fn INVALID_EXTENSION_CALLER() {
+    pub fn INVALID_EXTENSION_CALLER() {
         panic!("Invalid extension caller");
     }
     pub fn INVALID_EXTENSION_SINGNER(allowed: ContractAddress, current: ContractAddress) {
         panic!("Invalid extension signer. Allowed: {:?}, Current: {:?}", allowed, current);
     }
-    fn INVALID_EXTENSION_DURATION(duration: u64, limit: u64) {
+    pub fn INVALID_EXTENSION_DURATION(duration: u64, limit: u64) {
         panic!("Invalid extension duration. Current: {}, Limit: {}", duration, limit);
     }
     pub fn INVALID_MULTITOKEN_ASSET(
