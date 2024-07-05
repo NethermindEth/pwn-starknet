@@ -1,12 +1,26 @@
+use pwn::loan::lib::signature_checker::Signature;
 use pwn::loan::terms::simple::loan::types::Terms;
 use starknet::{ContractAddress, ClassHash};
 
 
 #[starknet::interface]
 trait ISimpleLoanProposal<TState> {
-    fn revoked_nonce(ref self: TState, nonce_space: felt252, nonce: felt252);
-    // fn accept_proposal(ref self: TState, acceptor: ContractAddress, refinancing_loan_id: felt252, proposal_data: felt252, proposal_inclusion_proof: Array<u8>, signature: felt256) -> (felt252, PwnSimpleLoan);
-    fn get_multiproposal_hash(self: @TState, multiproposal: ClassHash) -> felt252;
+    fn revoke_nonce(ref self: TState, nonce_space: felt252, nonce: felt252);
+    fn get_multiproposal_hash(
+        self: @TState, multiproposal: SimpleLoanProposalComponent::Multiproposal
+    ) -> felt252;
+}
+
+#[starknet::interface]
+pub trait ISimpleLoanAcceptProposal<TState> {
+    fn accept_proposal(
+        ref self: TState,
+        acceptor: starknet::ContractAddress,
+        refinancing_loan_id: felt252,
+        proposal_data: Array<felt252>,
+        proposal_inclusion_proof: Array<felt252>,
+        signature: Signature
+    ) -> (felt252, Terms);
 }
 
 #[starknet::interface]
@@ -37,14 +51,14 @@ pub mod SimpleLoanProposalComponent {
 
     const MULTIPROPOSAL_TYPEHASH: felt252 =
         0x03af92d8ed4d3261ba61cd686d2f8a9cceb2563cc7c4c5355eb121316fc5358d;
-    const BASE_DOMAIN_SEPARATOR: felt252 =
+    pub const BASE_DOMAIN_SEPARATOR: felt252 =
         0x0373c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
     const MULTIPROPOSAL_DOMAIN_SEPARATOR: felt252 =
         0x0341fc24aa498aaa42e724a6afc72d16d7b6c7a324a7efbcac56e17d75e6e678;
 
-    #[derive(Drop)]
-    struct Multiproposal {
-        multiproposal_root_hash: felt252
+    #[derive(Drop, Serde)]
+    pub struct Multiproposal {
+        merkle_root: u256
     }
 
     #[derive(Drop)]
@@ -120,22 +134,26 @@ pub mod SimpleLoanProposalComponent {
     impl SimpleLoanProposal<
         TContractState, +HasComponent<TContractState>,
     > of super::ISimpleLoanProposal<ComponentState<TContractState>> {
-        fn revoked_nonce(
+        fn revoke_nonce(
             ref self: ComponentState<TContractState>, nonce_space: felt252, nonce: felt252
         ) {
             self
                 .revoked_nonce
                 .read()
                 .revoke_nonce(
-                    Option::Some(nonce_space), Option::Some(starknet::get_caller_address()), nonce
+                    Option::Some(starknet::get_caller_address()), Option::Some(nonce_space), nonce
                 );
         }
 
         fn get_multiproposal_hash(
-            self: @ComponentState<TContractState>, multiproposal: ClassHash
+            self: @ComponentState<TContractState>, multiproposal: Multiproposal
         ) -> felt252 {
             let hash_elements: Array<felt252> = array![
-                1901, MULTIPROPOSAL_DOMAIN_SEPARATOR, MULTIPROPOSAL_TYPEHASH, multiproposal.into()
+                1901,
+                MULTIPROPOSAL_DOMAIN_SEPARATOR,
+                MULTIPROPOSAL_TYPEHASH,
+                multiproposal.merkle_root.low.into(),
+                multiproposal.merkle_root.high.into()
             ];
 
             poseidon_hash_span(hash_elements.span())
@@ -159,8 +177,10 @@ pub mod SimpleLoanProposalComponent {
             self.revoked_nonce.write(IRevokedNonceDispatcher { contract_address: revoked_nonce });
             self.config.write(IPwnConfigDispatcher { contract_address: config });
 
-            let hash_eleements = array![BASE_DOMAIN_SEPARATOR, name, version];
-            let domain_separator = poseidon_hash_span(hash_eleements.span());
+            let hash_elements = array![
+                BASE_DOMAIN_SEPARATOR, name, version, starknet::get_contract_address().into()
+            ];
+            let domain_separator = poseidon_hash_span(hash_elements.span());
 
             self.DOMAIN_SEPARATOR.write(domain_separator);
         }
@@ -216,18 +236,14 @@ pub mod SimpleLoanProposalComponent {
 
             if proposal_inclusion_proof.len() == 0 {
                 if !self.proposal_made.read(proposal_hash) {
-                    if !signature_checker::is_valid_signature_now(
-                        proposal.proposer, proposal_hash, signature
-                    ) {
+                    if !signature_checker::is_valid_signature_now(proposal_hash, signature) {
                         signature_checker::Err::INVALID_SIGNATURE(proposal.proposer, proposal_hash);
                     }
                 }
             } else {
                 // TODO: verify inclusion proof type with the pwn team
                 let multiproposal_hash = 0x0;
-                if !signature_checker::is_valid_signature_now(
-                    proposal.proposer, multiproposal_hash, signature
-                ) {
+                if !signature_checker::is_valid_signature_now(multiproposal_hash, signature) {
                     signature_checker::Err::INVALID_SIGNATURE(
                         proposal.proposer, multiproposal_hash
                     );
@@ -273,8 +289,8 @@ pub mod SimpleLoanProposalComponent {
                     .revoked_nonce
                     .read()
                     .revoke_nonce(
-                        Option::Some(proposal.nonce_space),
                         Option::Some(proposal.proposer),
+                        Option::Some(proposal.nonce_space),
                         proposal.nonce
                     );
             } else if self.credit_used.read(proposal_hash)
