@@ -1,23 +1,13 @@
 name: Format and Build
-
 on:
   push:
-    branches:
-      - main
-      - pr-pre-merge-target
+  merge_group:
   pull_request:
-    branches:
-      - main
-      - pr-pre-merge-target
-  workflow_dispatch:
-
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v3
       - uses: software-mansion/setup-scarb@v1
         with:
           scarb-version: '2.6.5'

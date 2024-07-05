@@ -1,21 +1,12 @@
 name: Test
-
 on:
   push:
-    branches:
-      - main
-      - pr-pre-merge-target
   pull_request:
-    branches:
-      - main
-      - pr-pre-merge-target
-  workflow_dispatch:
-
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
       - uses: foundry-rs/setup-snfoundry@v3
       - uses: software-mansion/setup-scarb@v1
         with:
