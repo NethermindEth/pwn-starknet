@@ -3,7 +3,7 @@ use pwn::loan::lib::signature_checker::Signature;
 use pwn::loan::terms::simple::loan::types::Terms;
 
 #[starknet::interface]
-trait ISimpleLoanFungibleProposal<TState> {
+pub trait ISimpleLoanFungibleProposal<TState> {
     fn make_proposal(ref self: TState, proposal: Proposal);
     fn accept_proposal(
         ref self: TState,
@@ -26,7 +26,7 @@ trait ISimpleLoanFungibleProposal<TState> {
 }
 
 #[starknet::contract]
-mod SimpleLoanFungibleProposal {
+pub mod SimpleLoanFungibleProposal {
     use pwn::ContractAddressDefault;
     use pwn::loan::lib::{math, serialization};
     use pwn::loan::terms::simple::proposal::simple_loan_proposal::{
@@ -46,40 +46,40 @@ mod SimpleLoanFungibleProposal {
     impl SimpleLoanProposalInternal = SimpleLoanProposalComponent::InternalImpl<ContractState>;
     // NOTE: we can hard code this by calculating the poseidon hash of the string 
     // in the Solidity contract offline.
-    const PROPOSAL_TYPEHASH: felt252 =
+    pub const PROPOSAL_TYPEHASH: felt252 =
         0x062dbce0eca7d4486c66e0d48cdd72744db07523b68e9e4dad30aa4bee1356;
-    const CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR: u256 =
+    pub const CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR: u256 =
         100_000_000_000_000_000_000_000_000_000_000_000_000;
 
     #[derive(Copy, Default, Drop, Serde)]
     pub struct Proposal {
-        collateral_category: MultiToken::Category,
-        collateral_address: ContractAddress,
-        collateral_id: felt252,
-        min_collateral_amount: u256,
-        check_collateral_state_fingerprint: bool,
-        collateral_state_fingerprint: felt252,
-        credit_address: ContractAddress,
-        credit_per_collateral_unit: u256,
-        available_credit_limit: u256,
-        fixed_interest_amount: u256,
-        accruing_interest_APR: u32,
-        duration: u64,
-        expiration: u64,
-        allowed_acceptor: ContractAddress,
-        proposer: ContractAddress,
-        proposer_spec_hash: felt252,
-        is_offer: bool,
-        refinancing_loan_id: felt252,
-        nonce_space: felt252,
-        nonce: felt252,
-        loan_contract: ContractAddress,
+        pub collateral_category: MultiToken::Category,
+        pub collateral_address: ContractAddress,
+        pub collateral_id: felt252,
+        pub min_collateral_amount: u256,
+        pub check_collateral_state_fingerprint: bool,
+        pub collateral_state_fingerprint: felt252,
+        pub credit_address: ContractAddress,
+        pub credit_per_collateral_unit: u256,
+        pub available_credit_limit: u256,
+        pub fixed_interest_amount: u256,
+        pub accruing_interest_APR: u32,
+        pub duration: u64,
+        pub expiration: u64,
+        pub allowed_acceptor: ContractAddress,
+        pub proposer: ContractAddress,
+        pub proposer_spec_hash: felt252,
+        pub is_offer: bool,
+        pub refinancing_loan_id: felt252,
+        pub nonce_space: felt252,
+        pub nonce: felt252,
+        pub loan_contract: ContractAddress,
     }
 
 
-    #[derive(Default, Drop, Serde)]
+    #[derive(Copy, Default, Drop, Serde)]
     pub struct ProposalValues {
-        collateral_amount: u256,
+        pub collateral_amount: u256,
     }
 
     #[storage]

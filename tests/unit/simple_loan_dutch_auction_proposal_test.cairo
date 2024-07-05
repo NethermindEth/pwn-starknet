@@ -28,6 +28,7 @@ use snforge_std::{
 };
 use starknet::secp256k1::{Secp256k1Point};
 use starknet::{ContractAddress, testing};
+use super::simple_loan_proposal_test::{TOKEN, PROPOSER, ACTIVATE_LOAN_CONTRACT, ACCEPTOR};
 
 #[starknet::interface]
 pub trait ISimpleLoanDutchAuctionProposal<TState> {
@@ -89,22 +90,6 @@ fn deploy() -> (
         IPwnHubDispatcher { contract_address: hub_address },
         IRevokedNonceDispatcher { contract_address: nonce_address },
     )
-}
-
-fn TOKEN() -> ContractAddress {
-    starknet::contract_address_const::<'token'>()
-}
-
-fn PROPOSER() -> ContractAddress {
-    starknet::contract_address_const::<73661723>()
-}
-
-fn ACCEPTOR() -> ContractAddress {
-    starknet::contract_address_const::<32716637>()
-}
-
-fn ACTIVATE_LOAN_CONTRACT() -> ContractAddress {
-    starknet::contract_address_const::<'activeLoanContract'>()
 }
 
 fn proposal() -> Proposal {
