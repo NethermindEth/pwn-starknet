@@ -24,7 +24,7 @@ use snforge_std::signature::stark_curve::{
 };
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
-    spy_events, SpyOn, EventSpy, EventAssertions, cheat_block_timestamp_global
+    spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait, cheat_block_timestamp_global
 };
 use starknet::secp256k1::{Secp256k1Point};
 use starknet::{ContractAddress, testing};
@@ -189,7 +189,7 @@ fn test_fuzz_should_fail_when_caller_is_not_proposer(caller: u128) {
 fn test_should_emit_proposal_made() {
     let (proposal, _, _) = deploy();
 
-    let mut spy = spy_events(SpyOn::One(proposal.contract_address));
+    let mut spy = spy_events();
 
     start_cheat_caller_address(proposal.contract_address, proposal().proposer);
     proposal.make_proposal(proposal());

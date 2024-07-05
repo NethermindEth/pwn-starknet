@@ -4,7 +4,7 @@ use pwn::nonce::revoked_nonce::{
 };
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
-    spy_events, SpyOn, EventSpy, EventAssertions
+    spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait
 };
 use starknet::ContractAddress;
 
@@ -30,8 +30,8 @@ fn deploy() -> (IRevokedNonceDispatcher, IPwnHubDispatcher) {
 
 mod revoke_nonce {
     use super::{
-        deploy, ALICE, IRevokedNonceDispatcherTrait, map_entry_address, spy_events, SpyOn, EventSpy,
-        EventAssertions, RevokedNonce
+        deploy, ALICE, IRevokedNonceDispatcherTrait, map_entry_address, spy_events, EventSpy,
+        RevokedNonce, EventSpyTrait, EventSpyAssertionsTrait
     };
 
     #[test]
@@ -85,7 +85,7 @@ mod revoke_nonce {
             array![nonce_space].span()
         );
 
-        let mut spy = spy_events(super::SpyOn::One(nonce.contract_address));
+        let mut spy = spy_events();
 
         super::start_cheat_caller_address(nonce.contract_address, ALICE());
         nonce.revoke_nonce(Option::None, Option::None, _nonce);
@@ -108,8 +108,8 @@ mod revoke_nonce {
 
 mod revoke_nonces {
     use super::{
-        deploy, ALICE, IRevokedNonceDispatcherTrait, map_entry_address, spy_events, SpyOn, EventSpy,
-        EventAssertions, RevokedNonce
+        deploy, ALICE, IRevokedNonceDispatcherTrait, map_entry_address, spy_events, EventSpy,
+        RevokedNonce, EventSpyTrait, EventSpyAssertionsTrait
     };
 
     #[test]
@@ -173,7 +173,7 @@ mod revoke_nonces {
 
         let nonces = array![nonce1, nonce2, nonce3];
 
-        let mut spy = spy_events(super::SpyOn::One(nonce.contract_address));
+        let mut spy = spy_events();
 
         super::start_cheat_caller_address(nonce.contract_address, ALICE());
         nonce.revoke_nonces(nonces.clone());
@@ -202,8 +202,8 @@ mod revoke_nonces {
 
 mod revoke_nonce_with_nonce_space {
     use super::{
-        deploy, ALICE, IRevokedNonceDispatcherTrait, map_entry_address, spy_events, SpyOn, EventSpy,
-        EventAssertions, RevokedNonce
+        deploy, ALICE, IRevokedNonceDispatcherTrait, map_entry_address, spy_events, EventSpy,
+        RevokedNonce, EventSpyTrait, EventSpyAssertionsTrait
     };
 
     #[test]
@@ -237,7 +237,7 @@ mod revoke_nonce_with_nonce_space {
     fn test_fuzz_should_emit_nonce_revoked(nonce_space: felt252, _nonce: felt252) {
         let (nonce, _) = deploy();
 
-        let mut spy = spy_events(super::SpyOn::One(nonce.contract_address));
+        let mut spy = spy_events();
 
         super::start_cheat_caller_address(nonce.contract_address, ALICE());
         nonce.revoke_nonce(Option::None, Option::Some(nonce_space), _nonce);
@@ -261,7 +261,7 @@ mod revoke_nonce_with_nonce_space {
 mod revoke_nonce_with_owner {
     use super::{
         ACCESS_TAG, ALICE, IRevokedNonceDispatcherTrait, IPwnHubDispatcherTrait, map_entry_address,
-        spy_events, SpyOn, EventSpy, EventAssertions, RevokedNonce
+        spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait, RevokedNonce
     };
 
     fn ACCESS_ENABLED_ADDRESS() -> starknet::ContractAddress {
@@ -340,7 +340,7 @@ mod revoke_nonce_with_owner {
             array![nonce_space].span()
         );
 
-        let mut spy = spy_events(super::SpyOn::One(nonce.contract_address));
+        let mut spy = spy_events();
 
         let owner: felt252 = owner.try_into().unwrap();
         super::start_cheat_caller_address(nonce.contract_address, ACCESS_ENABLED_ADDRESS());
@@ -365,7 +365,7 @@ mod revoke_nonce_with_owner {
 mod revoke_nonce_with_nonce_space_and_owner {
     use super::{
         ACCESS_TAG, ALICE, IRevokedNonceDispatcherTrait, IPwnHubDispatcherTrait, map_entry_address,
-        spy_events, SpyOn, EventSpy, EventAssertions, RevokedNonce
+        spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait, RevokedNonce
     };
 
     fn ACCESS_ENABLED_ADDRESS() -> starknet::ContractAddress {
@@ -432,7 +432,7 @@ mod revoke_nonce_with_nonce_space_and_owner {
     fn test_fuzz_should_emit_nonce_revoked(owner: u128, nonce_space: felt252, _nonce: felt252) {
         let nonce = deploy();
 
-        let mut spy = spy_events(super::SpyOn::One(nonce.contract_address));
+        let mut spy = spy_events();
 
         let owner: felt252 = owner.try_into().unwrap();
         super::start_cheat_caller_address(nonce.contract_address, ACCESS_ENABLED_ADDRESS());
@@ -531,8 +531,8 @@ mod is_nonce_usable {
 
 mod revoke_nonce_space {
     use super::{
-        ALICE, IRevokedNonceDispatcherTrait, map_entry_address, spy_events, SpyOn, EventSpy,
-        EventAssertions, RevokedNonce
+        ALICE, IRevokedNonceDispatcherTrait, map_entry_address, spy_events, EventSpy, RevokedNonce,
+        EventSpyTrait, EventSpyAssertionsTrait
     };
 
     #[test]
@@ -561,7 +561,7 @@ mod revoke_nonce_space {
             array![nonce_space].span()
         );
 
-        let mut spy = spy_events(super::SpyOn::One(nonce.contract_address));
+        let mut spy = spy_events();
 
         super::start_cheat_caller_address(nonce.contract_address, ALICE());
         nonce.revoke_nonce_space();
