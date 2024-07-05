@@ -4,7 +4,7 @@ use pwn::loan::terms::simple::loan::types::Terms;
 
 #[starknet::interface]
 pub trait ISimpleLoanFungibleProposal<TState> {
-    fn make_proposal(ref self: TState, proposal: Proposal);
+    fn make_proposal(ref self: TState, proposal: Proposal) -> felt252;
     fn accept_proposal(
         ref self: TState,
         acceptor: starknet::ContractAddress,
@@ -50,6 +50,7 @@ pub mod SimpleLoanFungibleProposal {
         0x062dbce0eca7d4486c66e0d48cdd72744db07523b68e9e4dad30aa4bee1356;
     pub const CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR: u256 =
         100_000_000_000_000_000_000_000_000_000_000_000_000;
+    pub const FUNGIBLE_PROPOSAL_DATA_LEN: usize = 29;
 
     #[derive(Copy, Default, Drop, Serde)]
     pub struct Proposal {
@@ -90,17 +91,17 @@ pub mod SimpleLoanFungibleProposal {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         ProposalMade: ProposalMade,
         #[flat]
         SimpleLoanProposalEvent: SimpleLoanProposalComponent::Event,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct ProposalMade {
-        proposal_hash: felt252,
-        proposer: ContractAddress,
-        proposal: Proposal,
+    pub struct ProposalMade {
+        pub proposal_hash: felt252,
+        pub proposer: ContractAddress,
+        pub proposal: Proposal,
     }
 
     mod Err {
@@ -109,6 +110,13 @@ pub mod SimpleLoanFungibleProposal {
         }
         pub fn INSUFFICIENT_COLLATERAL_AMOUNT(current: u256, limit: u256) {
             panic!("Insufficient collateral amount. Current: {}, Limit: {}", current, limit);
+        }
+        pub fn INVALID_PROPOSAL_DATA(len: usize) {
+            panic!(
+                "Invalid proposal data length: {}, expected: {}",
+                len,
+                super::FUNGIBLE_PROPOSAL_DATA_LEN
+            );
         }
     }
 
@@ -127,11 +135,13 @@ pub mod SimpleLoanFungibleProposal {
 
     #[abi(embed_v0)]
     impl SimpleLoanDutchAuctionProposalImpl of super::ISimpleLoanFungibleProposal<ContractState> {
-        fn make_proposal(ref self: ContractState, proposal: Proposal) {
+        fn make_proposal(ref self: ContractState, proposal: Proposal) -> felt252 {
             let proposal_hash = self.get_proposal_hash(proposal);
             self.simple_loan._make_proposal(proposal_hash, proposal.proposer);
 
             self.emit(ProposalMade { proposal_hash, proposer: proposal.proposer, proposal, });
+
+            proposal_hash
         }
 
         fn accept_proposal(
@@ -142,7 +152,12 @@ pub mod SimpleLoanFungibleProposal {
             proposal_inclusion_proof: Array<felt252>,
             signature: Signature
         ) -> (felt252, super::Terms) {
+            if proposal_data.len() != FUNGIBLE_PROPOSAL_DATA_LEN {
+                Err::INVALID_PROPOSAL_DATA(proposal_data.len());
+            }
+
             let (proposal, proposal_values) = self.decode_proposal_data(proposal_data);
+            // NOTE: add check for proposal data integrity to this and all other proposals
 
             let mut serialized_proposal = array![];
             proposal.serialize(ref serialized_proposal);
@@ -186,8 +201,8 @@ pub mod SimpleLoanFungibleProposal {
                 .simple_loan
                 ._accept_proposal(
                     acceptor,
-                    proposal_hash,
                     refinancing_loan_id,
+                    proposal_hash,
                     proposal_inclusion_proof,
                     signature,
                     proposal_base
@@ -252,6 +267,10 @@ pub mod SimpleLoanFungibleProposal {
         fn decode_proposal_data(
             self: @ContractState, encoded_data: Array<felt252>
         ) -> (Proposal, ProposalValues) {
+            if encoded_data.len() != FUNGIBLE_PROPOSAL_DATA_LEN {
+                Err::INVALID_PROPOSAL_DATA(encoded_data.len());
+            }
+
             let (proposal_data, proposal_values_data) = serialization::serde_decompose(
                 encoded_data.span()
             );

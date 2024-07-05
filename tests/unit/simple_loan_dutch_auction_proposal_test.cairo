@@ -28,7 +28,7 @@ use snforge_std::{
 };
 use starknet::secp256k1::{Secp256k1Point};
 use starknet::{ContractAddress, testing};
-use super::simple_loan_proposal_test::{TOKEN, PROPOSER, ACTIVATE_LOAN_CONTRACT, ACCEPTOR};
+use super::simple_loan_proposal_test::{TOKEN, PROPOSER, ACTIVATE_LOAN_CONTRACT, ACCEPTOR, E40};
 
 #[starknet::interface]
 pub trait ISimpleLoanDutchAuctionProposal<TState> {
@@ -52,8 +52,6 @@ pub trait ISimpleLoanDutchAuctionProposal<TState> {
     fn revoke_nonce(ref self: TState, nonce_space: felt252, nonce: felt252);
     fn get_multiproposal_hash(self: @TState, multiproposal: starknet::ClassHash) -> felt252;
 }
-
-const E40: u256 = 10_000_000_000_000_000_000_000_000_000_000_000_000;
 
 type ComponentState =
     SimpleLoanProposalComponent::ComponentState<SimpleLoanDutchAuctionProposal::ContractState>;

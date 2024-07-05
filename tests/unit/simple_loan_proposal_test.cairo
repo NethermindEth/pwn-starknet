@@ -2,6 +2,10 @@ use pwn::loan::lib::signature_checker::Signature;
 use pwn::loan::terms::simple::proposal::simple_loan_proposal::SimpleLoanProposalComponent;
 use starknet::ContractAddress;
 
+pub const E70: u256 =
+    10_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000;
+pub const E40: u256 = 10_000_000_000_000_000_000_000_000_000_000_000_000;
+
 pub struct Params {
     pub base: SimpleLoanProposalComponent::ProposalBase,
     pub acceptor: ContractAddress,
