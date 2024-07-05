@@ -59,6 +59,10 @@ pub mod nonce {
     pub mod revoked_nonce;
 }
 
+pub mod mocks {
+    pub mod erc20_mock;
+}
+
 impl ContractAddressDefault of Default<starknet::ContractAddress> {
     #[inline(always)]
     fn default() -> starknet::ContractAddress nopanic {

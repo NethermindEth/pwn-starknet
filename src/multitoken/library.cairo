@@ -23,7 +23,7 @@ pub mod MultiToken {
 
     const CATEGORY_NOT_REGISTERED: u8 = 255;
 
-    #[derive(Copy, Default, Drop, Serde, starknet::Store)]
+    #[derive(Copy, Default, Drop, Serde, starknet::Store, Debug)]
     pub enum Category {
         #[default]
         ERC20,
@@ -50,7 +50,7 @@ pub mod MultiToken {
     }
 
     pub fn ERC721(asset_address: ContractAddress, id: felt252) -> Asset {
-        Asset { category: Category::ERC721, asset_address, id, amount: 1.try_into().unwrap() }
+        Asset { category: Category::ERC721, asset_address, id, amount: 0.try_into().unwrap() }
     }
 
     pub fn ERC1155(asset_address: ContractAddress, id: felt252, amount: Option<u256>) -> Asset {

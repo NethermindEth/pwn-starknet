@@ -86,7 +86,7 @@ pub mod MultitokenCategoryRegistry {
 
         fn unregister_category_value(ref self: ContractState, asset_address: ContractAddress) {
             self.ownable.assert_only_owner();
-            
+
             self.registered_category.write(asset_address, 0);
 
             self.emit(CategoryUnregistered { asset_address, });
