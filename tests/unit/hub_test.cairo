@@ -41,7 +41,7 @@ mod constructor {
 }
 
 mod set_tag {
-    use snforge_std::{spy_events, SpyOn, EventSpy, EventAssertions};
+    use snforge_std::{spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait};
     use super::{deploy, ACCOUNT_1, OWNER, IPwnHubDispatcherTrait, PwnHub};
 
     #[test]
@@ -75,7 +75,7 @@ mod set_tag {
     #[test]
     fn test_should_emit_event_tag_set() {
         let hub = deploy();
-        let mut spy = spy_events(SpyOn::One(hub.contract_address));
+        let mut spy = spy_events();
 
         hub.set_tag(OWNER(), 'tag', true);
 
@@ -94,7 +94,7 @@ mod set_tag {
 }
 
 mod set_tags {
-    use snforge_std::{spy_events, SpyOn, EventSpy, EventAssertions};
+    use snforge_std::{spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait};
     use super::{deploy, ACCOUNT_1, OWNER, IPwnHubDispatcherTrait, PwnHub};
 
     #[test]
@@ -160,7 +160,7 @@ mod set_tags {
         let addresses = array![OWNER(), ACCOUNT_1()];
         let tags = array!['tag', 'tag'];
 
-        let mut spy = spy_events(SpyOn::One(hub.contract_address));
+        let mut spy = spy_events();
         hub.set_tags(addresses, tags, true);
 
         spy

@@ -4,9 +4,10 @@ use starknet::{ContractAddress, ClassHash};
 
 #[starknet::interface]
 trait ISimpleLoanProposal<TState> {
-    fn revoked_nonce(ref self: TState, nonce_space: felt252, nonce: felt252);
-    // fn accept_proposal(ref self: TState, acceptor: ContractAddress, refinancing_loan_id: felt252, proposal_data: felt252, proposal_inclusion_proof: Array<u8>, signature: felt256) -> (felt252, PwnSimpleLoan);
-    fn get_multiproposal_hash(self: @TState, multiproposal: ClassHash) -> felt252;
+    fn revoke_nonce(ref self: TState, nonce_space: felt252, nonce: felt252);
+    fn get_multiproposal_hash(
+        self: @TState, multiproposal: SimpleLoanProposalComponent::Multiproposal
+    ) -> felt252;
 }
 
 #[starknet::interface]
@@ -37,14 +38,14 @@ pub mod SimpleLoanProposalComponent {
 
     const MULTIPROPOSAL_TYPEHASH: felt252 =
         0x03af92d8ed4d3261ba61cd686d2f8a9cceb2563cc7c4c5355eb121316fc5358d;
-    const BASE_DOMAIN_SEPARATOR: felt252 =
+    pub const BASE_DOMAIN_SEPARATOR: felt252 =
         0x0373c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
     const MULTIPROPOSAL_DOMAIN_SEPARATOR: felt252 =
         0x0341fc24aa498aaa42e724a6afc72d16d7b6c7a324a7efbcac56e17d75e6e678;
 
-    #[derive(Drop)]
-    struct Multiproposal {
-        multiproposal_root_hash: felt252
+    #[derive(Drop, Serde)]
+    pub struct Multiproposal {
+        merkle_root: u256
     }
 
     #[derive(Drop)]
@@ -120,7 +121,7 @@ pub mod SimpleLoanProposalComponent {
     impl SimpleLoanProposal<
         TContractState, +HasComponent<TContractState>,
     > of super::ISimpleLoanProposal<ComponentState<TContractState>> {
-        fn revoked_nonce(
+        fn revoke_nonce(
             ref self: ComponentState<TContractState>, nonce_space: felt252, nonce: felt252
         ) {
             self
@@ -132,10 +133,14 @@ pub mod SimpleLoanProposalComponent {
         }
 
         fn get_multiproposal_hash(
-            self: @ComponentState<TContractState>, multiproposal: ClassHash
+            self: @ComponentState<TContractState>, multiproposal: Multiproposal
         ) -> felt252 {
             let hash_elements: Array<felt252> = array![
-                1901, MULTIPROPOSAL_DOMAIN_SEPARATOR, MULTIPROPOSAL_TYPEHASH, multiproposal.into()
+                1901,
+                MULTIPROPOSAL_DOMAIN_SEPARATOR,
+                MULTIPROPOSAL_TYPEHASH,
+                multiproposal.merkle_root.low.into(),
+                multiproposal.merkle_root.high.into()
             ];
 
             poseidon_hash_span(hash_elements.span())
@@ -159,8 +164,10 @@ pub mod SimpleLoanProposalComponent {
             self.revoked_nonce.write(IRevokedNonceDispatcher { contract_address: revoked_nonce });
             self.config.write(IPwnConfigDispatcher { contract_address: config });
 
-            let hash_eleements = array![BASE_DOMAIN_SEPARATOR, name, version];
-            let domain_separator = poseidon_hash_span(hash_eleements.span());
+            let hash_elements = array![
+                BASE_DOMAIN_SEPARATOR, name, version, starknet::get_contract_address().into()
+            ];
+            let domain_separator = poseidon_hash_span(hash_elements.span());
 
             self.DOMAIN_SEPARATOR.write(domain_separator);
         }

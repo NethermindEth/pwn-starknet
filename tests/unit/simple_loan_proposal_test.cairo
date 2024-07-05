@@ -1,3 +1,35 @@
+use pwn::loan::lib::signature_checker::Signature;
+use pwn::loan::terms::simple::proposal::simple_loan_proposal::SimpleLoanProposalComponent;
+use starknet::ContractAddress;
+
+pub const E70: u256 =
+    10_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000;
+pub const E40: u256 = 10_000_000_000_000_000_000_000_000_000_000_000_000;
+
+pub struct Params {
+    pub base: SimpleLoanProposalComponent::ProposalBase,
+    pub acceptor: ContractAddress,
+    pub refinancing_loan_id: u256,
+    pub proposal_inclusion_proof: Array<felt252>,
+    pub signature: Signature,
+}
+
+pub fn TOKEN() -> ContractAddress {
+    starknet::contract_address_const::<'token'>()
+}
+
+pub fn PROPOSER() -> ContractAddress {
+    starknet::contract_address_const::<73661723>()
+}
+
+pub fn ACCEPTOR() -> ContractAddress {
+    starknet::contract_address_const::<32716637>()
+}
+
+pub fn ACTIVATE_LOAN_CONTRACT() -> ContractAddress {
+    starknet::contract_address_const::<'activeLoanContract'>()
+}
+
 mod pwn_simple_loan_proposal_test {
     #[test]
     fn test_should_return_used_credit() {

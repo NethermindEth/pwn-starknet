@@ -108,7 +108,7 @@ mod initialize {
 }
 
 mod set_fee {
-    use snforge_std::{spy_events, SpyOn, EventSpy, EventAssertions};
+    use snforge_std::{spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait};
     use super::{OWNER, FEE_COLLECTOR, ACCOUNT_1, deploy, IPwnConfigDispatcherTrait, PwnConfig};
 
     #[test]
@@ -156,7 +156,7 @@ mod set_fee {
 
         config.initialize(OWNER(), fee, FEE_COLLECTOR());
 
-        let mut spy = spy_events(SpyOn::One(config.contract_address));
+        let mut spy = spy_events();
         super::start_cheat_caller_address(config.contract_address, OWNER());
 
         config.set_fee(super::MAX_FEE);
@@ -176,7 +176,7 @@ mod set_fee {
 }
 
 mod set_fee_collector {
-    use snforge_std::{spy_events, SpyOn, EventSpy, EventAssertions};
+    use snforge_std::{spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait};
     use super::{OWNER, FEE_COLLECTOR, ACCOUNT_1, deploy, IPwnConfigDispatcherTrait, PwnConfig};
 
     #[test]
@@ -224,7 +224,7 @@ mod set_fee_collector {
 
         config.initialize(OWNER(), fee, FEE_COLLECTOR());
 
-        let mut spy = spy_events(SpyOn::One(config.contract_address));
+        let mut spy = spy_events();
         super::start_cheat_caller_address(config.contract_address, OWNER());
 
         config.set_fee_collector(ACCOUNT_1());
@@ -246,7 +246,7 @@ mod set_fee_collector {
 }
 
 mod set_loan_metadata_uri {
-    use snforge_std::{spy_events, SpyOn, EventSpy, EventAssertions};
+    use snforge_std::{spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait};
     use super::{
         OWNER, FEE_COLLECTOR, ACCOUNT_1, LOAN_CONTRACT, deploy, IPwnConfigDispatcherTrait, PwnConfig
     };
@@ -300,7 +300,7 @@ mod set_loan_metadata_uri {
 
         config.initialize(OWNER(), fee, FEE_COLLECTOR());
 
-        let mut spy = spy_events(SpyOn::One(config.contract_address));
+        let mut spy = spy_events();
         super::start_cheat_caller_address(config.contract_address, OWNER());
         config.set_loan_metadata_uri(LOAN_CONTRACT(), meta_uri.clone());
 
@@ -321,7 +321,7 @@ mod set_loan_metadata_uri {
 }
 
 mod set_default_loan_metadata_uri {
-    use snforge_std::{spy_events, SpyOn, EventSpy, EventAssertions};
+    use snforge_std::{spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait};
     use super::{
         OWNER, FEE_COLLECTOR, ACCOUNT_1, LOAN_CONTRACT, deploy, IPwnConfigDispatcherTrait, PwnConfig
     };
@@ -366,7 +366,7 @@ mod set_default_loan_metadata_uri {
 
         config.initialize(OWNER(), fee, FEE_COLLECTOR());
 
-        let mut spy = spy_events(SpyOn::One(config.contract_address));
+        let mut spy = spy_events();
         super::start_cheat_caller_address(config.contract_address, OWNER());
         config.set_default_loan_metadata_uri(meta_uri.clone());
 

@@ -3,7 +3,7 @@ use pwn::loan::lib::signature_checker::Signature;
 use pwn::loan::terms::simple::loan::types::Terms;
 
 #[starknet::interface]
-trait ISimpleLoanDutchAuctionProposal<TState> {
+pub trait ISimpleLoanDutchAuctionProposal<TState> {
     fn make_proposal(ref self: TState, proposal: Proposal);
     fn accept_proposal(
         ref self: TState,
@@ -25,7 +25,7 @@ trait ISimpleLoanDutchAuctionProposal<TState> {
 
 #[starknet::contract]
 pub mod SimpleLoanDutchAuctionProposal {
-    use core::traits::Into;
+    use core::integer::BoundedInt;
     use pwn::ContractAddressDefault;
     use pwn::loan::lib::{serialization, math};
     use pwn::loan::terms::simple::proposal::simple_loan_proposal::{
@@ -45,43 +45,43 @@ pub mod SimpleLoanDutchAuctionProposal {
     impl SimpleLoanProposalInternal = SimpleLoanProposalComponent::InternalImpl<ContractState>;
     // NOTE: we can hard code this by calculating the poseidon hash of the string 
     // in the Solidity contract offline.
-    const PROPOSAL_TYPEHASH: felt252 =
+    pub const PROPOSAL_TYPEHASH: felt252 =
         0x011b95ba182b3ea59860b7ebc4e42e45c9c9ae5c8f6bd7b8dbbde7415bb396b7;
-    const MINUTE: u64 = 60;
+    pub const MINUTE: u64 = 60;
+    pub const DUTCH_PROPOSAL_DATA_LEN: usize = 34;
 
     #[derive(Copy, Default, Drop, Serde)]
     pub struct Proposal {
-        collateral_category: MultiToken::Category,
-        collateral_address: ContractAddress,
-        collateral_id: felt252,
-        collateral_amount: u256,
-        check_collateral_state_fingerprint: bool,
-        collateral_state_fingerprint: felt252,
-        credit_address: ContractAddress,
-        min_credit_amount: u256,
-        max_credit_amount: u256,
-        available_credit_limit: u256,
-        fixed_interest_amount: u256,
-        accruing_interest_APR: u32,
-        duration: u64,
-        auction_start: u64,
-        auction_duration: u64,
-        allowed_acceptor: ContractAddress,
-        proposer: ContractAddress,
-        proposer_specHash: felt252,
-        is_offer: bool,
-        refinancing_loan_id: felt252,
-        nonce_space: felt252,
-        nonce: felt252,
-        loan_contract: ContractAddress,
-        public_key: felt252,
+        pub collateral_category: MultiToken::Category,
+        pub collateral_address: ContractAddress,
+        pub collateral_id: felt252,
+        pub collateral_amount: u256,
+        pub check_collateral_state_fingerprint: bool,
+        pub collateral_state_fingerprint: felt252,
+        pub credit_address: ContractAddress,
+        pub min_credit_amount: u256,
+        pub max_credit_amount: u256,
+        pub available_credit_limit: u256,
+        pub fixed_interest_amount: u256,
+        pub accruing_interest_APR: u32,
+        pub duration: u64,
+        pub auction_start: u64,
+        pub auction_duration: u64,
+        pub allowed_acceptor: ContractAddress,
+        pub proposer: ContractAddress,
+        pub proposer_spec_hash: felt252,
+        pub is_offer: bool,
+        pub refinancing_loan_id: felt252,
+        pub nonce_space: felt252,
+        pub nonce: felt252,
+        pub loan_contract: ContractAddress,
     }
 
 
     #[derive(Default, Drop, Serde)]
     pub struct ProposalValues {
-        intended_credit_amount: u256,
-        slippage: u256,
+        pub intended_credit_amount: u256,
+        pub slippage: u256,
     }
 
     #[storage]
@@ -92,17 +92,17 @@ pub mod SimpleLoanDutchAuctionProposal {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         ProposalMade: ProposalMade,
         #[flat]
         SimpleLoanProposalEvent: SimpleLoanProposalComponent::Event,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct ProposalMade {
-        proposal_hash: felt252,
-        proposer: ContractAddress,
-        proposal: Proposal,
+    pub struct ProposalMade {
+        pub proposal_hash: felt252,
+        pub proposer: ContractAddress,
+        pub proposal: Proposal,
     }
 
     mod Err {
@@ -139,6 +139,13 @@ pub mod SimpleLoanDutchAuctionProposal {
         pub fn EXPIRED(current_timestamp: u64, expiration: u64) {
             panic!("Expired. Current timestamp: {}, Expiration: {}", current_timestamp, expiration);
         }
+        pub fn INVALID_PROPOSAL_DATA_LEN(len: usize) {
+            panic!(
+                "Invalid proposal data length: {}, expected: {}",
+                len,
+                super::DUTCH_PROPOSAL_DATA_LEN
+            );
+        }
     }
 
     #[constructor]
@@ -172,6 +179,9 @@ pub mod SimpleLoanDutchAuctionProposal {
             proposal_inclusion_proof: Array<felt252>,
             signature: Signature,
         ) -> (felt252, Terms) {
+            if proposal_data.len() != DUTCH_PROPOSAL_DATA_LEN {
+                Err::INVALID_PROPOSAL_DATA_LEN(proposal_data.len());
+            }
             let (proposal, proposal_values) = self.decode_proposal_data(proposal_data);
 
             let mut serialized_proposal = array![];
@@ -226,8 +236,8 @@ pub mod SimpleLoanDutchAuctionProposal {
                 .simple_loan
                 ._accept_proposal(
                     acceptor,
-                    proposal_hash,
                     refinancing_loan_id,
+                    proposal_hash,
                     proposal_inclusion_proof,
                     signature,
                     proposal_base
@@ -255,14 +265,14 @@ pub mod SimpleLoanDutchAuctionProposal {
                 fixed_interest_amount: proposal.fixed_interest_amount,
                 accruing_interest_apr: proposal.accruing_interest_APR,
                 lender_spec_hash: if proposal.is_offer {
-                    proposal.proposer_specHash
+                    proposal.proposer_spec_hash
                 } else {
                     0
                 },
                 borrower_spec_hash: if proposal.is_offer {
                     0
                 } else {
-                    proposal.proposer_specHash
+                    proposal.proposer_spec_hash
                 },
             };
 
@@ -292,6 +302,10 @@ pub mod SimpleLoanDutchAuctionProposal {
         fn decode_proposal_data(
             self: @ContractState, encoded_data: Array<felt252>
         ) -> (Proposal, ProposalValues) {
+            if encoded_data.len() != DUTCH_PROPOSAL_DATA_LEN {
+                Err::INVALID_PROPOSAL_DATA_LEN(encoded_data.len());
+            }
+
             let (proposal_data, proposal_values_data) = serialization::serde_decompose(
                 encoded_data.span()
             );
@@ -302,7 +316,8 @@ pub mod SimpleLoanDutchAuctionProposal {
         }
 
         fn get_credit_amount(self: @ContractState, proposal: Proposal, timestamp: u64) -> u256 {
-            if proposal.auction_duration < MINUTE {
+            if proposal.auction_duration < MINUTE || proposal.auction_duration > BoundedInt::max()
+                - MINUTE {
                 Err::INVALID_AUCTION_DURATION(proposal.auction_duration, MINUTE);
             }
             if proposal.auction_duration % MINUTE > 0 {
@@ -316,15 +331,17 @@ pub mod SimpleLoanDutchAuctionProposal {
             if timestamp < proposal.auction_start {
                 Err::AUCTION_NOT_IN_PROGRESS(timestamp, proposal.auction_start);
             }
-            if proposal.auction_start + proposal.auction_duration <= timestamp {
-                Err::EXPIRED(timestamp, proposal.auction_start + proposal.auction_duration);
+            if proposal.auction_start + proposal.auction_duration + MINUTE <= timestamp {
+                Err::EXPIRED(
+                    timestamp, proposal.auction_start + proposal.auction_duration + MINUTE
+                );
             }
 
             let timestamp: u256 = timestamp.into();
             let credit_amount_delta = math::mul_div(
                 proposal.max_credit_amount - proposal.min_credit_amount,
-                timestamp - proposal.auction_start.into() / MINUTE.into(),
-                proposal.auction_duration.into()
+                (timestamp - proposal.auction_start.into()) / MINUTE.into(),
+                proposal.auction_duration.into() / MINUTE.into(),
             );
 
             if proposal.is_offer {
@@ -386,7 +403,7 @@ pub mod SimpleLoanDutchAuctionProposal {
                 auction_duration,
                 allowed_acceptor,
                 proposer,
-                proposer_specHash: *data.at(22),
+                proposer_spec_hash: *data.at(22),
                 is_offer: if *data.at(23) == 1 {
                     true
                 } else {
@@ -396,7 +413,6 @@ pub mod SimpleLoanDutchAuctionProposal {
                 nonce_space: *data.at(25),
                 nonce: *data.at(26),
                 loan_contract,
-                public_key: *data.at(28),
             }
         }
 

@@ -3,8 +3,8 @@ use pwn::loan::lib::signature_checker::Signature;
 use pwn::loan::terms::simple::loan::types::Terms;
 
 #[starknet::interface]
-trait ISimpleLoanFungibleProposal<TState> {
-    fn make_proposal(ref self: TState, proposal: Proposal);
+pub trait ISimpleLoanFungibleProposal<TState> {
+    fn make_proposal(ref self: TState, proposal: Proposal) -> felt252;
     fn accept_proposal(
         ref self: TState,
         acceptor: starknet::ContractAddress,
@@ -26,7 +26,7 @@ trait ISimpleLoanFungibleProposal<TState> {
 }
 
 #[starknet::contract]
-mod SimpleLoanFungibleProposal {
+pub mod SimpleLoanFungibleProposal {
     use pwn::ContractAddressDefault;
     use pwn::loan::lib::{math, serialization};
     use pwn::loan::terms::simple::proposal::simple_loan_proposal::{
@@ -46,40 +46,41 @@ mod SimpleLoanFungibleProposal {
     impl SimpleLoanProposalInternal = SimpleLoanProposalComponent::InternalImpl<ContractState>;
     // NOTE: we can hard code this by calculating the poseidon hash of the string 
     // in the Solidity contract offline.
-    const PROPOSAL_TYPEHASH: felt252 =
+    pub const PROPOSAL_TYPEHASH: felt252 =
         0x062dbce0eca7d4486c66e0d48cdd72744db07523b68e9e4dad30aa4bee1356;
-    const CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR: u256 =
+    pub const CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR: u256 =
         100_000_000_000_000_000_000_000_000_000_000_000_000;
+    pub const FUNGIBLE_PROPOSAL_DATA_LEN: usize = 29;
 
     #[derive(Copy, Default, Drop, Serde)]
     pub struct Proposal {
-        collateral_category: MultiToken::Category,
-        collateral_address: ContractAddress,
-        collateral_id: felt252,
-        min_collateral_amount: u256,
-        check_collateral_state_fingerprint: bool,
-        collateral_state_fingerprint: felt252,
-        credit_address: ContractAddress,
-        credit_per_collateral_unit: u256,
-        available_credit_limit: u256,
-        fixed_interest_amount: u256,
-        accruing_interest_APR: u32,
-        duration: u64,
-        expiration: u64,
-        allowed_acceptor: ContractAddress,
-        proposer: ContractAddress,
-        proposer_spec_hash: felt252,
-        is_offer: bool,
-        refinancing_loan_id: felt252,
-        nonce_space: felt252,
-        nonce: felt252,
-        loan_contract: ContractAddress,
+        pub collateral_category: MultiToken::Category,
+        pub collateral_address: ContractAddress,
+        pub collateral_id: felt252,
+        pub min_collateral_amount: u256,
+        pub check_collateral_state_fingerprint: bool,
+        pub collateral_state_fingerprint: felt252,
+        pub credit_address: ContractAddress,
+        pub credit_per_collateral_unit: u256,
+        pub available_credit_limit: u256,
+        pub fixed_interest_amount: u256,
+        pub accruing_interest_APR: u32,
+        pub duration: u64,
+        pub expiration: u64,
+        pub allowed_acceptor: ContractAddress,
+        pub proposer: ContractAddress,
+        pub proposer_spec_hash: felt252,
+        pub is_offer: bool,
+        pub refinancing_loan_id: felt252,
+        pub nonce_space: felt252,
+        pub nonce: felt252,
+        pub loan_contract: ContractAddress,
     }
 
 
-    #[derive(Default, Drop, Serde)]
+    #[derive(Copy, Default, Drop, Serde)]
     pub struct ProposalValues {
-        collateral_amount: u256,
+        pub collateral_amount: u256,
     }
 
     #[storage]
@@ -90,17 +91,17 @@ mod SimpleLoanFungibleProposal {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         ProposalMade: ProposalMade,
         #[flat]
         SimpleLoanProposalEvent: SimpleLoanProposalComponent::Event,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct ProposalMade {
-        proposal_hash: felt252,
-        proposer: ContractAddress,
-        proposal: Proposal,
+    pub struct ProposalMade {
+        pub proposal_hash: felt252,
+        pub proposer: ContractAddress,
+        pub proposal: Proposal,
     }
 
     mod Err {
@@ -109,6 +110,13 @@ mod SimpleLoanFungibleProposal {
         }
         pub fn INSUFFICIENT_COLLATERAL_AMOUNT(current: u256, limit: u256) {
             panic!("Insufficient collateral amount. Current: {}, Limit: {}", current, limit);
+        }
+        pub fn INVALID_PROPOSAL_DATA(len: usize) {
+            panic!(
+                "Invalid proposal data length: {}, expected: {}",
+                len,
+                super::FUNGIBLE_PROPOSAL_DATA_LEN
+            );
         }
     }
 
@@ -127,11 +135,13 @@ mod SimpleLoanFungibleProposal {
 
     #[abi(embed_v0)]
     impl SimpleLoanDutchAuctionProposalImpl of super::ISimpleLoanFungibleProposal<ContractState> {
-        fn make_proposal(ref self: ContractState, proposal: Proposal) {
+        fn make_proposal(ref self: ContractState, proposal: Proposal) -> felt252 {
             let proposal_hash = self.get_proposal_hash(proposal);
             self.simple_loan._make_proposal(proposal_hash, proposal.proposer);
 
             self.emit(ProposalMade { proposal_hash, proposer: proposal.proposer, proposal, });
+
+            proposal_hash
         }
 
         fn accept_proposal(
@@ -142,7 +152,12 @@ mod SimpleLoanFungibleProposal {
             proposal_inclusion_proof: Array<felt252>,
             signature: Signature
         ) -> (felt252, super::Terms) {
+            if proposal_data.len() != FUNGIBLE_PROPOSAL_DATA_LEN {
+                Err::INVALID_PROPOSAL_DATA(proposal_data.len());
+            }
+
             let (proposal, proposal_values) = self.decode_proposal_data(proposal_data);
+            // NOTE: add check for proposal data integrity to this and all other proposals
 
             let mut serialized_proposal = array![];
             proposal.serialize(ref serialized_proposal);
@@ -186,8 +201,8 @@ mod SimpleLoanFungibleProposal {
                 .simple_loan
                 ._accept_proposal(
                     acceptor,
-                    proposal_hash,
                     refinancing_loan_id,
+                    proposal_hash,
                     proposal_inclusion_proof,
                     signature,
                     proposal_base
@@ -252,6 +267,10 @@ mod SimpleLoanFungibleProposal {
         fn decode_proposal_data(
             self: @ContractState, encoded_data: Array<felt252>
         ) -> (Proposal, ProposalValues) {
+            if encoded_data.len() != FUNGIBLE_PROPOSAL_DATA_LEN {
+                Err::INVALID_PROPOSAL_DATA(encoded_data.len());
+            }
+
             let (proposal_data, proposal_values_data) = serialization::serde_decompose(
                 encoded_data.span()
             );
