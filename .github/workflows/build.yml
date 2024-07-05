@@ -3,13 +3,12 @@ name: Format and Build
 on:
   push:
     branches:
-      - '**'
+      - main
+      - pr-pre-merge-target
   pull_request:
     branches:
-      - '**'
-  pull_request_target:
-    branches:
-      - '**'
+      - main
+      - pr-pre-merge-target
   workflow_dispatch:
 
 jobs:
@@ -21,6 +20,6 @@ jobs:
           fetch-depth: 0
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "2.6.5"
+          scarb-version: '2.6.5'
       - run: scarb fmt --check
       - run: scarb build

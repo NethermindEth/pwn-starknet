@@ -1,14 +1,14 @@
 name: Test
+
 on:
   push:
     branches:
-      - '**'
+      - main
+      - pr-pre-merge-target
   pull_request:
     branches:
-      - '**'
-  pull_request_target:
-    branches:
-      - '**'
+      - main
+      - pr-pre-merge-target
   workflow_dispatch:
 
 jobs:
@@ -19,5 +19,5 @@ jobs:
       - uses: foundry-rs/setup-snfoundry@v3
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "2.6.5"
+          scarb-version: '2.6.5'
       - run: snforge test
