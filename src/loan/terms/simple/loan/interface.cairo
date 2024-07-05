@@ -31,5 +31,5 @@ pub trait IPwnSimpleLoan<TState> {
     fn get_loan(self: @TState, loan_id: felt252) -> types::GetLoanReturnValue;
     fn get_is_valid_asset(self: @TState, asset: Asset) -> bool;
     fn get_loan_metadata_uri(self: @TState) -> ByteArray;
-    fn get_state_fingerprint(self: @TState) -> felt252;
+    fn get_state_fingerprint(self: @TState, token_id: felt252) -> felt252;
 }

@@ -3,7 +3,7 @@ use pwn::multitoken::library::MultiToken::Asset;
 use starknet::ContractAddress;
 
 
-#[derive(Clone, Default, Drop, Serde)]
+#[derive(Copy, Default, Drop, Serde)]
 pub struct Terms {
     pub lender: ContractAddress,
     pub borrower: ContractAddress,
@@ -24,7 +24,7 @@ pub struct ProposalSpec {
     pub signature: felt252
 }
 
-#[derive(Clone, Drop, Serde)]
+#[derive(Copy, Drop, Serde)]
 pub struct LenderSpec {
     pub source_of_funds: ContractAddress
 }
@@ -37,7 +37,7 @@ pub struct CallerSpec {
     pub permit_data: felt252,
 }
 
-#[derive(Clone, Drop, Serde, Default, starknet::Store)]
+#[derive(Copy, Drop, Serde, Default, starknet::Store)]
 pub struct Loan {
     pub status: u8,
     pub credit_address: ContractAddress,
@@ -52,7 +52,7 @@ pub struct Loan {
     pub collateral: Asset,
 }
 
-#[derive(Clone, Default, Drop, Serde)]
+#[derive(Copy, Default, Drop, Serde)]
 pub struct ExtensionProposal {
     pub loan_id: felt252,
     pub compensation_address: ContractAddress,

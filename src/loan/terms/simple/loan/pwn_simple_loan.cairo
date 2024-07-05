@@ -1,5 +1,6 @@
 #[starknet::contract]
 mod PwnSimpleLoan {
+    use core::poseidon::poseidon_hash_span;
     use openzeppelin::token::erc721::{interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait}};
     use pwn::ContractAddressDefault;
     use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
@@ -44,10 +45,14 @@ mod PwnSimpleLoan {
     // @note: 90 days 
     const MAX_EXTENSION_DURATION: u64 = 86400 * 90;
 
+    const EXTENSION_PROPOSAL_TYPEHASH: felt252 =
+        0x7e09d567c8fe43c280650abe4557a43fa693063ebc6c47ff3c585866507c732;
+
     #[storage]
     struct Storage {
         loans: LegacyMap::<felt252, Loan>,
         extension_proposal_made: LegacyMap::<felt252, bool>,
+        domain_separator: felt252,
         hub: IPwnHubDispatcher,
         loan_token: IPwnLoanDispatcher,
         config: IPwnConfigDispatcher,
@@ -111,7 +116,8 @@ mod PwnSimpleLoan {
         loan_token: ContractAddress,
         config: ContractAddress,
         revoked_nonce: ContractAddress,
-        category_registry: ContractAddress
+        category_registry: ContractAddress,
+        domain_separator: felt252,
     ) {
         let hub_dispatcher = IPwnHubDispatcher { contract_address: hub };
         let loan_token_dispatcher = IPwnLoanDispatcher { contract_address: loan_token };
@@ -125,6 +131,8 @@ mod PwnSimpleLoan {
         self.config.write(config_dispatcher);
         self.revoked_nonce.write(revoked_nonce_dispatcher);
         self.category_registry.write(category_registry_dispatcher);
+        // @note: shall we create hash here only?
+        self.domain_separator.write(domain_separator);
     }
 
     impl IPwnVault = PwnVaultComponent::InternalImpl<ContractState>;
@@ -222,8 +230,7 @@ mod PwnSimpleLoan {
                 );
 
             // @dev: abi.decode needs to implemented here for permit data
-            // if (caller_spec.permit_data.len() > 0) {// some abi decode happening here
-            // }
+            // @dev: _try_permit needs to be implemented
 
             if (caller_spec.refinancing_loan_id == 0) {
                 self._settle_new_loan(loan_terms, lender_spec);
@@ -247,7 +254,8 @@ mod PwnSimpleLoan {
 
             self._update_repaid_loan(loan_id);
 
-            // @dev: abi.decode needs to be handled for permit data
+            // @dev: abi.decode needs to implemented here for permit data
+            // @dev: _try_permit needs to be implemented
 
             let repayment_amount = self.get_loan_repayment_amount(loan_id);
             self.vault._pull(ERC20(loan.credit_address, repayment_amount), caller);
@@ -381,7 +389,12 @@ mod PwnSimpleLoan {
 
             let current_block_timestamp = starknet::get_block_timestamp();
 
-            if (current_block_timestamp >= extension.expiration) { // revert expired
+            if (current_block_timestamp >= extension.expiration) {
+                // @note: we shall move these error in a common place?
+                simple_loan_proposal::SimpleLoanProposalComponent::Err::EXPIRED(
+                    current_timestamp: starknet::get_block_timestamp(),
+                    expiration: extension.expiration
+                );
             }
 
             if (!self
@@ -460,8 +473,8 @@ mod PwnSimpleLoan {
 
                 self._check_permit(extension.compensation_address, permit_data);
 
-                // @dev add _try_permit here.
-                // self._try_p
+                // @dev: abi.decode needs to implemented here for permit data
+                // @dev: _try_permit needs to be implemented
 
                 self.vault._push_from(compensation, loan.borrower, loan_owner);
             }
@@ -469,8 +482,10 @@ mod PwnSimpleLoan {
         }
 
         fn get_lender_spec_hash(self: @ContractState, calladata: LenderSpec) -> felt252 {
-            // posedian hash?
-            0
+            let hash_elements: Array<felt252> = array![
+                calladata.source_of_funds.try_into().unwrap()
+            ];
+            poseidon_hash_span(hash_elements.span())
         }
 
         fn get_loan_repayment_amount(self: @ContractState, loan_id: felt252) -> u256 {
@@ -484,8 +499,16 @@ mod PwnSimpleLoan {
         }
 
         fn get_extension_hash(self: @ContractState, extension: ExtensionProposal) -> felt252 {
-            // hash again?
-            0
+            let hash_elements: Array<felt252> = array![
+                self.domain_separator.read(), starknet::get_contract_address().try_into().unwrap()
+            ];
+            let domain_seperator_hash = poseidon_hash_span(hash_elements.span());
+
+            // @note: in solidity, extension was also passed, so shall we pass every entity of ExtensionProposal?
+            let hash_elements: Array<felt252> = array![
+                1901, domain_seperator_hash, EXTENSION_PROPOSAL_TYPEHASH
+            ];
+            poseidon_hash_span(hash_elements.span())
         }
 
         fn get_loan(self: @ContractState, loan_id: felt252) -> GetLoanReturnValue {
@@ -522,8 +545,20 @@ mod PwnSimpleLoan {
             self.config.read().loan_metadata_uri(this_contract)
         }
 
-        fn get_state_fingerprint(self: @ContractState) -> felt252 {
-            0
+        fn get_state_fingerprint(self: @ContractState, token_id: felt252) -> felt252 {
+            let loan = self.loans.read(token_id);
+            if (loan.status == 0) {
+                return 0;
+            }
+
+            // @note: here fixed_interest_amount is in u256, shall we break it to low and high?
+            let hash_elements: Array<felt252> = array![
+                self._get_loan_status(token_id).try_into().unwrap(),
+                loan.default_timestamp.into(),
+                loan.fixed_interest_amount.try_into().unwrap(),
+                loan.accruing_interest_APR.into()
+            ];
+            poseidon_hash_span(hash_elements.span())
         }
     }
 
