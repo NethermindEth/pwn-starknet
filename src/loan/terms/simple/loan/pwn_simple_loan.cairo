@@ -7,7 +7,7 @@ mod PwnSimpleLoan {
     use pwn::hub::pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait};
     use pwn::hub::pwn_hub_tags;
     use pwn::loan::lib::{fee_calculator, math, signature_checker};
-    use pwn::loan::terms::simple::loan::error;
+    use pwn::loan::terms::simple::loan::error::Err;
     use pwn::loan::terms::simple::loan::{
         types::{
             GetLoanReturnValue, CallerSpec, ExtensionProposal, LenderSpec, Loan, ProposalSpec, Terms
@@ -187,16 +187,16 @@ mod PwnSimpleLoan {
             if (caller != loan_terms.lender
                 && loan_terms.lender_spec_hash != self.get_lender_spec_hash(lender_spec.clone())) {
                 // @note: solidity code has current and expected in the error as well, similar to the INTEREST_APR_OUT_OF_BOUNDS error below
-                error::Err::INVALID_LENDER_SPEC_HASH();
+                Err::INVALID_LENDER_SPEC_HASH();
             }
 
             if (loan_terms.duration < MIN_LOAN_DURATION) {
                 // @note: solidity code has current and limit in the error as well, similar to the INTEREST_APR_OUT_OF_BOUNDS error below
-                error::Err::INVALID_DURATION();
+                Err::INVALID_DURATION();
             }
 
             if (loan_terms.accruing_interest_APR > MAX_ACCRUING_INTEREST_APR) {
-                error::Err::INTEREST_APR_OUT_OF_BOUNDS(
+                Err::INTEREST_APR_OUT_OF_BOUNDS(
                     current: loan_terms.accruing_interest_APR, limit: MAX_ACCRUING_INTEREST_APR
                 );
             }
@@ -218,8 +218,8 @@ mod PwnSimpleLoan {
                 .emit(
                     Event::LoanCreated(
                         LoanCreated {
-                            loan_id: loan_id,
-                            proposal_hash: proposal_hash,
+                            loan_id,
+                            proposal_hash,
                             proposal_contract: proposal_spec.proposal_contract,
                             refinancing_loan_id: caller_spec.refinancing_loan_id,
                             terms: loan_terms.clone(),
@@ -282,18 +282,18 @@ mod PwnSimpleLoan {
                 .owner_of(loan_id.try_into().unwrap());
 
             if (caller != loan_token_owner) {
-                error::Err::CALLER_NOT_LOAN_TOKEN_HOLDER();
+                Err::CALLER_NOT_LOAN_TOKEN_HOLDER();
             }
 
             if (loan.status == 0) {
-                error::Err::NON_EXISTING_LOAN();
+                Err::NON_EXISTING_LOAN();
             } else if (loan.status == 3) {
                 self._settle_loan_claim(loan_id: loan_id, loan_owner: caller, defaulted: false);
             } else if (loan.status == 2
                 && loan.default_timestamp <= starknet::get_block_timestamp()) {
                 self._settle_loan_claim(loan_id: loan_id, loan_owner: caller, defaulted: true);
             } else {
-                error::Err::LOAN_RUNNING();
+                Err::LOAN_RUNNING();
             }
         }
 
@@ -304,7 +304,7 @@ mod PwnSimpleLoan {
             loan_owner: ContractAddress
         ) {
             if (starknet::get_caller_address() != starknet::get_contract_address()) {
-                error::Err::CALLER_NOT_VAULT();
+                Err::CALLER_NOT_VAULT();
             }
 
             let loan = self.loans.read(loan_id);
@@ -330,7 +330,7 @@ mod PwnSimpleLoan {
             } else {
                 let pool_adapter = self.config.read().get_pool_adapter(destination_of_funds);
                 if (pool_adapter.contract_address == Default::default()) {
-                    error::Err::INVALID_SOURCE_OF_FUNDS(source_of_funds: destination_of_funds);
+                    Err::INVALID_SOURCE_OF_FUNDS(source_of_funds: destination_of_funds);
                 }
 
                 self
@@ -345,7 +345,7 @@ mod PwnSimpleLoan {
             let caller = starknet::get_caller_address();
 
             if (caller != extension.proposer) {
-                error::Err::INVALID_EXTENSION_SINGNER(allowed: extension.proposer, current: caller);
+                Err::INVALID_EXTENSION_SINGNER(allowed: extension.proposer, current: caller);
             }
 
             let extension_hash = self.get_extension_hash(extension);
@@ -362,17 +362,16 @@ mod PwnSimpleLoan {
             ref self: ContractState,
             extension: ExtensionProposal,
             signature: signature_checker::Signature,
-            permit_data: Permit
         ) {
             let mut loan = self.loans.read(extension.loan_id);
             let caller = starknet::get_caller_address();
 
             if (loan.status == 0) {
-                error::Err::NON_EXISTING_LOAN();
+                Err::NON_EXISTING_LOAN();
             }
 
             if (loan.status == 3) {
-                error::Err::LOAN_REPAID();
+                Err::LOAN_REPAID();
             }
 
             let extension_hash = self.get_extension_hash(extension.clone());
@@ -414,28 +413,28 @@ mod PwnSimpleLoan {
 
             if (caller == loan_owner) {
                 if (extension.proposer != loan.borrower) {
-                    error::Err::INVALID_EXTENSION_SINGNER(
+                    Err::INVALID_EXTENSION_SINGNER(
                         allowed: loan.borrower, current: extension.proposer
                     );
                 }
             } else if (caller == loan.borrower) {
                 if (extension.proposer != loan_owner) {
-                    error::Err::INVALID_EXTENSION_SINGNER(
+                    Err::INVALID_EXTENSION_SINGNER(
                         allowed: loan_owner, current: extension.proposer
                     );
                 }
             } else {
-                error::Err::INVALID_EXTENSION_CALLER();
+                Err::INVALID_EXTENSION_CALLER();
             }
 
             if (extension.duration < MIN_EXTENSION_DURATION) {
-                error::Err::INVALID_EXTENSION_DURATION(
+                Err::INVALID_EXTENSION_DURATION(
                     duration: extension.duration, limit: MIN_EXTENSION_DURATION
                 );
             }
 
             if (extension.duration > MAX_EXTENSION_DURATION) {
-                error::Err::INVALID_EXTENSION_DURATION(
+                Err::INVALID_EXTENSION_DURATION(
                     duration: extension.duration, limit: MAX_EXTENSION_DURATION
                 );
             }
@@ -457,7 +456,7 @@ mod PwnSimpleLoan {
                     Event::LoanExtended(
                         LoanExtended {
                             loan_id: extension.loan_id,
-                            original_default_timestamp: original_default_timestamp,
+                            original_default_timestamp,
                             extended_default_timestamp: loan.default_timestamp
                         }
                     )
@@ -471,7 +470,7 @@ mod PwnSimpleLoan {
 
                 self._check_valid_asset(compensation);
 
-                self._check_permit(extension.compensation_address, permit_data);
+                // self._check_permit(extension.compensation_address, permit_data);
 
                 // @dev: abi.decode needs to implemented here for permit data
                 // @dev: _try_permit needs to be implemented
@@ -504,9 +503,18 @@ mod PwnSimpleLoan {
             ];
             let domain_seperator_hash = poseidon_hash_span(hash_elements.span());
 
-            // @note: in solidity, extension was also passed, so shall we pass every entity of ExtensionProposal?
             let hash_elements: Array<felt252> = array![
-                1901, domain_seperator_hash, EXTENSION_PROPOSAL_TYPEHASH
+                1901,
+                domain_seperator_hash,
+                EXTENSION_PROPOSAL_TYPEHASH,
+                extension.loan_id,
+                extension.compensation_address.try_into().unwrap(),
+                extension.compensation_amount.try_into().unwrap(),
+                extension.duration.into(),
+                extension.expiration.into(),
+                extension.proposer.try_into().unwrap(),
+                extension.nonce_space,
+                extension.nonce
             ];
             poseidon_hash_span(hash_elements.span())
         }
@@ -525,7 +533,7 @@ mod PwnSimpleLoan {
                 default_timestamp: loan.default_timestamp,
                 borrower: loan.borrower,
                 original_lender: loan.original_lender,
-                loan_owner: loan_owner,
+                loan_owner,
                 accruing_interest_APR: loan.accruing_interest_APR,
                 fixed_interest_amount: loan.fixed_interest_amount,
                 credit: ERC20(loan.credit_address, loan.principal_amount),
@@ -585,18 +593,18 @@ mod PwnSimpleLoan {
 
             if (loan.credit_address != loan_terms.credit.asset_address
                 || loan_terms.credit.amount == 0) {
-                error::Err::REFINANCE_CREDIT_MISMATCH();
+                Err::REFINANCE_CREDIT_MISMATCH();
             }
 
             if (loan.collateral.category != loan_terms.collateral.category
                 || loan.collateral.asset_address != loan_terms.collateral.asset_address
                 || loan.collateral.id != loan_terms.collateral.id
                 || loan.collateral.amount != loan_terms.collateral.amount) {
-                error::Err::REFINANCE_COLLATERAL_MISMATCH();
+                Err::REFINANCE_COLLATERAL_MISMATCH();
             }
 
             if (loan.borrower != loan_terms.borrower) {
-                error::Err::REFINANCE_BORROWER_MISMATCH(
+                Err::REFINANCE_BORROWER_MISMATCH(
                     currrent_borrower: loan.borrower, new_borrower: loan_terms.borrower
                 );
             }
@@ -739,7 +747,7 @@ mod PwnSimpleLoan {
         ) {
             let pool_adapter = self.config.read().get_pool_adapter(lender_spec.source_of_funds);
             if (pool_adapter.contract_address == Default::default()) {
-                error::Err::INVALID_SOURCE_OF_FUNDS(source_of_funds: lender_spec.source_of_funds);
+                Err::INVALID_SOURCE_OF_FUNDS(source_of_funds: lender_spec.source_of_funds);
             }
             if (credit.amount > 0) {
                 self
@@ -752,15 +760,15 @@ mod PwnSimpleLoan {
 
         fn _check_loan_can_be_repaid(ref self: ContractState, status: u8, default_timestamp: u64) {
             if (status == 0) {
-                error::Err::NON_EXISTING_LOAN();
+                Err::NON_EXISTING_LOAN();
             }
 
             if (status != 2) {
-                error::Err::LOAN_NOT_RUNNING();
+                Err::LOAN_NOT_RUNNING();
             }
             let current_timestamp = starknet::get_block_timestamp();
             if (default_timestamp <= current_timestamp) {
-                error::Err::LOAN_DEFAULTED(default_timestamp);
+                Err::LOAN_DEFAULTED(default_timestamp);
             }
         }
 
@@ -778,14 +786,9 @@ mod PwnSimpleLoan {
                 return loan.fixed_interest_amount;
             }
             let current_timestamp = starknet::get_block_timestamp();
-            // @note: here the timestamps are all in u64 and the loan.accruing_interest_APR is in u32
-            //        we can change either one and then in order to use mul_div we need everyting in u256
-            let accuring_minutes: u32 = ((current_timestamp - loan.start_timestamp) / 60)
-                .try_into()
-                .unwrap();
-            let interest_amount: u256 = (loan.accruing_interest_APR * accuring_minutes)
-                .try_into()
-                .unwrap();
+            let accuring_minutes: u64 = (current_timestamp - loan.start_timestamp) / 60;
+            let interest_amount: u256 = (accuring_minutes * loan.accruing_interest_APR.into())
+                .into();
             let accured_interest = math::mul_div(
                 loan.principal_amount, interest_amount, ACCRUING_INTEREST_APR_DECIMALS
             );
@@ -798,9 +801,7 @@ mod PwnSimpleLoan {
             let loan = self.loans.read(loan_id);
             let asset = match defaulted {
                 true => loan.collateral,
-                false => ERC20(
-                    loan.credit_address, self.get_loan_repayment_amount(loan_id)
-                ) // @note: needs to be updated
+                false => ERC20(loan.credit_address, self.get_loan_repayment_amount(loan_id))
             };
             self._delete_loan(loan_id);
             self.emit(Event::LoanClaimed(LoanClaimed { loan_id: loan_id, defaulted: defaulted }));
@@ -836,7 +837,7 @@ mod PwnSimpleLoan {
 
         fn _check_valid_asset(ref self: ContractState, asset: Asset) {
             if (!self.get_is_valid_asset(asset)) {
-                error::Err::INVALID_MULTITOKEN_ASSET(
+                Err::INVALID_MULTITOKEN_ASSET(
                     category: asset.category.into(),
                     address: asset.asset_address,
                     id: asset.id,
