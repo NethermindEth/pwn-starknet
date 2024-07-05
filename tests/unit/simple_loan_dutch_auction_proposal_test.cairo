@@ -28,6 +28,7 @@ use snforge_std::{
 };
 use starknet::secp256k1::{Secp256k1Point};
 use starknet::{ContractAddress, testing};
+use super::simple_loan_proposal_test::{TOKEN, PROPOSER, ACTIVATE_LOAN_CONTRACT, ACCEPTOR, E40};
 
 #[starknet::interface]
 pub trait ISimpleLoanDutchAuctionProposal<TState> {
@@ -51,8 +52,6 @@ pub trait ISimpleLoanDutchAuctionProposal<TState> {
     fn revoke_nonce(ref self: TState, nonce_space: felt252, nonce: felt252);
     fn get_multiproposal_hash(self: @TState, multiproposal: starknet::ClassHash) -> felt252;
 }
-
-const E40: u256 = 10_000_000_000_000_000_000_000_000_000_000_000_000;
 
 type ComponentState =
     SimpleLoanProposalComponent::ComponentState<SimpleLoanDutchAuctionProposal::ContractState>;
@@ -89,22 +88,6 @@ fn deploy() -> (
         IPwnHubDispatcher { contract_address: hub_address },
         IRevokedNonceDispatcher { contract_address: nonce_address },
     )
-}
-
-fn TOKEN() -> ContractAddress {
-    starknet::contract_address_const::<'token'>()
-}
-
-fn PROPOSER() -> ContractAddress {
-    starknet::contract_address_const::<73661723>()
-}
-
-fn ACCEPTOR() -> ContractAddress {
-    starknet::contract_address_const::<32716637>()
-}
-
-fn ACTIVATE_LOAN_CONTRACT() -> ContractAddress {
-    starknet::contract_address_const::<'activeLoanContract'>()
 }
 
 fn proposal() -> Proposal {

@@ -48,6 +48,7 @@ pub mod SimpleLoanDutchAuctionProposal {
     pub const PROPOSAL_TYPEHASH: felt252 =
         0x011b95ba182b3ea59860b7ebc4e42e45c9c9ae5c8f6bd7b8dbbde7415bb396b7;
     pub const MINUTE: u64 = 60;
+    pub const DUTCH_PROPOSAL_DATA_LEN: usize = 34;
 
     #[derive(Copy, Default, Drop, Serde)]
     pub struct Proposal {
@@ -138,6 +139,13 @@ pub mod SimpleLoanDutchAuctionProposal {
         pub fn EXPIRED(current_timestamp: u64, expiration: u64) {
             panic!("Expired. Current timestamp: {}, Expiration: {}", current_timestamp, expiration);
         }
+        pub fn INVALID_PROPOSAL_DATA_LEN(len: usize) {
+            panic!(
+                "Invalid proposal data length: {}, expected: {}",
+                len,
+                super::DUTCH_PROPOSAL_DATA_LEN
+            );
+        }
     }
 
     #[constructor]
@@ -171,6 +179,9 @@ pub mod SimpleLoanDutchAuctionProposal {
             proposal_inclusion_proof: Array<felt252>,
             signature: Signature,
         ) -> (felt252, Terms) {
+            if proposal_data.len() != DUTCH_PROPOSAL_DATA_LEN {
+                Err::INVALID_PROPOSAL_DATA_LEN(proposal_data.len());
+            }
             let (proposal, proposal_values) = self.decode_proposal_data(proposal_data);
 
             let mut serialized_proposal = array![];
@@ -291,6 +302,10 @@ pub mod SimpleLoanDutchAuctionProposal {
         fn decode_proposal_data(
             self: @ContractState, encoded_data: Array<felt252>
         ) -> (Proposal, ProposalValues) {
+            if encoded_data.len() != DUTCH_PROPOSAL_DATA_LEN {
+                Err::INVALID_PROPOSAL_DATA_LEN(encoded_data.len());
+            }
+
             let (proposal_data, proposal_values_data) = serialization::serde_decompose(
                 encoded_data.span()
             );
