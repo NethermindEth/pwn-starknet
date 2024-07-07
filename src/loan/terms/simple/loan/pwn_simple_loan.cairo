@@ -222,17 +222,15 @@ mod PwnSimpleLoan {
 
             self
                 .emit(
-                    Event::LoanCreated(
-                        LoanCreated {
-                            loan_id,
-                            proposal_hash,
-                            proposal_contract: proposal_spec.proposal_contract,
-                            refinancing_loan_id: caller_spec.refinancing_loan_id,
-                            terms: loan_terms.clone(),
-                            lender_spec: lender_spec.clone(),
-                            extra: extra.unwrap()
-                        }
-                    )
+                    LoanCreated {
+                        loan_id,
+                        proposal_hash,
+                        proposal_contract: proposal_spec.proposal_contract,
+                        refinancing_loan_id: caller_spec.refinancing_loan_id,
+                        terms: loan_terms.clone(),
+                        lender_spec: lender_spec.clone(),
+                        extra: extra.unwrap()
+                    }
                 );
 
             if (caller_spec.refinancing_loan_id == 0) {
@@ -319,7 +317,7 @@ mod PwnSimpleLoan {
 
             self._delete_loan(loan_id);
 
-            self.emit(Event::LoanClaimed(LoanClaimed { loan_id, defaulted: false }));
+            self.emit(LoanClaimed { loan_id, defaulted: false });
 
             if (credit_amount == 0) {
                 return;
@@ -350,7 +348,7 @@ mod PwnSimpleLoan {
 
             let extension_hash = self.get_extension_hash(extension);
             self.extension_proposal_made.write(extension_hash, true);
-            self.emit(Event::ExtensionProposalMade(ExtensionProposalMade { extension_hash }));
+            self.emit(ExtensionProposalMade { extension_hash });
         }
 
         fn extend_loan(
@@ -446,13 +444,11 @@ mod PwnSimpleLoan {
 
             self
                 .emit(
-                    Event::LoanExtended(
-                        LoanExtended {
-                            loan_id: extension.loan_id,
-                            original_default_timestamp,
-                            extended_default_timestamp: loan.default_timestamp
-                        }
-                    )
+                    LoanExtended {
+                        loan_id: extension.loan_id,
+                        original_default_timestamp,
+                        extended_default_timestamp: loan.default_timestamp
+                    }
                 );
 
             if (extension.compensation_address != Default::default()
@@ -763,7 +759,7 @@ mod PwnSimpleLoan {
             loan.fixed_interest_amount = self._loan_accrued_interest(loan.clone());
             loan.accruing_interest_APR = 0;
             self.loans.write(loan_id, loan);
-            self.emit(Event::LoanPaidBack(LoanPaidBack { loan_id }));
+            self.emit(LoanPaidBack { loan_id });
         }
 
         fn _loan_accrued_interest(self: @ContractState, loan: Loan) -> u256 {
@@ -789,7 +785,7 @@ mod PwnSimpleLoan {
                 false => ERC20(loan.credit_address, self.get_loan_repayment_amount(loan_id))
             };
             self._delete_loan(loan_id);
-            self.emit(Event::LoanClaimed(LoanClaimed { loan_id, defaulted }));
+            self.emit(LoanClaimed { loan_id, defaulted });
             self.vault._push(asset, loan_owner);
         }
 
