@@ -70,11 +70,15 @@ mod tests {
 
         let mut serialized_proposal = array![];
         proposal.serialize(ref serialized_proposal);
-        println!("serialized_proposal: {:?}", serialized_proposal);
+        // println!("serialized_proposal: {:?}", serialized_proposal);
 
         let mut serialized_proposal_values = array![];
         proposal_values.serialize(ref serialized_proposal_values);
-        println!("serialized_proposal_values: {:?}", serialized_proposal_values);
-    // serde_concat(serialized_proposal.span(), serialized_proposal_values.span())
+
+        let expected = array![
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ];
+
+        assert_eq!(serialized_proposal, expected);
     }
 }
