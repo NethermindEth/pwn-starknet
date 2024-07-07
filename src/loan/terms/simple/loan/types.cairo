@@ -1,6 +1,7 @@
 use pwn::ContractAddressDefault;
 use pwn::multitoken::library::MultiToken::Asset;
 use starknet::ContractAddress;
+use pwn::loan::lib::signature_checker::Signature;
 
 
 #[derive(Copy, Default, Drop, Serde)]
@@ -19,9 +20,9 @@ pub struct Terms {
 #[derive(Drop, Serde)]
 pub struct ProposalSpec {
     pub proposal_contract: ContractAddress,
-    pub proposal_data: Span<felt252>,
-    pub proposal_inclusion_proof: Span<felt252>,
-    pub signature: felt252
+    pub proposal_data: Array<felt252>,
+    pub proposal_inclusion_proof: Array<felt252>,
+    pub signature: Signature
 }
 
 #[derive(Copy, Drop, Serde)]

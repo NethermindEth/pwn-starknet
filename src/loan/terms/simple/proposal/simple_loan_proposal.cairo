@@ -23,17 +23,6 @@ pub trait ISimpleLoanAcceptProposal<TState> {
     ) -> (felt252, Terms);
 }
 
-#[starknet::interface]
-pub trait ISimpleLoanAcceptProposal<TState> {
-    fn accept_proposal(
-        ref self: TState,
-        acceptor: starknet::ContractAddress,
-        refinancing_loan_id: felt252,
-        proposal_data: Span<felt252>,
-        proposal_inclusion_proof: Span<felt252>,
-        signature: felt252
-    ) -> (felt252, Terms);
-}
 
 #[starknet::component]
 pub mod SimpleLoanProposalComponent {

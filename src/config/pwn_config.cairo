@@ -126,7 +126,7 @@ pub mod PwnConfig {
         }
 
         fn get_fee_collector(self: @ContractState) -> ContractAddress {
-            self.fee_collectior.read()
+            self.fee_collector.read()
         }
 
         fn set_loan_metadata_uri(

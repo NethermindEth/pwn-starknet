@@ -533,7 +533,7 @@ fn test_should_call_loan_contract_with_loan_terms( // collateral_amount: u256, c
     assert_eq!(terms.credit.id, 0);
     assert_eq!(terms.credit.amount, _proposal.available_credit_limit);
     assert_eq!(terms.fixed_interest_amount, _proposal.fixed_interest_amount);
-    assert_eq!(terms.accruing_interest_apr, _proposal.accruing_interest_APR);
+    assert_eq!(terms.accruing_interest_APR, _proposal.accruing_interest_APR);
     assert_eq!(
         terms.lender_spec_hash, if _proposal.is_offer {
             _proposal.proposer_spec_hash

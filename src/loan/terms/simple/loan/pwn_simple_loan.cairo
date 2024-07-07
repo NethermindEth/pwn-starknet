@@ -167,8 +167,8 @@ mod PwnSimpleLoan {
                     .revoked_nonce
                     .read()
                     .revoke_nonce(
-                        nonce_space: Option::None,
                         owner: Option::Some(caller),
+                        nonce_space: Option::None,
                         nonce: caller_spec.nonce
                     );
             }
@@ -373,7 +373,7 @@ mod PwnSimpleLoan {
 
             if (!self.extension_proposal_made.read(extension_hash)) {
                 if (!signature_checker::is_valid_signature_now(
-                    extension.proposer, extension_hash, signature
+                    extension_hash, signature
                 )) {
                     signature_checker::Err::INVALID_SIGNATURE(
                         signer: extension.proposer, digest: extension_hash
@@ -438,8 +438,8 @@ mod PwnSimpleLoan {
                 .revoked_nonce
                 .read()
                 .revoke_nonce(
-                    nonce_space: Option::Some(extension.nonce_space),
                     owner: Option::Some(extension.proposer),
+                    nonce_space: Option::Some(extension.nonce_space),
                     nonce: extension.nonce
                 );
 
