@@ -37,6 +37,7 @@ mod PwnSimpleLoan {
     const ACCRUING_INTEREST_APR_DECIMALS: u256 = 100;
     const MIN_LOAN_DURATION: u64 = 600;
     const MAX_ACCRUING_INTEREST_APR: u32 = 160000;
+    const MINUTE: u64 = 60;
 
     // @note: duration in seconds
 
@@ -47,6 +48,9 @@ mod PwnSimpleLoan {
 
     const EXTENSION_PROPOSAL_TYPEHASH: felt252 =
         0x7e09d567c8fe43c280650abe4557a43fa693063ebc6c47ff3c585866507c732;
+
+    const BASE_DOMAIN_SEPARATOR: felt252 =
+        0x23b0e9af1d18f697d3e6d8bee3b1defcd47b5be37cf6d26fde2b5d5485065bc;
 
     #[storage]
     struct Storage {
@@ -117,7 +121,6 @@ mod PwnSimpleLoan {
         config: ContractAddress,
         revoked_nonce: ContractAddress,
         category_registry: ContractAddress,
-        domain_separator: felt252,
     ) {
         let hub_dispatcher = IPwnHubDispatcher { contract_address: hub };
         let loan_token_dispatcher = IPwnLoanDispatcher { contract_address: loan_token };
@@ -131,7 +134,10 @@ mod PwnSimpleLoan {
         self.config.write(config_dispatcher);
         self.revoked_nonce.write(revoked_nonce_dispatcher);
         self.category_registry.write(category_registry_dispatcher);
-        // @note: shall we create hash here only?
+        let hash_elements: Array<felt252> = array![
+            BASE_DOMAIN_SEPARATOR, starknet::get_contract_address().into()
+        ];
+        let domain_separator = poseidon_hash_span(hash_elements.span());
         self.domain_separator.write(domain_separator);
     }
 
@@ -151,7 +157,6 @@ mod PwnSimpleLoan {
                 .hub
                 .read()
                 .has_tag(proposal_spec.proposal_contract, pwn_hub_tags::LOAN_PROPOSAL)) {
-                // @note: we shall move these error in a common place?
                 simple_loan_proposal::SimpleLoanProposalComponent::Err::ADDRESS_MISSING_HUB_TAG(
                     addr: proposal_spec.proposal_contract, tag: pwn_hub_tags::LOAN_PROPOSAL
                 );
@@ -184,15 +189,16 @@ mod PwnSimpleLoan {
                     signature: proposal_spec.signature
                 );
 
+            let current_lender_spec_hash = self.get_lender_spec_hash(lender_spec.clone());
             if (caller != loan_terms.lender
-                && loan_terms.lender_spec_hash != self.get_lender_spec_hash(lender_spec.clone())) {
-                // @note: solidity code has current and expected in the error as well, similar to the INTEREST_APR_OUT_OF_BOUNDS error below
-                Err::INVALID_LENDER_SPEC_HASH();
+                && loan_terms.lender_spec_hash != current_lender_spec_hash) {
+                Err::INVALID_LENDER_SPEC_HASH(
+                    current: loan_terms.lender_spec_hash, expected: current_lender_spec_hash
+                );
             }
 
             if (loan_terms.duration < MIN_LOAN_DURATION) {
-                // @note: solidity code has current and limit in the error as well, similar to the INTEREST_APR_OUT_OF_BOUNDS error below
-                Err::INVALID_DURATION();
+                Err::INVALID_DURATION(current: loan_terms.duration, limit: MIN_LOAN_DURATION);
             }
 
             if (loan_terms.accruing_interest_APR > MAX_ACCRUING_INTEREST_APR) {
@@ -229,9 +235,6 @@ mod PwnSimpleLoan {
                     )
                 );
 
-            // @dev: abi.decode needs to implemented here for permit data
-            // @dev: _try_permit needs to be implemented
-
             if (caller_spec.refinancing_loan_id == 0) {
                 self._settle_new_loan(loan_terms, lender_spec);
             } else {
@@ -253,9 +256,6 @@ mod PwnSimpleLoan {
             self._check_loan_can_be_repaid(loan.status, loan.default_timestamp);
 
             self._update_repaid_loan(loan_id);
-
-            // @dev: abi.decode needs to implemented here for permit data
-            // @dev: _try_permit needs to be implemented
 
             let repayment_amount = self.get_loan_repayment_amount(loan_id);
             self.vault._pull(ERC20(loan.credit_address, repayment_amount), caller);
@@ -319,7 +319,7 @@ mod PwnSimpleLoan {
 
             self._delete_loan(loan_id);
 
-            self.emit(Event::LoanClaimed(LoanClaimed { loan_id: loan_id, defaulted: false }));
+            self.emit(Event::LoanClaimed(LoanClaimed { loan_id, defaulted: false }));
 
             if (credit_amount == 0) {
                 return;
@@ -350,12 +350,7 @@ mod PwnSimpleLoan {
 
             let extension_hash = self.get_extension_hash(extension);
             self.extension_proposal_made.write(extension_hash, true);
-            self
-                .emit(
-                    Event::ExtensionProposalMade(
-                        ExtensionProposalMade { extension_hash: extension_hash }
-                    )
-                );
+            self.emit(Event::ExtensionProposalMade(ExtensionProposalMade { extension_hash }));
         }
 
         fn extend_loan(
@@ -470,11 +465,6 @@ mod PwnSimpleLoan {
 
                 self._check_valid_asset(compensation);
 
-                // self._check_permit(extension.compensation_address, permit_data);
-
-                // @dev: abi.decode needs to implemented here for permit data
-                // @dev: _try_permit needs to be implemented
-
                 self.vault._push_from(compensation, loan.borrower, loan_owner);
             }
             self.loans.write(extension.loan_id, loan);
@@ -559,11 +549,11 @@ mod PwnSimpleLoan {
                 return 0;
             }
 
-            // @note: here fixed_interest_amount is in u256, shall we break it to low and high?
             let hash_elements: Array<felt252> = array![
-                self._get_loan_status(token_id).try_into().unwrap(),
+                self._get_loan_status(token_id).into(),
                 loan.default_timestamp.into(),
-                loan.fixed_interest_amount.try_into().unwrap(),
+                loan.fixed_interest_amount.low.into(),
+                loan.fixed_interest_amount.high.into(),
                 loan.accruing_interest_APR.into()
             ];
             poseidon_hash_span(hash_elements.span())
@@ -667,7 +657,6 @@ mod PwnSimpleLoan {
             let erc721_dispatcher = ERC721ABIDispatcher {
                 contract_address: self.loan_token.read().contract_address
             };
-            // @note: owner_of needs u256 and here the id is in felt252
             let loan_owner = erc721_dispatcher.owner_of(refinancing_loan_id.try_into().unwrap());
             let repayment_amount = self.get_loan_repayment_amount(refinancing_loan_id);
             let (fee_amount, new_loan_amount) = fee_calculator::calculate_fee_amount(
@@ -732,8 +721,6 @@ mod PwnSimpleLoan {
             } else {
                 0
             };
-            // @note: in solidity this was in try catch? shall we have it in match or something?
-            // like Ok and error?
             self
                 .try_claim_repaid_loan(
                     loan_id: refinancing_loan_id,
@@ -778,7 +765,7 @@ mod PwnSimpleLoan {
             loan.fixed_interest_amount = self._loan_accrued_interest(loan.clone());
             loan.accruing_interest_APR = 0;
             self.loans.write(loan_id, loan);
-            self.emit(Event::LoanPaidBack(LoanPaidBack { loan_id: loan_id }));
+            self.emit(Event::LoanPaidBack(LoanPaidBack { loan_id }));
         }
 
         fn _loan_accrued_interest(self: @ContractState, loan: Loan) -> u256 {
@@ -786,7 +773,7 @@ mod PwnSimpleLoan {
                 return loan.fixed_interest_amount;
             }
             let current_timestamp = starknet::get_block_timestamp();
-            let accuring_minutes: u64 = (current_timestamp - loan.start_timestamp) / 60;
+            let accuring_minutes: u64 = (current_timestamp - loan.start_timestamp) / MINUTE;
             let interest_amount: u256 = (accuring_minutes * loan.accruing_interest_APR.into())
                 .into();
             let accured_interest = math::mul_div(
@@ -804,7 +791,7 @@ mod PwnSimpleLoan {
                 false => ERC20(loan.credit_address, self.get_loan_repayment_amount(loan_id))
             };
             self._delete_loan(loan_id);
-            self.emit(Event::LoanClaimed(LoanClaimed { loan_id: loan_id, defaulted: defaulted }));
+            self.emit(Event::LoanClaimed(LoanClaimed { loan_id, defaulted }));
             self.vault._push(asset, loan_owner);
         }
 

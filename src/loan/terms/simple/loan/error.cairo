@@ -34,11 +34,11 @@ pub mod Err {
     pub fn REFINANCE_COLLATERAL_MISMATCH() {
         panic!("Collateral is not the same");
     }
-    pub fn INVALID_LENDER_SPEC_HASH() {
-        panic!("Invalid lender spec hash");
+    pub fn INVALID_LENDER_SPEC_HASH(current: felt252, expected: felt252) {
+        panic!("Invalid lender spec hash. Current: {}, Expected: {}", current, expected);
     }
-    pub fn INVALID_DURATION() {
-        panic!("Invalid duration");
+    pub fn INVALID_DURATION(current: u64, limit: u64) {
+        panic!("Invalid duration. Current: {}, Limit: {}", current, limit);
     }
     pub fn INTEREST_APR_OUT_OF_BOUNDS(current: u32, limit: u32) {
         panic!("Interest APR is out of bounds. Current: {}, Limit: {}", current, limit);
