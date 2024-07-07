@@ -2,6 +2,7 @@ use pwn::loan::lib::signature_checker::Signature;
 use pwn::loan::terms::simple::loan::types::Terms;
 use starknet::{ContractAddress, ClassHash};
 
+
 #[starknet::interface]
 trait ISimpleLoanProposal<TState> {
     fn revoke_nonce(ref self: TState, nonce_space: felt252, nonce: felt252);
@@ -21,6 +22,7 @@ pub trait ISimpleLoanAcceptProposal<TState> {
         signature: Signature
     ) -> (felt252, Terms);
 }
+
 
 #[starknet::component]
 pub mod SimpleLoanProposalComponent {

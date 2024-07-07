@@ -25,6 +25,7 @@ pub mod loan {
     pub mod terms {
         pub mod simple {
             pub mod loan {
+                mod error;
                 mod interface;
                 mod pwn_simple_loan;
                 pub mod types;
@@ -35,18 +36,18 @@ pub mod loan {
                 pub mod simple_loan_fungible_proposal;
                 pub mod simple_loan_list_proposal;
                 pub mod simple_loan_proposal;
-                mod simple_loan_simple_proposal;
+                pub mod simple_loan_simple_proposal;
             }
         }
     }
 
     mod token {
-        mod pwn_loan;
+        pub mod pwn_loan;
     }
 
-    mod vault {
+    pub mod vault {
         pub mod permit;
-        mod pwn_vault;
+        pub mod pwn_vault;
     }
 }
 

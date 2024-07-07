@@ -1,4 +1,6 @@
+use pwn::loan::lib::{fee_calculator, math, signature_checker};
 use pwn::loan::terms::simple::loan::types;
+use pwn::loan::vault::permit::{Permit};
 use pwn::multitoken::library::MultiToken::Asset;
 use starknet::ContractAddress;
 
@@ -20,14 +22,13 @@ pub trait IPwnSimpleLoan<TState> {
     fn extend_loan(
         ref self: TState,
         extension: types::ExtensionProposal,
-        signature: felt252,
-        permit_data: felt252
+        signature: signature_checker::Signature
     );
-    fn get_lender_spec_hash(self: @TState, calladata: Array<felt252>) -> felt252;
+    fn get_lender_spec_hash(self: @TState, calladata: types::LenderSpec) -> felt252;
     fn get_loan_repayment_amount(self: @TState, loan_id: felt252) -> u256;
     fn get_extension_hash(self: @TState, extension: types::ExtensionProposal) -> felt252;
     fn get_loan(self: @TState, loan_id: felt252) -> types::GetLoanReturnValue;
     fn get_is_valid_asset(self: @TState, asset: Asset) -> bool;
     fn get_loan_metadata_uri(self: @TState) -> ByteArray;
-    fn get_state_fingerprint(self: @TState) -> felt252;
+    fn get_state_fingerprint(self: @TState, token_id: felt252) -> felt252;
 }

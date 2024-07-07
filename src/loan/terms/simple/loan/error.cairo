@@ -1,50 +1,63 @@
 pub mod Err {
-    fn LOAN_NOT_RUNNING() {
+    use starknet::ContractAddress;
+    pub fn LOAN_NOT_RUNNING() {
         panic!("Loan is not running");
     }
-    fn LOAN_RUNNING() {
+    pub fn CALLER_NOT_VAULT() {
+        panic!("Caller is not vault");
+    }
+    pub fn LOAN_RUNNING() {
         panic!("Loan is running");
     }
-    fn LOAN_REPAID() {
+    pub fn LOAN_REPAID() {
         panic!("Loan is repaid");
     }
-    fn LOAN_DEFAULTED(default_time: u64) {
-        panic!("Loan is defaulted at time {}", default_time);
+    pub fn LOAN_DEFAULTED(default_timestamp: u64) {
+        panic!("Loan is defaulted at time {}", default_timestamp);
     }
-    fn NON_EXISTING_LOAN() {
+    pub fn NON_EXISTING_LOAN() {
         panic!("Loan does not exist");
     }
-    fn CALLER_NOT_LOAN_TOKEN_HOLDER() {
+    pub fn CALLER_NOT_LOAN_TOKEN_HOLDER() {
         panic!("Caller is not the loan token holder");
     }
-    fn REFINANCE_BORROWER_MISMATCH(curr_borrower: ContractAddress, new_borrower: ContractAddress) {
-        panic!("Current borrower is {:?} and new borrower is {:?}", curr_borrower, new_borrower);
+    pub fn REFINANCE_BORROWER_MISMATCH(
+        currrent_borrower: ContractAddress, new_borrower: ContractAddress
+    ) {
+        panic!(
+            "Current borrower is {:?} and new borrower is {:?}", currrent_borrower, new_borrower
+        );
     }
-    fn REFINANCE_CREDIT_MISMATCH() {
+    pub fn REFINANCE_CREDIT_MISMATCH() {
         panic!("Credit is not the same");
     }
-    fn REFINANCE_COLLATERAL_MISMATCH() {
+    pub fn REFINANCE_COLLATERAL_MISMATCH() {
         panic!("Collateral is not the same");
     }
-    fn INVALID_LENDER_SPEC_HASH() {
-        panic!("Invalid lender spec hash");
+    pub fn INVALID_LENDER_SPEC_HASH(current: felt252, expected: felt252) {
+        panic!("Invalid lender spec hash. Current: {}, Expected: {}", current, expected);
     }
-    fn INVALID_DURATION() {
-        panic!("Invalid duration");
+    pub fn INVALID_DURATION(current: u64, limit: u64) {
+        panic!("Invalid duration. Current: {}, Limit: {}", current, limit);
     }
-    fn INTEREST_APR_OUT_OF_BOUNDS(current: u256, limit: u256) {
+    pub fn INTEREST_APR_OUT_OF_BOUNDS(current: u32, limit: u32) {
         panic!("Interest APR is out of bounds. Current: {}, Limit: {}", current, limit);
     }
-    fn INVALID_EXTENSION_CALLER() {
+    pub fn INVALID_SOURCE_OF_FUNDS(source_of_funds: ContractAddress) {
+        panic!("Invalid source of funds. Source of fungs: {:?}", source_of_funds);
+    }
+    pub fn INVALID_EXTENSION_CALLER() {
         panic!("Invalid extension caller");
     }
-    fn INVALID_EXTENSION_SINGNER(allowed: ContractAddress, current: ContractAddress) {
+    pub fn INVALID_EXTENSION_SINGNER(allowed: ContractAddress, current: ContractAddress) {
         panic!("Invalid extension signer. Allowed: {:?}, Current: {:?}", allowed, current);
     }
-    fn INVALID_EXTENSION_DURATION(duration: u64, limit: u64) {
+    pub fn INVALID_EXTENSION_DURATION(duration: u64, limit: u64) {
         panic!("Invalid extension duration. Current: {}, Limit: {}", duration, limit);
     }
-    fn INVALID_MULTITOKEN_ASSET(category: u8, address: ContractAddress, id: felt252, amount: u256) {
+    pub fn INVALID_MULTITOKEN_ASSET(
+        category: u8, address: ContractAddress, id: felt252, amount: u256
+    ) {
         panic!(
             "Invalid multi token asset. Category: {}, Address: {:?}, ID: {}, Amount: {}",
             category,
