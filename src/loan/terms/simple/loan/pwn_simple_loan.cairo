@@ -86,6 +86,7 @@ mod PwnSimpleLoan {
         erc1155: ERC1155ReceiverComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
+
     }
 
     #[event]
@@ -250,17 +251,15 @@ mod PwnSimpleLoan {
 
             self
                 .emit(
-                    Event::LoanCreated(
-                        LoanCreated {
-                            loan_id,
-                            proposal_hash,
-                            proposal_contract: proposal_spec.proposal_contract,
-                            refinancing_loan_id: caller_spec.refinancing_loan_id,
-                            terms: loan_terms.clone(),
-                            lender_spec: lender_spec.clone(),
-                            extra: extra.unwrap()
-                        }
-                    )
+                    LoanCreated {
+                        loan_id,
+                        proposal_hash,
+                        proposal_contract: proposal_spec.proposal_contract,
+                        refinancing_loan_id: caller_spec.refinancing_loan_id,
+                        terms: loan_terms.clone(),
+                        lender_spec: lender_spec.clone(),
+                        extra: extra.unwrap()
+                    }
                 );
 
             if (caller_spec.refinancing_loan_id == 0) {
@@ -282,12 +281,10 @@ mod PwnSimpleLoan {
             let caller = starknet::get_caller_address();
             let loan = self.loans.read(loan_id);
             self._check_loan_can_be_repaid(loan.status, loan.default_timestamp);
-
             self._update_repaid_loan(loan_id);
 
             let repayment_amount = self.get_loan_repayment_amount(loan_id);
             self.vault._pull(ERC20(loan.credit_address, repayment_amount), caller);
-
             self.vault._push(loan.collateral, loan.borrower);
 
             self
@@ -378,7 +375,7 @@ mod PwnSimpleLoan {
 
             let extension_hash = self.get_extension_hash(extension);
             self.extension_proposal_made.write(extension_hash, true);
-            self.emit(Event::ExtensionProposalMade(ExtensionProposalMade { extension_hash }));
+            self.emit(ExtensionProposalMade { extension_hash });
         }
 
         fn extend_loan(
@@ -474,13 +471,11 @@ mod PwnSimpleLoan {
 
             self
                 .emit(
-                    Event::LoanExtended(
-                        LoanExtended {
-                            loan_id: extension.loan_id,
-                            original_default_timestamp,
-                            extended_default_timestamp: loan.default_timestamp
-                        }
-                    )
+                    LoanExtended {
+                        loan_id: extension.loan_id,
+                        original_default_timestamp,
+                        extended_default_timestamp: loan.default_timestamp
+                    }
                 );
 
             if (extension.compensation_address != Default::default()
@@ -791,7 +786,7 @@ mod PwnSimpleLoan {
             loan.fixed_interest_amount = self._loan_accrued_interest(loan.clone());
             loan.accruing_interest_APR = 0;
             self.loans.write(loan_id, loan);
-            self.emit(Event::LoanPaidBack(LoanPaidBack { loan_id }));
+            self.emit(LoanPaidBack { loan_id });
         }
 
         fn _loan_accrued_interest(self: @ContractState, loan: Loan) -> u256 {
@@ -817,7 +812,7 @@ mod PwnSimpleLoan {
                 false => ERC20(loan.credit_address, self.get_loan_repayment_amount(loan_id))
             };
             self._delete_loan(loan_id);
-            self.emit(Event::LoanClaimed(LoanClaimed { loan_id, defaulted }));
+            self.emit(LoanClaimed { loan_id, defaulted });
             self.vault._push(asset, loan_owner);
         }
 
