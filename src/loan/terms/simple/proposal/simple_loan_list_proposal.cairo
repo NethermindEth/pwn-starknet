@@ -23,7 +23,7 @@ trait ISimpleLoanListProposal<TState> {
 }
 
 #[starknet::contract]
-mod SimpleLoanListProposal {
+pub mod SimpleLoanListProposal {
     use core::array::SpanTrait;
     use core::poseidon::poseidon_hash_span;
     use pwn::ContractAddressDefault;
@@ -46,40 +46,39 @@ mod SimpleLoanListProposal {
 
     // NOTE: we can hard code this by calculating the poseidon hash of the string 
     // in the Solidity contract offline.
-    const PROPOSAL_TYPEHASH: felt252 =
+    pub const PROPOSAL_TYPEHASH: felt252 =
         0x03bf4de294949c186bbc5f2122c5a2c96baf0ea86d6d3b740cddf83e4f890351;
 
     #[derive(Copy, Default, Drop, Serde)]
     pub struct Proposal {
-        collateral_category: MultiToken::Category,
-        collateral_address: ContractAddress,
-        collateral_ids_whitelist_merkle_root: felt252,
-        collateral_amount: u256,
-        check_collateral_state_fingerprint: bool,
-        collateral_state_fingerprint: felt252,
-        credit_address: ContractAddress,
-        credit_amount: u256,
-        available_credit_limit: u256,
-        fixed_interest_amount: u256,
-        accruing_interest_APR: u32,
-        duration: u64,
-        expiration: u64,
-        allowed_acceptor: ContractAddress,
-        proposer: ContractAddress,
-        proposer_spec_hash: felt252,
-        is_offer: bool,
-        refinancing_loan_id: felt252,
-        nonce_space: felt252,
-        nonce: felt252,
-        loan_contract: ContractAddress,
-        public_key: felt252,
+        pub collateral_category: MultiToken::Category,
+        pub collateral_address: ContractAddress,
+        pub collateral_ids_whitelist_merkle_root: felt252,
+        pub collateral_amount: u256,
+        pub check_collateral_state_fingerprint: bool,
+        pub collateral_state_fingerprint: felt252,
+        pub credit_address: ContractAddress,
+        pub credit_amount: u256,
+        pub available_credit_limit: u256,
+        pub fixed_interest_amount: u256,
+        pub accruing_interest_APR: u32,
+        pub duration: u64,
+        pub expiration: u64,
+        pub allowed_acceptor: ContractAddress,
+        pub proposer: ContractAddress,
+        pub proposer_spec_hash: felt252,
+        pub is_offer: bool,
+        pub refinancing_loan_id: felt252,
+        pub nonce_space: felt252,
+        pub nonce: felt252,
+        pub loan_contract: ContractAddress,
     }
 
 
     #[derive(Copy, Drop, Serde)]
     pub struct ProposalValues {
-        collateral_id: felt252,
-        merkle_inclusion_proof: Span<felt252>,
+        pub collateral_id: felt252,
+        pub merkle_inclusion_proof: Span<felt252>,
     }
 
     #[storage]
@@ -90,17 +89,17 @@ mod SimpleLoanListProposal {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         ProposalMade: ProposalMade,
         #[flat]
         SimpleLoanProposalEvent: SimpleLoanProposalComponent::Event,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct ProposalMade {
-        proposal_hash: felt252,
-        proposer: ContractAddress,
-        proposal: Proposal,
+    pub struct ProposalMade {
+        pub proposal_hash: felt252,
+        pub proposer: ContractAddress,
+        pub proposal: Proposal,
     }
 
     pub mod Err {
@@ -178,8 +177,8 @@ mod SimpleLoanListProposal {
                 .simple_loan
                 ._accept_proposal(
                     acceptor,
-                    proposal_hash,
                     refinancing_loan_id,
+                    proposal_hash,
                     proposal_inclusion_proof,
                     signature,
                     proposal_base
@@ -205,7 +204,7 @@ mod SimpleLoanListProposal {
                 },
                 credit: MultiToken::ERC20(proposal.credit_address, proposal.credit_amount),
                 fixed_interest_amount: proposal.fixed_interest_amount,
-                accruing_interest_apr: proposal.accruing_interest_APR,
+                accruing_interest_APR: proposal.accruing_interest_APR,
                 lender_spec_hash: if proposal.is_offer {
                     proposal.proposer_spec_hash
                 } else {
@@ -310,17 +309,25 @@ mod SimpleLoanListProposal {
                 nonce_space: *data.at(22),
                 nonce: *data.at(23),
                 loan_contract,
-                public_key: *data.at(25),
             }
         }
 
         fn decode_serde_proposal_values(
             self: @ContractState, data: Span<felt252>
         ) -> ProposalValues {
-            let mut merkle_inclusion_proof = data;
-            let _ = merkle_inclusion_proof.pop_front();
+            // Extract the length of the merkle_inclusion_proof
+            let proof_len: usize = (*data.at(1)).try_into().expect('failed to convert length');
+            let mut merkle_inclusion_proof = array![];
+            let mut i = 0;
+            while i < proof_len {
+                merkle_inclusion_proof.append(*data.at(i + 2));
+                i += 1;
+            };
 
-            ProposalValues { collateral_id: *data.at(0), merkle_inclusion_proof }
+            // Create ProposalValues with the collateral_id being the first element after the proof array
+            ProposalValues {
+                collateral_id: *data.at(0), merkle_inclusion_proof: merkle_inclusion_proof.span()
+            }
         }
     }
 }

@@ -115,10 +115,18 @@ pub mod PwnConfig {
             self._set_fee(fee);
         }
 
+        fn get_fee(self: @ContractState) -> u16 {
+            self.fee.read()
+        }
+
 
         fn set_fee_collector(ref self: ContractState, fee_collector: ContractAddress) {
             self.ownable.assert_only_owner();
             self._set_fee_collector(fee_collector);
+        }
+
+        fn get_fee_collector(self: @ContractState) -> ContractAddress {
+            self.fee_collector.read()
         }
 
         fn set_loan_metadata_uri(
