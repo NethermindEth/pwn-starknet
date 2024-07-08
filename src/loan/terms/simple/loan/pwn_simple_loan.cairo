@@ -1,6 +1,12 @@
 #[starknet::contract]
 mod PwnSimpleLoan {
     use core::poseidon::poseidon_hash_span;
+
+    use openzeppelin::introspection::src5::SRC5Component;
+    use openzeppelin::token::erc1155::erc1155_receiver::ERC1155ReceiverComponent;
+    use openzeppelin::token::erc721::{
+        erc721_receiver::{ERC721ReceiverComponent}, interface::IERC721_ID
+    };
     use openzeppelin::token::erc721::{interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait}};
     use pwn::ContractAddressDefault;
     use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
@@ -33,6 +39,16 @@ mod PwnSimpleLoan {
     use starknet::ContractAddress;
 
     component!(path: PwnVaultComponent, storage: vault, event: VaultEvent);
+    component!(path: ERC721ReceiverComponent, storage: erc721, event: ERC721Event);
+    component!(path: ERC1155ReceiverComponent, storage: erc1155, event: ERC1155Event);
+    component!(path: SRC5Component, storage: src5, event: SRC5Event);
+
+
+    #[abi(embed_v0)]
+    impl ERC721Impl = ERC721ReceiverComponent::ERC721ReceiverImpl<ContractState>;
+
+    #[abi(embed_v0)]
+    impl ERC1155Impl = ERC1155ReceiverComponent::ERC1155ReceiverImpl<ContractState>;
 
     const ACCRUING_INTEREST_APR_DECIMALS: u256 = 100;
     const MIN_LOAN_DURATION: u64 = 600;
@@ -64,6 +80,12 @@ mod PwnSimpleLoan {
         category_registry: IMultitokenCategoryRegistryDispatcher,
         #[substorage(v0)]
         vault: PwnVaultComponent::Storage,
+        #[substorage(v0)]
+        erc721: ERC721ReceiverComponent::Storage,
+        #[substorage(v0)]
+        erc1155: ERC1155ReceiverComponent::Storage,
+        #[substorage(v0)]
+        src5: SRC5Component::Storage,
     }
 
     #[event]
@@ -74,7 +96,13 @@ mod PwnSimpleLoan {
         LoanClaimed: LoanClaimed,
         LoanExtended: LoanExtended,
         ExtensionProposalMade: ExtensionProposalMade,
-        VaultEvent: PwnVaultComponent::Event
+        VaultEvent: PwnVaultComponent::Event,
+        #[flat]
+        ERC721Event: ERC721ReceiverComponent::Event,
+        #[flat]
+        SRC5Event: SRC5Component::Event,
+        #[flat]
+        ERC1155Event: ERC1155ReceiverComponent::Event,
     }
 
     #[derive(Drop, starknet::Event)]
