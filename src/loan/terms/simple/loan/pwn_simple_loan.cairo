@@ -86,7 +86,6 @@ mod PwnSimpleLoan {
         erc1155: ERC1155ReceiverComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
-
     }
 
     #[event]
