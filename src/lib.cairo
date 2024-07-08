@@ -61,6 +61,8 @@ pub mod nonce {
 
 pub mod mocks {
     pub mod erc20_mock;
+    pub mod erc721_mock;
+    pub mod erc1155_mock;
 }
 
 impl ContractAddressDefault of Default<starknet::ContractAddress> {

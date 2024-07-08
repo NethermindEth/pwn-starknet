@@ -40,7 +40,7 @@ mod constructor {
 }
 
 mod register_category_value {
-    use snforge_std::{spy_events, SpyOn, EventSpy, EventAssertions};
+    use snforge_std::{spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait};
     use super::{deploy, ACCOUNT_1, OWNER, IMultitokenCategoryRegistryDispatcherTrait, MultitokenCategoryRegistry};
     use starknet::{ContractAddress};
 
@@ -79,7 +79,7 @@ mod register_category_value {
 
         let asset_address : felt252 = asset_address.try_into().unwrap();
 
-        let mut spy = spy_events(SpyOn::One(registry.contract_address));
+        let mut spy = spy_events();
         registry.register_category_value(asset_address.try_into().unwrap(), category);
 
         spy
@@ -97,7 +97,7 @@ mod register_category_value {
 }
 
 mod unregister_category_value {
-    use snforge_std::{spy_events, SpyOn, EventSpy, EventAssertions};
+    use snforge_std::{spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait};
     use super::{deploy, ACCOUNT_1, OWNER, IMultitokenCategoryRegistryDispatcherTrait, MultitokenCategoryRegistry};
     use starknet::{ContractAddress};
 
@@ -129,7 +129,7 @@ mod unregister_category_value {
 
         let asset_address : felt252 = asset_address.try_into().unwrap();
 
-        let mut spy = spy_events(SpyOn::One(registry.contract_address));
+        let mut spy = spy_events();
         registry.unregister_category_value(asset_address.try_into().unwrap());
 
         spy
@@ -147,7 +147,6 @@ mod unregister_category_value {
 }
 
 mod registered_category_value {
-    use snforge_std::{spy_events, SpyOn, EventSpy, EventAssertions};
     use super::{deploy, ACCOUNT_1, OWNER, IMultitokenCategoryRegistryDispatcherTrait, MultitokenCategoryRegistry};
     use starknet::{ContractAddress};
 
