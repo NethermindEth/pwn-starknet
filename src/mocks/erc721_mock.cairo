@@ -30,9 +30,7 @@ pub mod ERC721Mock {
     }
 
     #[constructor]
-    fn constructor(
-        ref self: ContractState,
-    ) {
+    fn constructor(ref self: ContractState,) {
         let name = "MyNFT";
         let symbol = "NFT";
         let base_uri = "https://api.example.com/v1/";
@@ -41,11 +39,7 @@ pub mod ERC721Mock {
     }
 
     #[external(v0)]
-    fn mint(
-        ref self: ContractState,
-        recipient: ContractAddress,
-        token_id: u256
-    ) {
+    fn mint(ref self: ContractState, recipient: ContractAddress, token_id: u256) {
         self.erc721.mint(recipient, token_id);
     }
 }

@@ -30,9 +30,7 @@ pub mod ERC1155Mock {
     }
 
     #[constructor]
-    fn constructor(
-        ref self: ContractState,
-    ) {
+    fn constructor(ref self: ContractState,) {
         self.erc1155.initializer("token_uri");
     }
 
@@ -49,14 +47,7 @@ pub mod ERC1155Mock {
     }
 
     #[external(v0)]
-    fn mint(
-        ref self: ContractState,
-        recipient: ContractAddress,
-        token_id: u256,
-        value: u256
-    ) {
-        self
-            .erc1155
-            .mint_with_acceptance_check(recipient, token_id, value, array![].span());
+    fn mint(ref self: ContractState, recipient: ContractAddress, token_id: u256, value: u256) {
+        self.erc1155.mint_with_acceptance_check(recipient, token_id, value, array![].span());
     }
 }

@@ -3,6 +3,8 @@ mod unit {
     mod config_test;
     mod fee_calculator_test;
     mod hub_test;
+    mod multitoken_category_registry_test;
+    mod multitoken_library_test;
     mod revoked_nonce_test;
     mod signature_checker_test;
     mod simple_loan_dutch_auction_proposal_test;
@@ -12,8 +14,6 @@ mod unit {
     mod simple_loan_simple_proposal_test;
     mod simple_loan_test;
     mod vault_test;
-    mod multitoken_category_registry_test;
-    mod multitoken_library_test;
 }
 
 mod integration {

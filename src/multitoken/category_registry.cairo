@@ -9,8 +9,8 @@ pub trait IMultitokenCategoryRegistry<TState> {
 
 #[starknet::contract]
 pub mod MultitokenCategoryRegistry {
-    use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
     use openzeppelin::access::ownable::OwnableComponent;
+    use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
     use openzeppelin::introspection::src5::SRC5Component;
     use starknet::{ContractAddress, get_caller_address};
 
@@ -50,7 +50,7 @@ pub mod MultitokenCategoryRegistry {
     }
 
     #[derive(Drop, starknet::Event)]
-   pub struct CategoryUnregistered {
+    pub struct CategoryUnregistered {
         #[key]
         pub asset_address: ContractAddress,
     }

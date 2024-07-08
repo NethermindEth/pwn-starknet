@@ -24,9 +24,7 @@ pub mod ERC20Mock {
     }
 
     #[constructor]
-    fn constructor(
-        ref self: ContractState,
-    ) {
+    fn constructor(ref self: ContractState,) {
         let name = "ERC20Mock";
         let symbol = "MTK";
 
@@ -34,11 +32,7 @@ pub mod ERC20Mock {
     }
 
     #[external(v0)]
-    fn mint(
-        ref self: ContractState,
-        recipient: ContractAddress,
-        amount: u256
-    ) {
+    fn mint(ref self: ContractState, recipient: ContractAddress, amount: u256) {
         self.erc20.mint(recipient, amount);
     }
 }

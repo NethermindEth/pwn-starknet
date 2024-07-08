@@ -1,10 +1,10 @@
 use pwn::multitoken::category_registry::MultitokenCategoryRegistry;
-use starknet::ContractAddress;
 
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
     cheat_caller_address_global,
 };
+use starknet::ContractAddress;
 
 #[starknet::interface]
 pub trait IMultitokenCategoryRegistry<TState> {
@@ -41,8 +41,11 @@ mod constructor {
 
 mod register_category_value {
     use snforge_std::{spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait};
-    use super::{deploy, ACCOUNT_1, OWNER, IMultitokenCategoryRegistryDispatcherTrait, MultitokenCategoryRegistry};
     use starknet::{ContractAddress};
+    use super::{
+        deploy, ACCOUNT_1, OWNER, IMultitokenCategoryRegistryDispatcherTrait,
+        MultitokenCategoryRegistry
+    };
 
     #[test]
     #[should_panic]
@@ -58,26 +61,29 @@ mod register_category_value {
     fn test_should_fail_when_category_max_u8_value() {
         let registry = deploy();
 
-        registry.register_category_value(OWNER(), MultitokenCategoryRegistry::CATEGORY_NOT_REGISTERED);
+        registry
+            .register_category_value(OWNER(), MultitokenCategoryRegistry::CATEGORY_NOT_REGISTERED);
     }
 
     fn test_fuzz_should_store_incremented_category_value(asset_address: u128, category: u8) {
         let registry = deploy();
 
-        let asset_address : felt252 = asset_address.try_into().unwrap();
+        let asset_address: felt252 = asset_address.try_into().unwrap();
 
         assert_eq!(registry.registered_category_value(asset_address.try_into().unwrap()), 0);
 
         registry.register_category_value(asset_address.try_into().unwrap(), category);
 
-        assert_eq!(registry.registered_category_value(asset_address.try_into().unwrap()), category + 1);
+        assert_eq!(
+            registry.registered_category_value(asset_address.try_into().unwrap()), category + 1
+        );
     }
 
     #[test]
     fn test_fuzz_should_emit_CategoryRegistered(asset_address: u128, category: u8) {
         let registry = deploy();
 
-        let asset_address : felt252 = asset_address.try_into().unwrap();
+        let asset_address: felt252 = asset_address.try_into().unwrap();
 
         let mut spy = spy_events();
         registry.register_category_value(asset_address.try_into().unwrap(), category);
@@ -88,7 +94,9 @@ mod register_category_value {
                     (
                         registry.contract_address,
                         MultitokenCategoryRegistry::Event::CategoryRegistered(
-                            MultitokenCategoryRegistry::CategoryRegistered { asset_address: asset_address.try_into().unwrap(), category}
+                            MultitokenCategoryRegistry::CategoryRegistered {
+                                asset_address: asset_address.try_into().unwrap(), category
+                            }
                         )
                     )
                 ]
@@ -98,8 +106,11 @@ mod register_category_value {
 
 mod unregister_category_value {
     use snforge_std::{spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait};
-    use super::{deploy, ACCOUNT_1, OWNER, IMultitokenCategoryRegistryDispatcherTrait, MultitokenCategoryRegistry};
     use starknet::{ContractAddress};
+    use super::{
+        deploy, ACCOUNT_1, OWNER, IMultitokenCategoryRegistryDispatcherTrait,
+        MultitokenCategoryRegistry
+    };
 
     #[test]
     #[should_panic]
@@ -113,10 +124,12 @@ mod unregister_category_value {
     fn test_fuzz_should_clear_store(asset_address: u128, category: u8) {
         let registry = deploy();
 
-        let asset_address : felt252 = asset_address.try_into().unwrap();
+        let asset_address: felt252 = asset_address.try_into().unwrap();
 
         registry.register_category_value(asset_address.try_into().unwrap(), category);
-        assert_eq!(registry.registered_category_value(asset_address.try_into().unwrap()), category + 1);
+        assert_eq!(
+            registry.registered_category_value(asset_address.try_into().unwrap()), category + 1
+        );
 
         registry.unregister_category_value(asset_address.try_into().unwrap());
 
@@ -127,7 +140,7 @@ mod unregister_category_value {
     fn test_fuzz_should_emit_CategoryUnregistered(asset_address: u128) {
         let registry = deploy();
 
-        let asset_address : felt252 = asset_address.try_into().unwrap();
+        let asset_address: felt252 = asset_address.try_into().unwrap();
 
         let mut spy = spy_events();
         registry.unregister_category_value(asset_address.try_into().unwrap());
@@ -138,7 +151,9 @@ mod unregister_category_value {
                     (
                         registry.contract_address,
                         MultitokenCategoryRegistry::Event::CategoryUnregistered(
-                            MultitokenCategoryRegistry::CategoryUnregistered { asset_address: asset_address.try_into().unwrap()}
+                            MultitokenCategoryRegistry::CategoryUnregistered {
+                                asset_address: asset_address.try_into().unwrap()
+                            }
                         )
                     )
                 ]
@@ -147,25 +162,33 @@ mod unregister_category_value {
 }
 
 mod registered_category_value {
-    use super::{deploy, ACCOUNT_1, OWNER, IMultitokenCategoryRegistryDispatcherTrait, MultitokenCategoryRegistry};
     use starknet::{ContractAddress};
+    use super::{
+        deploy, ACCOUNT_1, OWNER, IMultitokenCategoryRegistryDispatcherTrait,
+        MultitokenCategoryRegistry
+    };
 
     fn test_fuzz_should_return_category_value_when_registered(asset_address: u128, category: u8) {
         let registry = deploy();
 
-        let asset_address : felt252 = asset_address.try_into().unwrap();
+        let asset_address: felt252 = asset_address.try_into().unwrap();
 
         registry.register_category_value(asset_address.try_into().unwrap(), category);
 
-        assert_eq!(registry.registered_category_value(asset_address.try_into().unwrap()), category + 1);
+        assert_eq!(
+            registry.registered_category_value(asset_address.try_into().unwrap()), category + 1
+        );
     }
 
     #[test]
     fn test_fuzz_should_return_category_not_registered_when_not_registered(asset_address: u128) {
         let registry = deploy();
 
-        let asset_address : felt252 = asset_address.try_into().unwrap();
+        let asset_address: felt252 = asset_address.try_into().unwrap();
 
-        assert_eq!(registry.registered_category_value(asset_address.try_into().unwrap()), MultitokenCategoryRegistry::CATEGORY_NOT_REGISTERED);
+        assert_eq!(
+            registry.registered_category_value(asset_address.try_into().unwrap()),
+            MultitokenCategoryRegistry::CATEGORY_NOT_REGISTERED
+        );
     }
 }
