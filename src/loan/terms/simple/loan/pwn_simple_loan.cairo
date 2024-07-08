@@ -343,7 +343,7 @@ mod PwnSimpleLoan {
 
             self._delete_loan(loan_id);
 
-            self.emit(Event::LoanClaimed(LoanClaimed { loan_id, defaulted: false }));
+            self.emit(LoanClaimed { loan_id, defaulted: false });
 
             if (credit_amount == 0) {
                 return;
