@@ -1,7 +1,10 @@
 use openzeppelin::token::erc1155::interface::{ERC1155ABIDispatcher, ERC1155ABIDispatcherTrait};
 use openzeppelin::token::erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
 use openzeppelin::token::erc721::interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait};
-use pwn::mocks::{erc20_mock::ERC20Mock, erc721_mock::ERC721Mock, erc1155_mock::ERC1155Mock, account_mock::AccountMock};
+use pwn::mocks::{
+    erc20_mock::ERC20Mock, erc721_mock::ERC721Mock, erc1155_mock::ERC1155Mock,
+    account_mock::AccountMock
+};
 use pwn::multitoken::category_registry::MultitokenCategoryRegistry;
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
@@ -22,7 +25,9 @@ trait IERC7210Mock<TState> {
 #[starknet::interface]
 trait IERC1155Mock<TState> {
     fn mint(ref self: TState, recipient: ContractAddress, tokenId: u256, value: u256);
-    fn batch_mint(ref self: TState, recipient: ContractAddress, tokenIds: Span<u256>, values: Span<u256>);
+    fn batch_mint(
+        ref self: TState, recipient: ContractAddress, tokenIds: Span<u256>, values: Span<u256>
+    );
 }
 
 fn ALICE() -> ContractAddress {
@@ -282,16 +287,20 @@ mod transfer_asset_from {
         let token_address = deploy_erc1155_mock();
         let this_address = starknet::get_contract_address();
         mint_erc1155(token_address, alice, 1, 10);
-        assert_eq!(ERC1155ABIDispatcher{ contract_address: token_address }.balance_of(alice, 1), 10);
-        assert_eq!(ERC1155ABIDispatcher{ contract_address: token_address }.balance_of(bob, 1), 0);
+        assert_eq!(
+            ERC1155ABIDispatcher { contract_address: token_address }.balance_of(alice, 1), 10
+        );
+        assert_eq!(ERC1155ABIDispatcher { contract_address: token_address }.balance_of(bob, 1), 0);
 
         let asset = MultiToken::ERC1155(token_address, 1, Option::Some(5));
 
         give_allowance_erc1155(token_address, alice, this_address, 1, 5);
         asset.transfer_asset_from(alice, bob, false);
 
-        assert_eq!(ERC1155ABIDispatcher{ contract_address: token_address }.balance_of(alice, 1), 5);
-        assert_eq!(ERC1155ABIDispatcher{ contract_address: token_address }.balance_of(bob, 1), 5);
+        assert_eq!(
+            ERC1155ABIDispatcher { contract_address: token_address }.balance_of(alice, 1), 5
+        );
+        assert_eq!(ERC1155ABIDispatcher { contract_address: token_address }.balance_of(bob, 1), 5);
     }
 
     #[test]
@@ -301,16 +310,20 @@ mod transfer_asset_from {
         let this_address = starknet::get_contract_address();
 
         mint_erc1155(token_address, alice, 1, 10);
-        assert_eq!(ERC1155ABIDispatcher{ contract_address: token_address }.balance_of(alice, 1), 10);
-        assert_eq!(ERC1155ABIDispatcher{ contract_address: token_address }.balance_of(bob, 1), 0);
+        assert_eq!(
+            ERC1155ABIDispatcher { contract_address: token_address }.balance_of(alice, 1), 10
+        );
+        assert_eq!(ERC1155ABIDispatcher { contract_address: token_address }.balance_of(bob, 1), 0);
 
         let asset = MultiToken::ERC1155(token_address, 1, Option::None);
 
         give_allowance_erc1155(token_address, alice, this_address, 1, 5);
         asset.transfer_asset_from(alice, bob, false);
 
-        assert_eq!(ERC1155ABIDispatcher{ contract_address: token_address }.balance_of(alice, 1), 9);
-        assert_eq!(ERC1155ABIDispatcher{ contract_address: token_address }.balance_of(bob, 1), 1);
+        assert_eq!(
+            ERC1155ABIDispatcher { contract_address: token_address }.balance_of(alice, 1), 9
+        );
+        assert_eq!(ERC1155ABIDispatcher { contract_address: token_address }.balance_of(bob, 1), 1);
     }
 }
 
@@ -318,8 +331,8 @@ mod balance_of {
     use pwn::multitoken::library::MultiToken::AssetTrait;
     use pwn::multitoken::library::MultiToken;
     use super::{
-        deploy_erc20_mock, mint_erc20, deploy_erc721_mock, mint_erc721,
-        deploy_erc1155_mock, mint_erc1155, deploy_accounts
+        deploy_erc20_mock, mint_erc20, deploy_erc721_mock, mint_erc721, deploy_erc1155_mock,
+        mint_erc1155, deploy_accounts
     };
 
     #[test]
@@ -354,22 +367,22 @@ mod balance_of {
 }
 
 mod approve_asset {
-    use pwn::multitoken::library::MultiToken::AssetTrait;
-    use pwn::multitoken::library::MultiToken;
     use openzeppelin::token::erc1155::interface::{ERC1155ABIDispatcher, ERC1155ABIDispatcherTrait};
     use openzeppelin::token::erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
     use openzeppelin::token::erc721::interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait};
+    use pwn::multitoken::library::MultiToken::AssetTrait;
+    use pwn::multitoken::library::MultiToken;
     use super::{
         ALICE, BOB, deploy_erc20_mock, mint_erc20, deploy_erc721_mock, mint_erc721,
         deploy_erc1155_mock, mint_erc1155, deploy_accounts
     };
-    
+
     #[test]
     #[should_panic]
     fn test_erc20_transfer_asset_from_should_fail_when_not_approved() {
         let token_address = deploy_erc20_mock();
         mint_erc20(token_address, ALICE(), 1000);
-        
+
         let asset = MultiToken::ERC20(token_address, 1000);
         asset.transfer_asset_from(ALICE(), BOB(), false);
     }
@@ -380,7 +393,9 @@ mod approve_asset {
         let this_address = starknet::get_contract_address();
         mint_erc20(token_address, ALICE(), 1000);
 
-        assert_eq!(ERC20ABIDispatcher { contract_address: token_address }.balance_of(ALICE()), 1000);
+        assert_eq!(
+            ERC20ABIDispatcher { contract_address: token_address }.balance_of(ALICE()), 1000
+        );
         assert_eq!(ERC20ABIDispatcher { contract_address: token_address }.balance_of(BOB()), 0);
 
         let asset = MultiToken::ERC20(token_address, 1000);
@@ -424,33 +439,18 @@ mod is_valid_with_registry {
         let token = starknet::contract_address_const::<'TOKEN'>();
 
         // category check returns false
-        mock_call(
-            registry,
-            selector!("registered_category_value"),
-            0,
-            1
-        );
+        mock_call(registry, selector!("registered_category_value"), 0, 1);
         let asset = MultiToken::ERC721(token, 1);
         assert_eq!(asset.is_valid(Option::Some(registry)), false);
 
         // format check returns false
-        mock_call(
-            registry,
-            selector!("registered_category_value"),
-            1,
-            1
-        );
+        mock_call(registry, selector!("registered_category_value"), 1, 1);
         let mut asset = MultiToken::ERC721(token, 1);
         asset.amount = 1;
         assert_eq!(asset.is_valid(Option::Some(registry)), false);
 
         // both category and format check return true
-        mock_call(
-            registry,
-            selector!("registered_category_value"),
-            1,
-            1
-        );
+        mock_call(registry, selector!("registered_category_value"), 1, 1);
         let asset = MultiToken::ERC721(token, 1);
         assert_eq!(asset.is_valid(Option::Some(registry)), true);
     }
@@ -466,33 +466,18 @@ mod is_valid_without_registry {
         let token = starknet::contract_address_const::<'TOKEN'>();
 
         // category check returns false
-        mock_call(
-            token,
-            selector!("supports_interface"),
-            false,
-            1
-        );
+        mock_call(token, selector!("supports_interface"), false, 1);
         let asset = MultiToken::ERC721(token, 1);
         assert_eq!(asset.is_valid(Option::None), false);
 
         // format check returns false
-        mock_call(
-            token,
-            selector!("supports_interface"),
-            true,
-            1
-        );
+        mock_call(token, selector!("supports_interface"), true, 1);
         let mut asset = MultiToken::ERC721(token, 1);
         asset.amount = 1;
         assert_eq!(asset.is_valid(Option::None), false);
 
         // both category and format check return true
-        mock_call(
-            token,
-            selector!("supports_interface"),
-            true,
-            1
-        );
+        mock_call(token, selector!("supports_interface"), true, 1);
         let mut asset = MultiToken::ERC721(token, 1);
         assert_eq!(asset.is_valid(Option::None), true);
     }
