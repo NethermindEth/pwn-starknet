@@ -19,3 +19,7 @@ mod integration {
     mod protocol_integrity_test;
     mod simple_loan_integration_test;
 }
+
+pub mod utils {
+   pub mod simple_loan_proposal_component_mock;
+}

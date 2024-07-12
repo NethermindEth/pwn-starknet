@@ -4,7 +4,7 @@ use starknet::{ContractAddress, ClassHash};
 
 
 #[starknet::interface]
-trait ISimpleLoanProposal<TState> {
+pub trait ISimpleLoanProposal<TState> {
     fn revoke_nonce(ref self: TState, nonce_space: felt252, nonce: felt252);
     fn get_multiproposal_hash(
         self: @TState, multiproposal: SimpleLoanProposalComponent::Multiproposal
@@ -193,8 +193,8 @@ pub mod SimpleLoanProposalComponent {
             proposal_hash: felt252,
             proposer: ContractAddress
         ) {
-            if starknet::get_caller_address() != proposer {
-                Err::CALLER_IS_NOT_STATED_PROPOSER(starknet::get_caller_address());
+            if starknet::get_caller_address() != proposer { 
+                Err::CALLER_IS_NOT_STATED_PROPOSER(starknet::get_caller_address()); // why not directly write caller instead of checking
             }
 
             self.proposal_made.write(proposal_hash, true);
@@ -225,13 +225,14 @@ pub mod SimpleLoanProposalComponent {
 
             if proposal_inclusion_proof.len() == 0 {
                 if !self.proposal_made.read(proposal_hash) {
+                    // should we also need to ensure it is signed by the proposer
                     if !signature_checker::is_valid_signature_now(proposal_hash, signature) {
                         signature_checker::Err::INVALID_SIGNATURE(proposal.proposer, proposal_hash);
                     }
                 }
             } else {
                 // TODO: verify inclusion proof type with the pwn team
-                let multiproposal_hash = 0x0;
+                let multiproposal_hash = poseidon_hash_span(array!['multiProposalHash'].span());
                 if !signature_checker::is_valid_signature_now(multiproposal_hash, signature) {
                     signature_checker::Err::INVALID_SIGNATURE(
                         proposal.proposer, multiproposal_hash
@@ -259,7 +260,7 @@ pub mod SimpleLoanProposalComponent {
                 Err::EXPIRED(starknet::get_block_timestamp(), proposal.expiration);
             }
 
-            if self
+            if !self
                 .revoked_nonce
                 .read()
                 .is_nonce_usable(proposal.proposer, proposal.nonce_space, proposal.nonce) {
@@ -282,7 +283,7 @@ pub mod SimpleLoanProposalComponent {
                         Option::Some(proposal.nonce_space),
                         proposal.nonce
                     );
-            } else if self.credit_used.read(proposal_hash)
+            } else if self.credit_used.read(proposal_hash) // inefficient storage read
                 + proposal.credit_amount <= proposal.available_credit_limit {
                 let credit_used = self.credit_used.read(proposal_hash);
                 self.credit_used.write(proposal_hash, credit_used + proposal.credit_amount);
@@ -301,7 +302,7 @@ pub mod SimpleLoanProposalComponent {
                         .get_state_fingerprint_computer(proposal.collateral_address)
                         .contract_address
                 };
-                if computer.contract_address == starknet::contract_address_const::<0>() {
+                if computer.contract_address != starknet::contract_address_const::<0>() { // should be neq!
                     current_fingerprint = computer
                         .compute_state_fingerprint(
                             proposal.collateral_address, proposal.collateral_id
