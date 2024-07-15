@@ -14,8 +14,4 @@ mod unit {
     mod vault_test;
 }
 
-mod integration {
-    mod base_integration_test;
-    mod protocol_integrity_test;
-    mod simple_loan_integration_test;
-}
+
