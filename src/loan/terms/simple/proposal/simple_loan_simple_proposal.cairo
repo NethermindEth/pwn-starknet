@@ -19,7 +19,7 @@ trait ISimpleLoanSimpleProposal<TState> {
 }
 
 #[starknet::contract]
-mod SimpleLoanSimpleProposal {
+pub mod SimpleLoanSimpleProposal {
     use pwn::ContractAddressDefault;
     use pwn::loan::lib::serialization;
     use pwn::loan::terms::simple::proposal::simple_loan_proposal::{
@@ -40,32 +40,32 @@ mod SimpleLoanSimpleProposal {
 
     // NOTE: we can hard code this by calculating the poseidon hash of the string 
     // in the Solidity contract offline.
-    const PROPOSAL_TYPEHASH: felt252 =
-        0x035f73ebb16e8e796c727d020a1a8f0190005ba40559ee87674fb8de78939b1a;
+    pub const PROPOSAL_TYPEHASH: felt252 =
+        0x51f6ba475e1a1eb81008cc3bdf2084518ae00fd5f333e5738b597a26c75a761;
 
-    #[derive(Copy, Default, Drop, Serde)]
+    #[derive(Copy, Debug, Default, Drop, Serde)]
     pub struct Proposal {
-        collateral_category: MultiToken::Category,
-        collateral_address: ContractAddress,
-        collateral_id: felt252,
-        collateral_amount: u256,
-        check_collateral_state_fingerprint: bool,
-        collateral_state_fingerprint: felt252,
-        credit_address: ContractAddress,
-        credit_amount: u256,
-        available_credit_limit: u256,
-        fixed_interest_amount: u256,
-        accruing_interest_APR: u32,
-        duration: u64,
-        expiration: u64,
-        allowed_acceptor: ContractAddress,
-        proposer: ContractAddress,
-        proposer_spec_hash: felt252,
-        is_offer: bool,
-        refinancing_loan_id: felt252,
-        nonce_space: felt252,
-        nonce: felt252,
-        loan_contract: ContractAddress,
+        pub collateral_category: MultiToken::Category,
+        pub collateral_address: ContractAddress,
+        pub collateral_id: felt252,
+        pub collateral_amount: u256,
+        pub check_collateral_state_fingerprint: bool,
+        pub collateral_state_fingerprint: felt252,
+        pub credit_address: ContractAddress,
+        pub credit_amount: u256,
+        pub available_credit_limit: u256,
+        pub fixed_interest_amount: u256,
+        pub accruing_interest_APR: u32,
+        pub duration: u64,
+        pub expiration: u64,
+        pub allowed_acceptor: ContractAddress,
+        pub proposer: ContractAddress,
+        pub proposer_spec_hash: felt252,
+        pub is_offer: bool,
+        pub refinancing_loan_id: felt252,
+        pub nonce_space: felt252,
+        pub nonce: felt252,
+        pub loan_contract: ContractAddress,
     }
 
 
@@ -77,17 +77,17 @@ mod SimpleLoanSimpleProposal {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         ProposalMade: ProposalMade,
         #[flat]
         SimpleLoanProposalEvent: SimpleLoanProposalComponent::Event,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct ProposalMade {
-        proposal_hash: felt252,
-        proposer: ContractAddress,
-        proposal: Proposal,
+    pub struct ProposalMade {
+        pub proposal_hash: felt252,
+        pub proposer: ContractAddress,
+        pub proposal: Proposal,
     }
 
     #[constructor]
@@ -119,7 +119,77 @@ mod SimpleLoanSimpleProposal {
             proposal_inclusion_proof: Array<felt252>,
             signature: Signature
         ) -> (felt252, super::Terms) {
-            (0, Default::default())
+            let proposal = self.decode_proposal_data(proposal_data);
+
+            let mut serialized_proposal = array![];
+            proposal.serialize(ref serialized_proposal);
+            let proposal_hash = self
+                .simple_loan
+                ._get_proposal_hash(PROPOSAL_TYPEHASH, serialized_proposal);
+
+            let proposal_base = ProposalBase {
+                collateral_address: proposal.collateral_address,
+                collateral_id: proposal.collateral_id,
+                check_collateral_state_fingerprint: proposal.check_collateral_state_fingerprint,
+                collateral_state_fingerprint: proposal.collateral_state_fingerprint,
+                credit_amount: proposal.credit_amount,
+                available_credit_limit: proposal.available_credit_limit,
+                expiration: proposal.expiration,
+                allowed_acceptor: proposal.allowed_acceptor,
+                proposer: proposal.proposer,
+                is_offer: proposal.is_offer,
+                refinancing_loan_id: proposal.refinancing_loan_id,
+                nonce_space: proposal.nonce_space,
+                nonce: proposal.nonce,
+                loan_contract: proposal.loan_contract,
+            };
+
+            self
+                .simple_loan
+                ._accept_proposal(
+                    acceptor,
+                    refinancing_loan_id,
+                    proposal_hash,
+                    proposal_inclusion_proof,
+                    signature,
+                    proposal_base,
+                );
+
+            // Create loan terms object
+            let loan_terms = Terms {
+                lender: if proposal.is_offer {
+                    proposal.proposer
+                } else {
+                    acceptor
+                },
+                borrower: if proposal.is_offer {
+                    acceptor
+                } else {
+                    proposal.proposer
+                },
+                duration: proposal.duration,
+                collateral: MultiToken::Asset {
+                    category: proposal.collateral_category,
+                    asset_address: proposal.collateral_address,
+                    id: proposal.collateral_id,
+                    amount: proposal.collateral_amount,
+                },
+                credit: MultiToken::ERC20(proposal.credit_address, proposal.credit_amount),
+                fixed_interest_amount: proposal.fixed_interest_amount,
+                accruing_interest_APR: proposal.accruing_interest_APR,
+                lender_spec_hash: if proposal.is_offer {
+                    proposal.proposer_spec_hash
+                } else {
+                    0.into()
+                },
+                borrower_spec_hash: if proposal.is_offer {
+                    0.into()
+                } else {
+                    proposal.proposer_spec_hash
+                },
+            };
+
+            (proposal_hash, loan_terms)
         }
 
         fn get_proposal_hash(self: @ContractState, proposal: Proposal) -> felt252 {
