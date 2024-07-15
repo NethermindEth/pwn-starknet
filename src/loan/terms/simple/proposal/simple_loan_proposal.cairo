@@ -283,7 +283,7 @@ pub mod SimpleLoanProposalComponent {
                         Option::Some(proposal.nonce_space),
                         proposal.nonce
                     );
-            } else if self.credit_used.read(proposal_hash) // inefficient storage read
+            } else if self.credit_used.read(proposal_hash)
                 + proposal.credit_amount <= proposal.available_credit_limit {
                 let credit_used = self.credit_used.read(proposal_hash);
                 self.credit_used.write(proposal_hash, credit_used + proposal.credit_amount);
@@ -302,7 +302,7 @@ pub mod SimpleLoanProposalComponent {
                         .get_state_fingerprint_computer(proposal.collateral_address)
                         .contract_address
                 };
-                if computer.contract_address != starknet::contract_address_const::<0>() { // should be neq!
+                if computer.contract_address != starknet::contract_address_const::<0>() {
                     current_fingerprint = computer
                         .compute_state_fingerprint(
                             proposal.collateral_address, proposal.collateral_id

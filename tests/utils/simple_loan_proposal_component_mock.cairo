@@ -2,7 +2,11 @@
 pub mod MockSimpleLoanProposal {
     use pwn::loan::terms::simple::proposal::simple_loan_proposal::SimpleLoanProposalComponent;
 
-    component!(path: SimpleLoanProposalComponent, storage: simple_loan_proposal, event: SimpleLoanProposalEvent);
+    component!(
+        path: SimpleLoanProposalComponent,
+        storage: simple_loan_proposal,
+        event: SimpleLoanProposalEvent
+    );
 
     #[storage]
     struct Storage {
@@ -15,6 +19,7 @@ pub mod MockSimpleLoanProposal {
         SimpleLoanProposalEvent: SimpleLoanProposalComponent::Event,
     }
     #[abi(embed_v0)]
-    impl SimpleLoanProposalImpl = SimpleLoanProposalComponent::SimpleLoanProposalImpl<ContractState>;
+    impl SimpleLoanProposalImpl =
+        SimpleLoanProposalComponent::SimpleLoanProposalImpl<ContractState>;
     impl SimpleLoanProposalInternalImpl = SimpleLoanProposalComponent::InternalImpl<ContractState>;
 }
