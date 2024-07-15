@@ -194,7 +194,7 @@ pub mod SimpleLoanProposalComponent {
             proposer: ContractAddress
         ) {
             if starknet::get_caller_address() != proposer { 
-                Err::CALLER_IS_NOT_STATED_PROPOSER(starknet::get_caller_address()); // why not directly write caller instead of checking
+                Err::CALLER_IS_NOT_STATED_PROPOSER(starknet::get_caller_address());
             }
 
             self.proposal_made.write(proposal_hash, true);
