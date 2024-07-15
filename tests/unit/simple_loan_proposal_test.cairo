@@ -35,7 +35,7 @@ pub const E70: u256 =
 pub const E40: u256 = 10_000_000_000_000_000_000_000_000_000_000_000_000;
 pub const E10: u256 = 10_000_000_000;
 pub const MINUTE: u64 = 60;
-pub const MAX_U256: u256 = u256 { low: 0xFFFFFFFFFFFFFFFF, high: 0xFFFFFFFFFFFFFFFF };
+pub const MAX_U256: u256 = u256 { low: 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, high: 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF };
 
 #[derive(Drop)]
 pub struct Params {
