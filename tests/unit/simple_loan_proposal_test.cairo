@@ -155,12 +155,6 @@ pub fn deploy() -> (
 
     (state, hub, config, IRevokedNonceDispatcher { contract_address: nonce_address },)
 }
-// is relevant
-#[test]
-#[ignore]
-fn test_should_return_used_credit() {
-    assert!(true, "");
-}
 
 #[test]
 fn test_should_call_revoke_nonce() {
@@ -178,12 +172,6 @@ fn test_should_call_revoke_nonce() {
     is_usable = nonces
         .is_nonce_usable(params.base.proposer, params.base.nonce_space, params.base.nonce);
     assert!(!is_usable, "Nonce is usable");
-}
-// TODO: Write test, proposal_base does not implements serde, should work with dummy hash?
-#[test]
-#[ignore]
-fn test_should_return_proposal_hash() {
-    assert!(true, "");
 }
 
 #[test]
@@ -611,125 +599,4 @@ fn test_should_pass_when_computer_returns_matching_fingerprint() {
     let params = params();
     cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref component, params);
-}
-////////////////////////////////////////// Irrelevants ? ///////////////////////////////////////////
-mod irrelevants {
-    // is relevant, no events in scope
-    #[test]
-    #[ignore]
-    fn test_should_emit_proposal_made() {
-        assert!(true, "");
-    }
-    // is relevant
-    #[test]
-    #[ignore]
-    fn test_should_return_encoded_proposal_data() {
-        assert!(true, "");
-    }
-    // is relevant
-    #[test]
-    #[ignore]
-    fn test_should_return_decoded_proposal_data() {
-        assert!(true, "");
-    }
-    // is relevant
-    // might related to multiproposal verification
-    #[test]
-    #[ignore]
-    fn test_should_accept_any_collateral_id_when_merkle_root_is_zero() {
-        assert!(true, "");
-    }
-    // is relevant
-    // might related to multiproposal verification
-    #[test]
-    #[ignore]
-    fn test_should_pass_when_given_collateral_id_is_whitelisted() {
-        assert!(true, "");
-    }
-    // is relevant
-    // might related to multiproposal verification
-    #[test]
-    #[ignore]
-    fn test_should_fail_when_given_collateral_id_is_not_whitelisted() {
-        assert!(true, "");
-    }
-    // is relevant
-    #[test]
-    #[ignore]
-    fn test_should_call_loan_contract_with_loan_terms() {
-        assert!(true, "");
-    }
-
-    // not sure is there any difference between EOA and contract account in current setting we just verify ECDSA
-    #[test]
-    #[ignore]
-    fn test_should_fail_when_invalid_signature_when_contract_account() {
-        assert!(true, "");
-    }
-
-    // not sure is there any difference between EOA and contract account in current setting we just verify ECDSA
-    #[test]
-    #[ignore]
-    fn test_should_pass_when_valid_signature_when_contract_account() {
-        assert!(true, "");
-    }
-
-    // is relevant & no fallback to asset for SF for now
-    #[test]
-    #[ignore]
-    fn test_should_fail_when_no_computer_registered_when_asset_does_not_implement_erc165() {
-        assert!(true, "");
-    }
-    // is relevant & no fallback to asset for SF for now
-    #[test]
-    #[ignore]
-    fn test_should_fail_when_no_computer_registered_when_asset_does_not_implement_erc5646() {
-        assert!(true, "");
-    }
-    // is relevant & no fallback to asset for SF for now
-    #[test]
-    #[ignore]
-    fn test_should_fail_when_asset_implements_erc5646_when_computer_returns_different_state_fingerprint() {
-        assert!(true, "");
-    }
-
-    // is relevant & no fallback to asset for SF for now
-    #[test]
-    #[ignore]
-    fn test_should_pass_when_asset_implements_erc5646_when_returns_matching_fingerprint() {
-        assert!(true, "");
-    }
-
-    // multiproposal is not implemented yet TODO
-    #[test]
-    #[ignore]
-    fn test_should_pass_with_valid_signature_when_eoa_when_standard_signature_when_multiproposal() {
-        assert!(true, "");
-    }
-    // multiproposal is not implemented yet TODO & currently only support compact signatures
-    #[test]
-    #[ignore]
-    fn test_should_pass_with_valid_signature_when_eoa_when_compact_eip2098_signature_when_multiproposal() {
-        assert!(true, "");
-    }
-    // multiproposal is not implemented yet TODO & currently only support compact signatures
-    #[test]
-    #[ignore]
-    fn test_should_pass_when_valid_signature_when_contract_account_when_multiproposal() {
-        assert!(true, "");
-    }
-
-    // currently only support compact signatures
-    #[test]
-    #[ignore]
-    fn test_should_pass_with_valid_signature_when_eoa_when_compact_eip2098_signature() {
-        assert!(true, "");
-    }
-
-    // multiproposal is not implemented yet TODO & currently only support compact signatures
-    #[test]
-    #[ignore]
-    fn test_should_fail_when_invalid_signature_when_contract_account_when_multiproposal() {
-        assert!(true, "");
-    }
 }
