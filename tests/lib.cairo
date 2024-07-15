@@ -14,4 +14,3 @@ mod unit {
     mod vault_test;
 }
 
-
