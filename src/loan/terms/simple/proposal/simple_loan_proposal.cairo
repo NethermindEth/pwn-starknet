@@ -193,7 +193,7 @@ pub mod SimpleLoanProposalComponent {
             proposal_hash: felt252,
             proposer: ContractAddress
         ) {
-            if starknet::get_caller_address() != proposer { 
+            if starknet::get_caller_address() != proposer {
                 Err::CALLER_IS_NOT_STATED_PROPOSER(starknet::get_caller_address());
             }
 

@@ -1,4 +1,3 @@
-use super::super::utils::simple_loan_proposal_component_mock::MockSimpleLoanProposal;
 use core::{
     starknet,
     starknet::{storage::StorageMapMemberAccessTrait, ContractAddress, get_contract_address},
@@ -29,13 +28,15 @@ use snforge_std::{
     },
     ContractClassTrait,
 };
+use super::super::utils::simple_loan_proposal_component_mock::MockSimpleLoanProposal;
 
 pub const E70: u256 =
     10_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000;
 pub const E40: u256 = 10_000_000_000_000_000_000_000_000_000_000_000_000;
 pub const E10: u256 = 10_000_000_000;
 pub const MINUTE: u64 = 60;
-pub const MAX_U256: u256 = u256 { low: 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, high: 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF };
+pub const MAX_U256: u256 =
+    u256 { low: 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, high: 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF };
 
 #[derive(Drop)]
 pub struct Params {
