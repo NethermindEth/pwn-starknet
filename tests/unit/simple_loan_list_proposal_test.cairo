@@ -101,7 +101,7 @@ fn proposal() -> Proposal {
         proposer_spec_hash: 'proposer spec',
         is_offer: true,
         refinancing_loan_id: 0,
-        nonce_space: 1,
+        nonce_space: 0,
         nonce: 'nonce_1',
         loan_contract: ACTIVATE_LOAN_CONTRACT(),
     }

@@ -4,7 +4,7 @@ use starknet::{ContractAddress, ClassHash};
 
 
 #[starknet::interface]
-trait ISimpleLoanProposal<TState> {
+pub trait ISimpleLoanProposal<TState> {
     fn revoke_nonce(ref self: TState, nonce_space: felt252, nonce: felt252);
     fn get_multiproposal_hash(
         self: @TState, multiproposal: SimpleLoanProposalComponent::Multiproposal
@@ -225,13 +225,14 @@ pub mod SimpleLoanProposalComponent {
 
             if proposal_inclusion_proof.len() == 0 {
                 if !self.proposal_made.read(proposal_hash) {
+                    // should we also need to ensure it is signed by the proposer
                     if !signature_checker::is_valid_signature_now(proposal_hash, signature) {
                         signature_checker::Err::INVALID_SIGNATURE(proposal.proposer, proposal_hash);
                     }
                 }
             } else {
                 // TODO: verify inclusion proof type with the pwn team
-                let multiproposal_hash = 0x0;
+                let multiproposal_hash = poseidon_hash_span(array!['multiProposalHash'].span());
                 if !signature_checker::is_valid_signature_now(multiproposal_hash, signature) {
                     signature_checker::Err::INVALID_SIGNATURE(
                         proposal.proposer, multiproposal_hash
@@ -259,7 +260,7 @@ pub mod SimpleLoanProposalComponent {
                 Err::EXPIRED(starknet::get_block_timestamp(), proposal.expiration);
             }
 
-            if self
+            if !self
                 .revoked_nonce
                 .read()
                 .is_nonce_usable(proposal.proposer, proposal.nonce_space, proposal.nonce) {
@@ -301,7 +302,7 @@ pub mod SimpleLoanProposalComponent {
                         .get_state_fingerprint_computer(proposal.collateral_address)
                         .contract_address
                 };
-                if computer.contract_address == starknet::contract_address_const::<0>() {
+                if computer.contract_address != starknet::contract_address_const::<0>() {
                     current_fingerprint = computer
                         .compute_state_fingerprint(
                             proposal.collateral_address, proposal.collateral_id
