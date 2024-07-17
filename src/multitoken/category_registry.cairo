@@ -8,7 +8,7 @@ pub trait IMultitokenCategoryRegistry<TState> {
 }
 
 #[starknet::contract]
-mod MultiTokenCategoryRegistry {
+pub mod MultiTokenCategoryRegistry {
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use starknet::{ContractAddress, get_caller_address};

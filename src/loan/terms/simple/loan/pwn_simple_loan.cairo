@@ -1,5 +1,5 @@
 #[starknet::contract]
-mod PwnSimpleLoan {
+pub mod PwnSimpleLoan {
     use core::poseidon::poseidon_hash_span;
 
     use openzeppelin::introspection::src5::SRC5Component;
