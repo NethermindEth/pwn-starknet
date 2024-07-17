@@ -379,7 +379,7 @@ mod approve_asset {
     use openzeppelin::token::erc721::interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait};
     use pwn::multitoken::library::MultiToken::AssetTrait;
     use pwn::multitoken::library::MultiToken;
-    use snforge_std::{cheat_caller_address, CheatSpan};
+    use snforge_std::{cheat_caller_address_global, stop_cheat_caller_address_global};
     use super::{
         ALICE, BOB, deploy_erc20_mock, mint_erc20, deploy_erc721_mock, mint_erc721,
         deploy_erc1155_mock, mint_erc1155, deploy_accounts
@@ -396,7 +396,6 @@ mod approve_asset {
     }
 
     #[test]
-    #[ignore]
     fn test_erc20_transfer_asset_from_should_succeed_when_approved() {
         let token_address = deploy_erc20_mock();
         let this_address = starknet::get_contract_address();
@@ -408,9 +407,10 @@ mod approve_asset {
         assert_eq!(ERC20ABIDispatcher { contract_address: token_address }.balance_of(BOB()), 0);
 
         let asset = MultiToken::ERC20(token_address, 1000);
-        // simulate that ALICE is doing the call
-        cheat_caller_address(token_address, ALICE(), CheatSpan::TargetCalls(1));
+        
+        cheat_caller_address_global(ALICE());
         asset.approve_asset(this_address);
+        stop_cheat_caller_address_global();
 
         asset.transfer_asset_from(ALICE(), BOB(), false);
         assert_eq!(ERC20ABIDispatcher { contract_address: token_address }.balance_of(ALICE()), 0);
@@ -418,23 +418,68 @@ mod approve_asset {
     }
 
     #[test]
+    #[should_panic]
     fn test_erc721_transfer_asset_from_should_fail_when_not_approved() {
-        assert_eq!(0, 1);
+        let token_address = deploy_erc721_mock();
+        mint_erc721(token_address, ALICE(), 1);
+
+        let asset = MultiToken::ERC721(token_address, 1);
+        asset.transfer_asset_from(ALICE(), BOB(), false);
     }
 
     #[test]
     fn test_erc721_transfer_asset_from_should_succeed_when_approved() {
-        assert_eq!(0, 1);
+        let (alice, bob) = deploy_accounts();
+        let token_address = deploy_erc721_mock();
+        let this_address = starknet::get_contract_address();
+        mint_erc721(token_address, alice, 1);
+
+        assert_eq!(ERC721ABIDispatcher { contract_address: token_address }.owner_of(1), alice);
+
+        let asset = MultiToken::ERC721(token_address, 1);
+
+        cheat_caller_address_global(alice);
+        asset.approve_asset(this_address);
+        stop_cheat_caller_address_global();
+
+        asset.transfer_asset_from(alice, bob, false);
+        assert_eq!(ERC721ABIDispatcher { contract_address: token_address }.owner_of(1), bob);
     }
 
     #[test]
+    #[should_panic]
     fn test_erc1155_transfer_asset_from_should_fail_when_not_approved() {
-        assert_eq!(0, 1);
+        let (alice, bob) = deploy_accounts();
+        let token_address = deploy_erc1155_mock();
+        mint_erc1155(token_address, alice, 1, 10);
+
+        let asset = MultiToken::ERC1155(token_address, 1, Option::Some(10));
+        asset.transfer_asset_from(alice, bob, false);
     }
 
     #[test]
     fn test_erc1155_transfer_asset_from_should_succeed_when_approved() {
-        assert_eq!(0, 1);
+        let (alice, bob) = deploy_accounts();
+        let token_address = deploy_erc1155_mock();
+        let this_address = starknet::get_contract_address();
+        mint_erc1155(token_address, alice, 1, 10);
+
+        assert_eq!(
+            ERC1155ABIDispatcher { contract_address: token_address }.balance_of(alice, 1), 10
+        );
+        assert_eq!(ERC1155ABIDispatcher { contract_address: token_address }.balance_of(bob, 1), 0);
+
+        let asset = MultiToken::ERC1155(token_address, 1, Option::Some(5));
+
+        cheat_caller_address_global(alice);
+        asset.approve_asset(this_address);
+        stop_cheat_caller_address_global();
+
+        asset.transfer_asset_from(alice, bob, false);
+        assert_eq!(
+            ERC1155ABIDispatcher { contract_address: token_address }.balance_of(alice, 1), 5
+        );
+        assert_eq!(ERC1155ABIDispatcher { contract_address: token_address }.balance_of(bob, 1), 5);
     }
 }
 
@@ -499,7 +544,6 @@ mod is_same_as {
     use snforge_std::mock_call;
 
     #[test]
-    #[ignore]
     fn test_should_fail_when_different_category() {
         let token = starknet::contract_address_const::<'TOKEN'>();
         let asset_a = MultiToken::ERC721(token, 1);
@@ -509,7 +553,6 @@ mod is_same_as {
     }
 
     #[test]
-    #[ignore]
     fn test_should_fail_when_different_address() {
         let token_a = starknet::contract_address_const::<'TOKEN_A'>();
         let token_b = starknet::contract_address_const::<'TOKEN_B'>();
@@ -520,7 +563,6 @@ mod is_same_as {
     }
 
     #[test]
-    #[ignore]
     fn test_should_fail_when_different_id() {
         let token = starknet::contract_address_const::<'TOKEN'>();
         let asset_a = MultiToken::ERC721(token, 1);
@@ -530,7 +572,6 @@ mod is_same_as {
     }
 
     #[test]
-    #[ignore]
     fn test_should_pass_when_different_amount() {
         let token = starknet::contract_address_const::<'TOKEN'>();
         let asset_a = MultiToken::ERC1155(token, 1, Option::Some(10));
