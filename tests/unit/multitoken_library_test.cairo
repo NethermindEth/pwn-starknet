@@ -407,7 +407,7 @@ mod approve_asset {
         assert_eq!(ERC20ABIDispatcher { contract_address: token_address }.balance_of(BOB()), 0);
 
         let asset = MultiToken::ERC20(token_address, 1000);
-        
+
         cheat_caller_address_global(ALICE());
         asset.approve_asset(this_address);
         stop_cheat_caller_address_global();
