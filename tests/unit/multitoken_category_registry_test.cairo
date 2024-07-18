@@ -1,4 +1,4 @@
-use pwn::multitoken::category_registry::MultitokenCategoryRegistry;
+use pwn::multitoken::category_registry::MultiTokenCategoryRegistry;
 
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
@@ -7,7 +7,7 @@ use snforge_std::{
 use starknet::ContractAddress;
 
 #[starknet::interface]
-pub trait IMultitokenCategoryRegistry<TState> {
+pub trait IMultiTokenCategoryRegistry<TState> {
     fn register_category_value(ref self: TState, asset_address: ContractAddress, category: u8);
     fn unregister_category_value(ref self: TState, asset_address: ContractAddress);
     fn registered_category_value(self: @TState, asset_address: ContractAddress) -> u8;
@@ -21,15 +21,15 @@ fn ACCOUNT_1() -> starknet::ContractAddress {
     starknet::contract_address_const::<'account_1'>()
 }
 
-fn deploy() -> IMultitokenCategoryRegistryDispatcher {
-    let contract = declare("MultitokenCategoryRegistry").unwrap();
+fn deploy() -> IMultiTokenCategoryRegistryDispatcher {
+    let contract = declare("MultiTokenCategoryRegistry").unwrap();
     let (contract_address, _) = contract.deploy(@array![]).unwrap();
 
-    IMultitokenCategoryRegistryDispatcher { contract_address }
+    IMultiTokenCategoryRegistryDispatcher { contract_address }
 }
 
 mod constructor {
-    use super::{deploy, ACCOUNT_1, OWNER, IMultitokenCategoryRegistryDispatcherTrait};
+    use super::{deploy, ACCOUNT_1, OWNER, IMultiTokenCategoryRegistryDispatcherTrait};
 
     #[test]
     fn test_should_set_contract_owner() {
@@ -43,8 +43,8 @@ mod register_category_value {
     use snforge_std::{spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait};
     use starknet::{ContractAddress};
     use super::{
-        deploy, ACCOUNT_1, OWNER, IMultitokenCategoryRegistryDispatcherTrait,
-        MultitokenCategoryRegistry
+        deploy, ACCOUNT_1, OWNER, IMultiTokenCategoryRegistryDispatcherTrait,
+        MultiTokenCategoryRegistry
     };
 
     #[test]
@@ -62,7 +62,7 @@ mod register_category_value {
         let registry = deploy();
 
         registry
-            .register_category_value(OWNER(), MultitokenCategoryRegistry::CATEGORY_NOT_REGISTERED);
+            .register_category_value(OWNER(), MultiTokenCategoryRegistry::CATEGORY_NOT_REGISTERED);
     }
 
     fn test_fuzz_should_store_incremented_category_value(asset_address: u128, category: u8) {
@@ -81,7 +81,7 @@ mod register_category_value {
 
     #[test]
     fn test_fuzz_should_emit_CategoryRegistered(asset_address: u128, category: u8) {
-        if (category == MultitokenCategoryRegistry::CATEGORY_NOT_REGISTERED) {
+        if (category == MultiTokenCategoryRegistry::CATEGORY_NOT_REGISTERED) {
             return;
         }
 
@@ -97,8 +97,8 @@ mod register_category_value {
                 @array![
                     (
                         registry.contract_address,
-                        MultitokenCategoryRegistry::Event::CategoryRegistered(
-                            MultitokenCategoryRegistry::CategoryRegistered {
+                        MultiTokenCategoryRegistry::Event::CategoryRegistered(
+                            MultiTokenCategoryRegistry::CategoryRegistered {
                                 asset_address: asset_address.try_into().unwrap(), category
                             }
                         )
@@ -112,8 +112,8 @@ mod unregister_category_value {
     use snforge_std::{spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait};
     use starknet::{ContractAddress};
     use super::{
-        deploy, ACCOUNT_1, OWNER, IMultitokenCategoryRegistryDispatcherTrait,
-        MultitokenCategoryRegistry
+        deploy, ACCOUNT_1, OWNER, IMultiTokenCategoryRegistryDispatcherTrait,
+        MultiTokenCategoryRegistry
     };
 
     #[test]
@@ -154,8 +154,8 @@ mod unregister_category_value {
                 @array![
                     (
                         registry.contract_address,
-                        MultitokenCategoryRegistry::Event::CategoryUnregistered(
-                            MultitokenCategoryRegistry::CategoryUnregistered {
+                        MultiTokenCategoryRegistry::Event::CategoryUnregistered(
+                            MultiTokenCategoryRegistry::CategoryUnregistered {
                                 asset_address: asset_address.try_into().unwrap()
                             }
                         )
@@ -168,8 +168,8 @@ mod unregister_category_value {
 mod registered_category_value {
     use starknet::{ContractAddress};
     use super::{
-        deploy, ACCOUNT_1, OWNER, IMultitokenCategoryRegistryDispatcherTrait,
-        MultitokenCategoryRegistry
+        deploy, ACCOUNT_1, OWNER, IMultiTokenCategoryRegistryDispatcherTrait,
+        MultiTokenCategoryRegistry
     };
 
     fn test_fuzz_should_return_category_value_when_registered(asset_address: u128, category: u8) {
@@ -192,7 +192,7 @@ mod registered_category_value {
 
         assert_eq!(
             registry.registered_category_value(asset_address.try_into().unwrap()),
-            MultitokenCategoryRegistry::CATEGORY_NOT_REGISTERED
+            MultiTokenCategoryRegistry::CATEGORY_NOT_REGISTERED
         );
     }
 }

@@ -1,14 +1,14 @@
 use starknet::ContractAddress;
 
 #[starknet::interface]
-pub trait IMultitokenCategoryRegistry<TState> {
+pub trait IMultiTokenCategoryRegistry<TState> {
     fn register_category_value(ref self: TState, asset_address: ContractAddress, category: u8);
     fn unregister_category_value(ref self: TState, asset_address: ContractAddress);
     fn registered_category_value(self: @TState, asset_address: ContractAddress) -> u8;
 }
 
 #[starknet::contract]
-pub mod MultitokenCategoryRegistry {
+pub mod MultiTokenCategoryRegistry {
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
     use openzeppelin::introspection::src5::SRC5Component;
@@ -69,7 +69,7 @@ pub mod MultitokenCategoryRegistry {
     pub const CATEGORY_NOT_REGISTERED: u8 = 255;
 
     #[abi(embed_v0)]
-    impl IMultitokenCategoryRegistryImpl of super::IMultitokenCategoryRegistry<ContractState> {
+    impl IMultiTokenCategoryRegistryImpl of super::IMultiTokenCategoryRegistry<ContractState> {
         fn register_category_value(
             ref self: ContractState, asset_address: ContractAddress, category: u8
         ) {

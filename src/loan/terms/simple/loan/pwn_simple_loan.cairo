@@ -1,5 +1,5 @@
 #[starknet::contract]
-mod PwnSimpleLoan {
+pub mod PwnSimpleLoan {
     use core::poseidon::poseidon_hash_span;
 
     use openzeppelin::introspection::src5::SRC5Component;
@@ -29,7 +29,7 @@ mod PwnSimpleLoan {
     use pwn::loan::vault::permit;
     use pwn::loan::vault::pwn_vault::PwnVaultComponent;
     use pwn::multitoken::category_registry::{
-        IMultitokenCategoryRegistryDispatcher, IMultitokenCategoryRegistryDispatcherTrait
+        IMultiTokenCategoryRegistryDispatcher, IMultiTokenCategoryRegistryDispatcherTrait
     };
     use pwn::multitoken::library::MultiToken::Asset;
     use pwn::multitoken::library::MultiToken::AssetTrait;
@@ -77,7 +77,7 @@ mod PwnSimpleLoan {
         loan_token: IPwnLoanDispatcher,
         config: IPwnConfigDispatcher,
         revoked_nonce: IRevokedNonceDispatcher,
-        category_registry: IMultitokenCategoryRegistryDispatcher,
+        category_registry: IMultiTokenCategoryRegistryDispatcher,
         #[substorage(v0)]
         vault: PwnVaultComponent::Storage,
         #[substorage(v0)]
@@ -154,7 +154,7 @@ mod PwnSimpleLoan {
         let loan_token_dispatcher = IPwnLoanDispatcher { contract_address: loan_token };
         let config_dispatcher = IPwnConfigDispatcher { contract_address: config };
         let revoked_nonce_dispatcher = IRevokedNonceDispatcher { contract_address: revoked_nonce };
-        let category_registry_dispatcher = IMultitokenCategoryRegistryDispatcher {
+        let category_registry_dispatcher = IMultiTokenCategoryRegistryDispatcher {
             contract_address: category_registry
         };
         self.hub.write(hub_dispatcher);

@@ -7,7 +7,7 @@ pub mod MultiToken {
     use openzeppelin::token::erc721::interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait};
     use pwn::ContractAddressDefault;
     use pwn::multitoken::category_registry::{
-        IMultitokenCategoryRegistryDispatcher, IMultitokenCategoryRegistryDispatcherTrait
+        IMultiTokenCategoryRegistryDispatcher, IMultiTokenCategoryRegistryDispatcherTrait
     };
     use starknet::ContractAddress;
     use super::{CategoryIntoU8, CategoryEq};
@@ -163,7 +163,7 @@ pub mod MultiToken {
     }
 
     fn _check_category(asset: Asset, registry: ContractAddress) -> bool {
-        let category_value = IMultitokenCategoryRegistryDispatcher { contract_address: registry }
+        let category_value = IMultiTokenCategoryRegistryDispatcher { contract_address: registry }
             .registered_category_value(asset.asset_address);
         if category_value != CATEGORY_NOT_REGISTERED {
             return asset.category.into() == category_value;

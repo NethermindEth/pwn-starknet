@@ -5,7 +5,7 @@ use pwn::mocks::{
     erc20_mock::ERC20Mock, erc721_mock::ERC721Mock, erc1155_mock::ERC1155Mock,
     account_mock::AccountMock
 };
-use pwn::multitoken::category_registry::MultitokenCategoryRegistry;
+use pwn::multitoken::category_registry::MultiTokenCategoryRegistry;
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
     cheat_caller_address, CheatSpan, mock_call, start_mock_call, stop_mock_call

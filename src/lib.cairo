@@ -26,8 +26,8 @@ pub mod loan {
         pub mod simple {
             pub mod loan {
                 mod error;
-                mod interface;
-                mod pwn_simple_loan;
+                pub mod interface;
+                pub mod pwn_simple_loan;
                 pub mod types;
             }
 
@@ -41,7 +41,7 @@ pub mod loan {
         }
     }
 
-    mod token {
+    pub mod token {
         pub mod pwn_loan;
     }
 

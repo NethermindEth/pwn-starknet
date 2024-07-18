@@ -1,9 +1,26 @@
-mod constructor {
-    #[test]
-    fn test_should_have_correct_name_and_symbol() {
-        assert(true, '');
-    }
+use core::integer::BoundedInt;
+use core::poseidon::poseidon_hash_span;
+use core::starknet::SyscallResultTrait;
+use pwn::config::pwn_config::PwnConfig;
+use pwn::hub::{pwn_hub::{PwnHub, IPwnHubDispatcher, IPwnHubDispatcherTrait}, pwn_hub_tags};
+use pwn::loan::terms::simple::loan::{
+    interface::{IPwnSimpleLoanDispatcher, IPwnSimpleLoanDispatcherTrait},
+    pwn_simple_loan::PwnSimpleLoan
+};
+use pwn::loan::token::pwn_loan::PwnLoan;
+use pwn::multitoken::category_registry::MultiTokenCategoryRegistry;
+use pwn::nonce::revoked_nonce::{RevokedNonce, IRevokedNonceDispatcher};
+use snforge_std::{
+    declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
+    spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait, cheat_block_timestamp_global
+};
+use starknet::{ContractAddress, testing};
+
+#[test]
+fn test_should_have_correct_name_and_symbol() {
+    assert(true, '');
 }
+
 
 mod mint {
     #[test]
