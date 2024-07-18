@@ -81,6 +81,10 @@ mod register_category_value {
 
     #[test]
     fn test_fuzz_should_emit_CategoryRegistered(asset_address: u128, category: u8) {
+        if (category == MultitokenCategoryRegistry::CATEGORY_NOT_REGISTERED) {
+            return;
+        }
+
         let registry = deploy();
 
         let asset_address: felt252 = asset_address.try_into().unwrap();
