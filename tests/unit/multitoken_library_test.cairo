@@ -107,7 +107,7 @@ fn test_should_call_transfer_when_erc20_when_source_is_this() {
     let this_address = starknet::get_contract_address();
     store(
         tokens.erc20.contract_address,
-        map_entry_address(selector!("ERC20_balances"), array![this_address].span()),
+        map_entry_address(selector!("ERC20_balances"), array![this_address.into()].span()),
         array![1000].span()
     );
 
