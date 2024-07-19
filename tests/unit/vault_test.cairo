@@ -3,7 +3,7 @@ mod pwn_vault_pull_test {
     fn test_should_call_transfer_from_from_origin_to_vault() {
         assert(true, '');
     }
-
+ 
     #[test]
     fn test_should_fail_when_incomplete_transaction() {
         assert(true, '');
