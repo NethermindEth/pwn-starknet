@@ -155,7 +155,7 @@ fn test_should_call_transfer_when_erc20_when_source_is_not_this() {
 
     store(
         tokens.erc20.contract_address,
-        map_entry_address(selector!("ERC20_allowances"), array![ALICE().into(), this_address].span()),
+        map_entry_address(selector!("ERC20_allowances"), array![ALICE().into(), this_address.into()].span()),
         array![1000].span()
     );
 
