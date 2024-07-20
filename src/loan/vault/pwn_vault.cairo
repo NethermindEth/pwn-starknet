@@ -18,46 +18,46 @@ pub mod PwnVaultComponent {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct VaultPull {
-        asset: MultiToken::Asset,
-        origin: ContractAddress,
+    pub struct VaultPull {
+        pub asset: MultiToken::Asset,
+        pub origin: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct VaultPush {
-        asset: MultiToken::Asset,
-        beneficiary: ContractAddress,
+    pub struct VaultPush {
+        pub asset: MultiToken::Asset,
+        pub beneficiary: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct VaultPushFrom {
-        asset: MultiToken::Asset,
-        origin: ContractAddress,
-        beneficiary: ContractAddress,
+    pub struct VaultPushFrom {
+        pub asset: MultiToken::Asset,
+        pub origin: ContractAddress,
+        pub beneficiary: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct PoolWithdraw {
-        asset: MultiToken::Asset,
-        pool_adapter: ContractAddress,
-        pool: ContractAddress,
-        owner: ContractAddress
+    pub struct PoolWithdraw {
+        pub asset: MultiToken::Asset,
+        pub pool_adapter: ContractAddress,
+        pub pool: ContractAddress,
+        pub owner: ContractAddress
     }
 
     #[derive(Drop, starknet::Event)]
-    struct PoolSupply {
-        asset: MultiToken::Asset,
-        pool_adapter: ContractAddress,
-        pool: ContractAddress,
-        owner: ContractAddress
+    pub struct PoolSupply {
+        pub asset: MultiToken::Asset,
+        pub pool_adapter: ContractAddress,
+        pub pool: ContractAddress,
+        pub owner: ContractAddress
     }
 
     pub mod Err {
         pub fn UNSUPPORTED_TRANSFER_FUNCTION() {
-            panic!("Unsupported trasfer function");
+            panic!("Unsupported transfer function");
         }
         pub fn INCOMPLETE_TRANSFER() {
-            panic!("Uncomplete transfer");
+            panic!("Incomplete transfer");
         }
     }
 
@@ -75,7 +75,6 @@ pub mod PwnVaultComponent {
 
             asset.transfer_asset_from(origin, this_address, false);
             self._check_transfer(asset, original_balance, origin, false);
-
             self.emit(VaultPull { asset, origin });
         }
 
@@ -85,7 +84,6 @@ pub mod PwnVaultComponent {
             beneficiary: ContractAddress
         ) {
             let original_balance = asset.balance_of(beneficiary);
-
             asset.transfer_asset_from(starknet::get_contract_address(), beneficiary, false);
             self._check_transfer(asset, original_balance, beneficiary, true);
 
@@ -114,7 +112,6 @@ pub mod PwnVaultComponent {
             owner: ContractAddress
         ) {
             let original_balance = asset.balance_of(owner);
-
             pool_adaptor.withdraw(pool, owner, asset.asset_address, asset.amount);
             self._check_transfer(asset, original_balance, owner, true);
 
@@ -133,9 +130,9 @@ pub mod PwnVaultComponent {
         ) {
             let this_address = starknet::get_contract_address();
             let original_balance = asset.balance_of(this_address);
-
             asset.transfer_asset_from(this_address, pool_adaptor.contract_address, false);
             pool_adaptor.supply(pool, owner, asset.asset_address, asset.amount);
+
             self._check_transfer(asset, original_balance, this_address, false);
 
             self
@@ -147,16 +144,15 @@ pub mod PwnVaultComponent {
         fn _check_transfer(
             ref self: ComponentState<TContractState>,
             asset: MultiToken::Asset,
-            original_balanance: u256,
+            original_balance: u256,
             checked_address: ContractAddress,
             check_increasing_balance: bool
         ) {
             let expected_balance = if check_increasing_balance {
-                original_balanance + asset.amount
+                original_balance + asset.amount
             } else {
-                original_balanance - asset.amount
+                original_balance - asset.amount
             };
-
             if expected_balance != asset.balance_of(checked_address) {
                 Err::INCOMPLETE_TRANSFER();
             }
