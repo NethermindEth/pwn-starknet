@@ -56,6 +56,10 @@ pub mod multitoken {
     pub mod library;
 }
 
+pub mod mocks {
+    pub mod account;
+}
+
 pub mod nonce {
     pub mod revoked_nonce;
 }
