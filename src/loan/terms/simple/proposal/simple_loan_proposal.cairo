@@ -27,6 +27,7 @@ pub trait ISimpleLoanAcceptProposal<TState> {
 #[starknet::component]
 pub mod SimpleLoanProposalComponent {
     use core::poseidon::poseidon_hash_span;
+    use openzeppelin::account::interface::{ISRC6Dispatcher, ISRC6DispatcherTrait};
     use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
     use pwn::hub::{pwn_hub_tags, pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait}};
     use pwn::interfaces::fingerprint_computer::{
@@ -226,14 +227,14 @@ pub mod SimpleLoanProposalComponent {
             if proposal_inclusion_proof.len() == 0 {
                 if !self.proposal_made.read(proposal_hash) {
                     // should we also need to ensure it is signed by the proposer
-                    if !signature_checker::is_valid_signature_now(proposal_hash, signature) {
+                    if !self._is_valid_signature_now(acceptor, proposal_hash, signature) {
                         signature_checker::Err::INVALID_SIGNATURE(proposal.proposer, proposal_hash);
                     }
                 }
             } else {
                 // TODO: verify inclusion proof type with the pwn team
                 let multiproposal_hash = poseidon_hash_span(array!['multiProposalHash'].span());
-                if !signature_checker::is_valid_signature_now(multiproposal_hash, signature) {
+                if !self._is_valid_signature_now(acceptor, multiproposal_hash, signature) {
                     signature_checker::Err::INVALID_SIGNATURE(
                         proposal.proposer, multiproposal_hash
                     );
@@ -317,6 +318,18 @@ pub mod SimpleLoanProposalComponent {
                     );
                 }
             }
+        }
+
+        fn _is_valid_signature_now(
+            self: @ComponentState<TContractState>,
+            signer: ContractAddress,
+            message_hash: felt252,
+            signature: signature_checker::Signature
+        ) -> bool {
+            ISRC6Dispatcher { contract_address: signer }
+                .is_valid_signature(
+                    message_hash, array![signature.pub_key, signature.r, signature.s]
+                ) == starknet::VALIDATED
         }
     }
 }
