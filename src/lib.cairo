@@ -60,6 +60,13 @@ pub mod nonce {
     pub mod revoked_nonce;
 }
 
+pub mod mocks {
+    pub mod mock_erc20;
+    pub mod mock_erc721;
+    pub mod mock_pool_adapter;
+    pub mod mock_vault;
+}
+
 impl ContractAddressDefault of Default<starknet::ContractAddress> {
     #[inline(always)]
     fn default() -> starknet::ContractAddress nopanic {
