@@ -328,7 +328,7 @@ pub mod SimpleLoanProposalComponent {
         ) -> bool {
             ISRC6Dispatcher { contract_address: signer }
                 .is_valid_signature(
-                    message_hash, array![signature.pub_key, signature.r, signature.s]
+                    message_hash, array![signature.r, signature.s]
                 ) == starknet::VALIDATED
         }
     }

@@ -16,9 +16,11 @@ use pwn::loan::terms::simple::proposal::{
         SimpleLoanDutchAuctionProposal::{Proposal, ProposalValues, MINUTE}
     }
 };
+use openzeppelin::account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
+use pwn::mocks::account::AccountUpgradeable;
 use pwn::multitoken::library::MultiToken;
 use pwn::nonce::revoked_nonce::{RevokedNonce, IRevokedNonceDispatcher};
-use snforge_std::signature::KeyPairTrait;
+use snforge_std::signature::{KeyPairTrait, KeyPair};
 use snforge_std::signature::stark_curve::{
     StarkCurveKeyPairImpl, StarkCurveSignerImpl, StarkCurveVerifierImpl
 };
@@ -28,7 +30,7 @@ use snforge_std::{
 };
 use starknet::secp256k1::{Secp256k1Point};
 use starknet::{ContractAddress, testing};
-use super::simple_loan_proposal_test::{TOKEN, PROPOSER, ACTIVATE_LOAN_CONTRACT, ACCEPTOR, E40};
+use super::simple_loan_proposal_test::{TOKEN, PROPOSER, ACTIVATE_LOAN_CONTRACT, E40};
 
 #[starknet::interface]
 pub trait ISimpleLoanDutchAuctionProposal<TState> {
@@ -65,6 +67,8 @@ struct Setup {
     proposal: ISimpleLoanDutchAuctionProposalDispatcher,
     hub: IPwnHubDispatcher,
     nonce: IRevokedNonceDispatcher,
+    signer: IPublicKeyDispatcher,
+    key_pair: KeyPair::<felt252, felt252>
 }
 
 fn deploy() -> Setup {
@@ -91,7 +95,13 @@ fn deploy() -> Setup {
         .unwrap();
     let proposal = ISimpleLoanDutchAuctionProposalDispatcher { contract_address };
 
-    Setup { proposal, hub, nonce }
+    let key_pair = KeyPairTrait::<felt252, felt252>::generate();
+    
+    let contract = declare("AccountUpgradeable").unwrap();
+    let (account_address, _) = contract.deploy(@array![key_pair.public_key]).unwrap();
+    let signer = IPublicKeyDispatcher { contract_address: account_address };
+
+    Setup { proposal, hub, nonce, signer, key_pair }
 }
 
 fn proposal() -> Proposal {
@@ -569,15 +579,14 @@ fn test_should_fail_when_current_auction_credit_amount_not_in_intended_credit_am
 
     let proposal_hash = dsp.proposal.get_proposal_hash(_proposal);
 
-    let key_pair = KeyPairTrait::<felt252, felt252>::generate();
-    let (r, s): (felt252, felt252) = key_pair.sign(proposal_hash).unwrap();
+    let (r, s): (felt252, felt252) = dsp.key_pair.sign(proposal_hash).unwrap();
 
-    let signature = Signature { pub_key: key_pair.public_key, r, s, };
+    let signature = Signature { pub_key: dsp.key_pair.public_key, r, s, };
 
     start_cheat_caller_address(dsp.proposal.contract_address, ACTIVATE_LOAN_CONTRACT());
     dsp.proposal
         .accept_proposal(
-            ACCEPTOR(),
+            dsp.signer.contract_address,
             0,
             dsp.proposal.encode_proposal_data(_proposal, _proposal_values),
             array![],
@@ -613,15 +622,14 @@ fn test_should_fail_when_current_auction_credit_amount_not_in_intended_credit_am
 
     let proposal_hash = dsp.proposal.get_proposal_hash(_proposal);
 
-    let key_pair = KeyPairTrait::<felt252, felt252>::generate();
-    let (r, s): (felt252, felt252) = key_pair.sign(proposal_hash).unwrap();
+    let (r, s): (felt252, felt252) = dsp.key_pair.sign(proposal_hash).unwrap();
 
-    let signature = Signature { pub_key: key_pair.public_key, r, s, };
+    let signature = Signature { pub_key: dsp.key_pair.public_key, r, s, };
 
     start_cheat_caller_address(dsp.proposal.contract_address, ACTIVATE_LOAN_CONTRACT());
     dsp.proposal
         .accept_proposal(
-            ACCEPTOR(),
+            dsp.signer.contract_address,
             0,
             dsp.proposal.encode_proposal_data(_proposal, _proposal_values),
             array![],
@@ -702,14 +710,13 @@ fn test_should_call_loan_contract_with_loan_terms(
 
     let proposal_hash = dsp.proposal.get_proposal_hash(_proposal);
 
-    let key_pair = KeyPairTrait::<felt252, felt252>::generate();
-    let (r, s): (felt252, felt252) = key_pair.sign(proposal_hash).unwrap();
+    let (r, s): (felt252, felt252) = dsp.key_pair.sign(proposal_hash).unwrap();
 
-    let signature = Signature { pub_key: key_pair.public_key, r, s, };
+    let signature = Signature { pub_key: dsp.key_pair.public_key, r, s, };
 
     let (proposal_hash, terms) = dsp.proposal
         .accept_proposal(
-            ACCEPTOR(),
+            dsp.signer.contract_address,
             0,
             dsp.proposal.encode_proposal_data(_proposal, _proposal_values),
             array![],
@@ -720,10 +727,10 @@ fn test_should_call_loan_contract_with_loan_terms(
     assert_eq!(terms.lender, if is_offer {
         PROPOSER()
     } else {
-        ACCEPTOR()
+        dsp.signer.contract_address
     });
     assert_eq!(terms.borrower, if is_offer {
-        ACCEPTOR()
+        dsp.signer.contract_address
     } else {
         PROPOSER()
     });
