@@ -134,7 +134,7 @@ pub mod MultiToken {
             Category::ERC20 => {
                 if source == this_address {
                     ERC20ABIDispatcher { contract_address: asset.asset_address }
-                        .transferFrom(asset.asset_address, dest, asset.amount);
+                        .transfer(dest, asset.amount);
                 } else {
                     ERC20ABIDispatcher { contract_address: asset.asset_address }
                         .transferFrom(source, dest, asset.amount);
