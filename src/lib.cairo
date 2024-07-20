@@ -51,6 +51,12 @@ pub mod loan {
     }
 }
 
+pub mod mocks {
+    pub mod erc1155;
+    pub mod erc20;
+    pub mod erc721;
+}
+
 pub mod multitoken {
     pub mod category_registry;
     pub mod library;
