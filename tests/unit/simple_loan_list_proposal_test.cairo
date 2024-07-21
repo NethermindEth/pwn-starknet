@@ -352,7 +352,7 @@ fn test_should_accept_any_collateral_id_when_merkle_root_is_zero(coll_id: felt25
 
     let (r, s): (felt252, felt252) = dsp.key_pair.sign(proposal_hash).unwrap();
 
-    let signature = Signature { pub_key: dsp.key_pair.public_key, r, s, };
+    let signature = Signature { r, s };
 
     dsp
         .proposal
@@ -414,7 +414,7 @@ fn test_should_pass_when_given_collateral_id_is_whitelisted(
 
     let (r, s): (felt252, felt252) = dsp.key_pair.sign(proposal_hash).unwrap();
 
-    let signature = Signature { pub_key: dsp.key_pair.public_key, r, s, };
+    let signature = Signature { r, s };
 
     dsp
         .proposal
@@ -491,7 +491,7 @@ fn test_should_fail_when_given_collateral_id_is_not_whitelisted(
 
     let (r, s): (felt252, felt252) = dsp.key_pair.sign(proposal_hash).unwrap();
 
-    let signature = Signature { pub_key: dsp.key_pair.public_key, r, s, };
+    let signature = Signature { r, s };
 
     dsp
         .proposal
@@ -540,7 +540,7 @@ fn test_should_call_loan_contract_with_loan_terms(is_offer: u8) {
 
     let (r, s): (felt252, felt252) = dsp.key_pair.sign(proposal_hash).unwrap();
 
-    let signature = Signature { pub_key: dsp.key_pair.public_key, r, s, };
+    let signature = Signature { r, s };
 
     let (proposal_hash, terms) = dsp
         .proposal

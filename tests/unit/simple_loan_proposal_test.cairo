@@ -86,7 +86,7 @@ pub fn get_dummy_message_hash_and_signature(
 ) -> (felt252, Signature) {
     let dummy_hash = poseidon_hash_span(array!['dummy'].span());
     let (r, s): (felt252, felt252) = key_pair.sign(dummy_hash).unwrap();
-    (dummy_hash, Signature { pub_key: key_pair.public_key, r, s })
+    (dummy_hash, Signature { r, s })
 }
 
 pub fn proposal() -> SimpleLoanProposalComponent::ProposalBase {
@@ -264,7 +264,7 @@ fn test_fuzz_should_fail_when_invalid_signature_when_eoa(random_private_key: fel
         key_pair = KeyPairTrait::<felt252, felt252>::from_secret_key(random_private_key + 1);
     }
     let (r, s): (felt252, felt252) = key_pair.sign(params.message_hash).unwrap();
-    params.signature = Signature { pub_key: key_pair.public_key, r, s };
+    params.signature = Signature { r, s };
 
     cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref dsp.component, params);
@@ -283,7 +283,7 @@ fn test_fuzz_should_fail_with_invalid_signature_when_eoa_when_multiproposal(
         key_pair = KeyPairTrait::<felt252, felt252>::from_secret_key(random_private_key + 1);
     }
     let (r, s): (felt252, felt252) = key_pair.sign(params.message_hash).unwrap();
-    params.signature = Signature { pub_key: key_pair.public_key, r, s };
+    params.signature = Signature { r, s };
     params.proposal_inclusion_proof = array!['first proof', 'second proof'];
     cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref dsp.component, params);

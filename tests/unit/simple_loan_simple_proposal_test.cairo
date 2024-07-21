@@ -328,7 +328,7 @@ fn test_should_return_proposal_hash_and_loan_terms(is_offer: u8) {
 
     let (r, s): (felt252, felt252) = dsp.key_pair.sign(proposal_hash).unwrap();
 
-    let signature = Signature { pub_key: dsp.key_pair.public_key, r, s, };
+    let signature = Signature { r, s };
 
     let (proposal_hash, terms) = dsp
         .proposal

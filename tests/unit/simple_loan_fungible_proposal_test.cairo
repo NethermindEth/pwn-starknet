@@ -411,7 +411,7 @@ fn test_should_fail_when_zero_min_collateral_amount() {
 
     let (r, s): (felt252, felt252) = dsp.key_pair.sign(proposal_hash).unwrap();
 
-    let signature = Signature { pub_key: dsp.key_pair.public_key, r, s, };
+    let signature = Signature { r, s };
 
     start_cheat_caller_address(dsp.proposal.contract_address, _proposal.proposer);
     dsp
@@ -451,7 +451,7 @@ fn test_should_fail_when_collateral_amount_less_than_min_collateral_amount(
 
     let (r, s): (felt252, felt252) = dsp.key_pair.sign(proposal_hash).unwrap();
 
-    let signature = Signature { pub_key: dsp.key_pair.public_key, r, s, };
+    let signature = Signature { r, s };
 
     start_cheat_caller_address(dsp.proposal.contract_address, ACTIVATE_LOAN_CONTRACT());
     dsp
@@ -519,7 +519,7 @@ fn test_should_call_loan_contract_with_loan_terms( // collateral_amount: u256, c
 
     let (r, s): (felt252, felt252) = dsp.key_pair.sign(proposal_hash).unwrap();
 
-    let signature = Signature { pub_key: dsp.key_pair.public_key, r, s, };
+    let signature = Signature { r, s };
 
     let (proposal_hash, terms) = dsp
         .proposal
