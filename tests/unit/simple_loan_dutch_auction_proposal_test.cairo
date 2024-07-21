@@ -1,6 +1,7 @@
 use core::integer::BoundedInt;
 use core::poseidon::poseidon_hash_span;
 use core::starknet::SyscallResultTrait;
+use openzeppelin::account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
 use pwn::config::pwn_config::PwnConfig;
 use pwn::hub::{pwn_hub::{PwnHub, IPwnHubDispatcher, IPwnHubDispatcherTrait}, pwn_hub_tags};
 use pwn::loan::lib::serialization;
@@ -16,14 +17,13 @@ use pwn::loan::terms::simple::proposal::{
         SimpleLoanDutchAuctionProposal::{Proposal, ProposalValues, MINUTE}
     }
 };
-use openzeppelin::account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
 use pwn::mocks::account::AccountUpgradeable;
 use pwn::multitoken::library::MultiToken;
 use pwn::nonce::revoked_nonce::{RevokedNonce, IRevokedNonceDispatcher};
-use snforge_std::signature::{KeyPairTrait, KeyPair};
 use snforge_std::signature::stark_curve::{
     StarkCurveKeyPairImpl, StarkCurveSignerImpl, StarkCurveVerifierImpl
 };
+use snforge_std::signature::{KeyPairTrait, KeyPair};
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
     spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait, cheat_block_timestamp_global
@@ -53,13 +53,6 @@ pub trait ISimpleLoanDutchAuctionProposal<TState> {
     fn get_credit_amount(self: @TState, proposal: Proposal, timestamp: u64) -> u256;
     fn revoke_nonce(ref self: TState, nonce_space: felt252, nonce: felt252);
     fn get_multiproposal_hash(self: @TState, multiproposal: starknet::ClassHash) -> felt252;
-}
-
-type ComponentState =
-    SimpleLoanProposalComponent::ComponentState<SimpleLoanDutchAuctionProposal::ContractState>;
-
-fn COMPONENT_STATE() -> ComponentState {
-    SimpleLoanProposalComponent::component_state_for_testing()
 }
 
 #[derive(Drop)]
@@ -96,7 +89,7 @@ fn deploy() -> Setup {
     let proposal = ISimpleLoanDutchAuctionProposalDispatcher { contract_address };
 
     let key_pair = KeyPairTrait::<felt252, felt252>::generate();
-    
+
     let contract = declare("AccountUpgradeable").unwrap();
     let (account_address, _) = contract.deploy(@array![key_pair.public_key]).unwrap();
     let signer = IPublicKeyDispatcher { contract_address: account_address };
@@ -275,7 +268,9 @@ fn test_should_return_decoded_proposal_data() {
 
     let encoded_data = dsp.proposal.encode_proposal_data(proposal(), proposal_values());
 
-    let (decoded_proposal, decoded_proposal_values) = dsp.proposal.decode_proposal_data(encoded_data);
+    let (decoded_proposal, decoded_proposal_values) = dsp
+        .proposal
+        .decode_proposal_data(encoded_data);
 
     assert_eq!(decoded_proposal.collateral_category, proposal().collateral_category);
     assert_eq!(decoded_proposal.collateral_address, proposal().collateral_address);
@@ -426,7 +421,8 @@ fn test_fuzz_should_return_correct_edge_values(auction_duration: u64) {
 
     _proposal.is_offer = true;
     assert_eq!(
-        dsp.proposal.get_credit_amount(_proposal, _proposal.auction_start), _proposal.min_credit_amount
+        dsp.proposal.get_credit_amount(_proposal, _proposal.auction_start),
+        _proposal.min_credit_amount
     );
     assert_eq!(
         dsp.proposal.get_credit_amount(_proposal, _proposal.auction_duration),
@@ -439,7 +435,8 @@ fn test_fuzz_should_return_correct_edge_values(auction_duration: u64) {
 
     _proposal.is_offer = false;
     assert_eq!(
-        dsp.proposal.get_credit_amount(_proposal, _proposal.auction_start), _proposal.max_credit_amount
+        dsp.proposal.get_credit_amount(_proposal, _proposal.auction_start),
+        _proposal.max_credit_amount
     );
     assert_eq!(
         dsp.proposal.get_credit_amount(_proposal, _proposal.auction_duration),
@@ -584,7 +581,8 @@ fn test_should_fail_when_current_auction_credit_amount_not_in_intended_credit_am
     let signature = Signature { pub_key: dsp.key_pair.public_key, r, s, };
 
     start_cheat_caller_address(dsp.proposal.contract_address, ACTIVATE_LOAN_CONTRACT());
-    dsp.proposal
+    dsp
+        .proposal
         .accept_proposal(
             dsp.signer.contract_address,
             0,
@@ -627,7 +625,8 @@ fn test_should_fail_when_current_auction_credit_amount_not_in_intended_credit_am
     let signature = Signature { pub_key: dsp.key_pair.public_key, r, s, };
 
     start_cheat_caller_address(dsp.proposal.contract_address, ACTIVATE_LOAN_CONTRACT());
-    dsp.proposal
+    dsp
+        .proposal
         .accept_proposal(
             dsp.signer.contract_address,
             0,
@@ -714,7 +713,8 @@ fn test_should_call_loan_contract_with_loan_terms(
 
     let signature = Signature { pub_key: dsp.key_pair.public_key, r, s, };
 
-    let (proposal_hash, terms) = dsp.proposal
+    let (proposal_hash, terms) = dsp
+        .proposal
         .accept_proposal(
             dsp.signer.contract_address,
             0,
