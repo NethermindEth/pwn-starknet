@@ -1,6 +1,7 @@
 #[starknet::contract]
 pub mod PwnSimpleLoan {
     use core::poseidon::poseidon_hash_span;
+    use openzeppelin::account::interface::{ISRC6Dispatcher, ISRC6DispatcherTrait};
 
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc1155::erc1155_receiver::ERC1155ReceiverComponent;
@@ -396,7 +397,7 @@ pub mod PwnSimpleLoan {
             let extension_hash = self.get_extension_hash(extension.clone());
 
             if (!self.extension_proposal_made.read(extension_hash)) {
-                if (!signature_checker::is_valid_signature_now(extension_hash, signature)) {
+                if (!self._is_valid_signature_now(caller, extension_hash, signature)) {
                     signature_checker::Err::INVALID_SIGNATURE(
                         signer: extension.proposer, digest: extension_hash
                     );
@@ -851,6 +852,18 @@ pub mod PwnSimpleLoan {
                     amount: asset.amount
                 );
             }
+        }
+
+        fn _is_valid_signature_now(
+            self: @ContractState,
+            signer: ContractAddress,
+            message_hash: felt252,
+            signature: signature_checker::Signature
+        ) -> bool {
+            ISRC6Dispatcher { contract_address: signer }
+                .is_valid_signature(
+                    message_hash, array![signature.r, signature.s]
+                ) == starknet::VALIDATED
         }
     }
 }
