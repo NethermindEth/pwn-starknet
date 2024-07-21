@@ -38,16 +38,20 @@ fn hash_2(a: u256, b: u256) -> u256 {
 
 
 pub fn verify(proof: Span<u256>, root: u256, leaf: u256) -> bool {
-    true
+    process_proof(proof, leaf) == root
 }
 
-// fn process_proof(proof: Array, bytes32 leaf) internal pure returns (bytes32) {
-//     bytes32 computedHash = leaf;
-//     for (uint256 i = 0; i < proof.length; i++) {
-//         computedHash = Hashes.commutativeKeccak256(computedHash, proof[i]);
-//     }
-//     return computedHash;
-// }
+fn process_proof(proof: Span<u256>, leaf: u256) -> u256 {
+    let mut computed_hash = leaf;
+    let length = proof.len();
+    let mut i = 0;
+
+    while i < length {
+        computed_hash = hash_2(computed_hash, *proof.at(i));
+        i += 1;
+    };
+    computed_hash
+}
 
 #[cfg(test)]
 mod tests {
