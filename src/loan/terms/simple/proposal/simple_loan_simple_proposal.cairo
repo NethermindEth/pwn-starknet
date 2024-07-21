@@ -3,7 +3,7 @@ use pwn::loan::lib::signature_checker::Signature;
 use pwn::loan::terms::simple::loan::types::Terms;
 
 #[starknet::interface]
-trait ISimpleLoanSimpleProposal<TState> {
+pub trait ISimpleLoanSimpleProposal<TState> {
     fn make_proposal(ref self: TState, proposal: Proposal);
     fn accept_proposal(
         ref self: TState,
