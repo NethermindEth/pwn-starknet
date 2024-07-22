@@ -28,9 +28,7 @@ use snforge_std::{
 };
 use starknet::secp256k1::{Secp256k1Point};
 use starknet::{ContractAddress, testing};
-use super::simple_loan_proposal_test::{
-    TOKEN, PROPOSER, ACTIVATE_LOAN_CONTRACT, ACCEPTOR, Params, E70, E40
-};
+use super::simple_loan_proposal_test::{TOKEN, ACTIVATE_LOAN_CONTRACT, ACCEPTOR, Params, E70, E40};
 
 #[starknet::interface]
 pub trait ISimpleLoanFungibleProposal<TState> {
@@ -99,7 +97,7 @@ fn deploy() -> Setup {
     Setup { proposal, hub, nonce, signer, key_pair }
 }
 
-fn proposal() -> Proposal {
+fn proposal(proposer: ContractAddress) -> Proposal {
     Proposal {
         collateral_category: MultiToken::Category::ERC1155(()),
         collateral_address: TOKEN(),
@@ -115,7 +113,7 @@ fn proposal() -> Proposal {
         duration: 1000,
         expiration: 60303,
         allowed_acceptor: starknet::contract_address_const::<0>(),
-        proposer: PROPOSER(),
+        proposer,
         proposer_spec_hash: 'proposer spec',
         is_offer: true,
         refinancing_loan_id: 0,
@@ -198,7 +196,9 @@ fn get_proposal_with(
 fn test_fuzz_should_return_used_credit(used: u128) {
     let dsp = deploy();
 
-    let proposal_hash = proposal_hash(proposal(), dsp.proposal.contract_address);
+    let proposal_hash = proposal_hash(
+        proposal(dsp.signer.contract_address), dsp.proposal.contract_address
+    );
 
     store(
         dsp.proposal.contract_address,
@@ -241,9 +241,13 @@ fn test_should_call_revoke_nonce(caller: u128, nonce_space: felt252, nonce: felt
 fn test_should_return_proposal_hash() {
     let dsp = deploy();
 
-    let proposal_hash = proposal_hash(proposal(), dsp.proposal.contract_address);
+    let proposal_hash = proposal_hash(
+        proposal(dsp.signer.contract_address), dsp.proposal.contract_address
+    );
 
-    assert_eq!(dsp.proposal.get_proposal_hash(proposal()), proposal_hash);
+    assert_eq!(
+        dsp.proposal.get_proposal_hash(proposal(dsp.signer.contract_address)), proposal_hash
+    );
 }
 
 #[test]
@@ -252,12 +256,12 @@ fn test_fuzz_should_fail_when_caller_is_not_proposer(_proposer: felt252) {
     let dsp = deploy();
 
     let mut proposer: ContractAddress = _proposer.try_into().unwrap();
-    if proposer == proposal().proposer {
+    if proposer == proposal(dsp.signer.contract_address).proposer {
         proposer = (_proposer + 1).try_into().unwrap();
     }
 
     start_cheat_caller_address(dsp.proposal.contract_address, proposer);
-    dsp.proposal.make_proposal(proposal());
+    dsp.proposal.make_proposal(proposal(dsp.signer.contract_address));
 }
 
 #[test]
@@ -266,8 +270,10 @@ fn test_should_emit_proposal_made() {
 
     let mut spy = spy_events();
 
-    start_cheat_caller_address(dsp.proposal.contract_address, proposal().proposer);
-    dsp.proposal.make_proposal(proposal());
+    start_cheat_caller_address(
+        dsp.proposal.contract_address, proposal(dsp.signer.contract_address).proposer
+    );
+    dsp.proposal.make_proposal(proposal(dsp.signer.contract_address));
 
     spy
         .assert_emitted(
@@ -276,9 +282,11 @@ fn test_should_emit_proposal_made() {
                     dsp.proposal.contract_address,
                     SimpleLoanFungibleProposal::Event::ProposalMade(
                         SimpleLoanFungibleProposal::ProposalMade {
-                            proposal_hash: proposal_hash(proposal(), dsp.proposal.contract_address),
-                            proposer: proposal().proposer,
-                            proposal: proposal()
+                            proposal_hash: proposal_hash(
+                                proposal(dsp.signer.contract_address), dsp.proposal.contract_address
+                            ),
+                            proposer: proposal(dsp.signer.contract_address).proposer,
+                            proposal: proposal(dsp.signer.contract_address)
                         }
                     )
                 )
@@ -290,10 +298,14 @@ fn test_should_emit_proposal_made() {
 fn test_should_make_proposal() {
     let dsp = deploy();
 
-    start_cheat_caller_address(dsp.proposal.contract_address, proposal().proposer);
-    dsp.proposal.make_proposal(proposal());
+    start_cheat_caller_address(
+        dsp.proposal.contract_address, proposal(dsp.signer.contract_address).proposer
+    );
+    dsp.proposal.make_proposal(proposal(dsp.signer.contract_address));
 
-    let proposal_hash = proposal_hash(proposal(), dsp.proposal.contract_address);
+    let proposal_hash = proposal_hash(
+        proposal(dsp.signer.contract_address), dsp.proposal.contract_address
+    );
 
     let proposal_made = (*load(
         dsp.proposal.contract_address,
@@ -309,10 +321,12 @@ fn test_should_make_proposal() {
 fn test_should_return_encoded_proposal_data() {
     let dsp = deploy();
 
-    let encoded_data = dsp.proposal.encode_proposal_data(proposal(), proposal_values());
+    let encoded_data = dsp
+        .proposal
+        .encode_proposal_data(proposal(dsp.signer.contract_address), proposal_values());
 
     let mut serialized_proposal = array![];
-    proposal().serialize(ref serialized_proposal);
+    proposal(dsp.signer.contract_address).serialize(ref serialized_proposal);
 
     let mut serialized_proposal_values = array![];
     proposal_values().serialize(ref serialized_proposal_values);
@@ -328,38 +342,72 @@ fn test_should_return_encoded_proposal_data() {
 fn test_should_return_decoded_proposal_data() {
     let dsp = deploy();
 
-    let encoded_data = dsp.proposal.encode_proposal_data(proposal(), proposal_values());
+    let encoded_data = dsp
+        .proposal
+        .encode_proposal_data(proposal(dsp.signer.contract_address), proposal_values());
 
     let (decoded_proposal, decoded_proposal_values) = dsp
         .proposal
         .decode_proposal_data(encoded_data);
 
-    assert_eq!(decoded_proposal.collateral_category, proposal().collateral_category);
-    assert_eq!(decoded_proposal.collateral_address, proposal().collateral_address);
-    assert_eq!(decoded_proposal.collateral_id, proposal().collateral_id);
-    assert_eq!(decoded_proposal.min_collateral_amount, proposal().min_collateral_amount);
+    assert_eq!(
+        decoded_proposal.collateral_category,
+        proposal(dsp.signer.contract_address).collateral_category
+    );
+    assert_eq!(
+        decoded_proposal.collateral_address,
+        proposal(dsp.signer.contract_address).collateral_address
+    );
+    assert_eq!(decoded_proposal.collateral_id, proposal(dsp.signer.contract_address).collateral_id);
+    assert_eq!(
+        decoded_proposal.min_collateral_amount,
+        proposal(dsp.signer.contract_address).min_collateral_amount
+    );
     assert_eq!(
         decoded_proposal.check_collateral_state_fingerprint,
-        proposal().check_collateral_state_fingerprint
+        proposal(dsp.signer.contract_address).check_collateral_state_fingerprint
     );
     assert_eq!(
-        decoded_proposal.collateral_state_fingerprint, proposal().collateral_state_fingerprint
+        decoded_proposal.collateral_state_fingerprint,
+        proposal(dsp.signer.contract_address).collateral_state_fingerprint
     );
-    assert_eq!(decoded_proposal.credit_address, proposal().credit_address);
-    assert_eq!(decoded_proposal.credit_per_collateral_unit, proposal().credit_per_collateral_unit);
-    assert_eq!(decoded_proposal.available_credit_limit, proposal().available_credit_limit);
-    assert_eq!(decoded_proposal.fixed_interest_amount, proposal().fixed_interest_amount);
-    assert_eq!(decoded_proposal.accruing_interest_APR, proposal().accruing_interest_APR);
-    assert_eq!(decoded_proposal.duration, proposal().duration);
-    assert_eq!(decoded_proposal.expiration, proposal().expiration);
-    assert_eq!(decoded_proposal.allowed_acceptor, proposal().allowed_acceptor);
-    assert_eq!(decoded_proposal.proposer, proposal().proposer);
-    assert_eq!(decoded_proposal.proposer_spec_hash, proposal().proposer_spec_hash);
-    assert_eq!(decoded_proposal.is_offer, proposal().is_offer);
-    assert_eq!(decoded_proposal.refinancing_loan_id, proposal().refinancing_loan_id);
-    assert_eq!(decoded_proposal.nonce_space, proposal().nonce_space);
-    assert_eq!(decoded_proposal.nonce, proposal().nonce);
-    assert_eq!(decoded_proposal.loan_contract, proposal().loan_contract);
+    assert_eq!(
+        decoded_proposal.credit_address, proposal(dsp.signer.contract_address).credit_address
+    );
+    assert_eq!(
+        decoded_proposal.credit_per_collateral_unit,
+        proposal(dsp.signer.contract_address).credit_per_collateral_unit
+    );
+    assert_eq!(
+        decoded_proposal.available_credit_limit,
+        proposal(dsp.signer.contract_address).available_credit_limit
+    );
+    assert_eq!(
+        decoded_proposal.fixed_interest_amount,
+        proposal(dsp.signer.contract_address).fixed_interest_amount
+    );
+    assert_eq!(
+        decoded_proposal.accruing_interest_APR,
+        proposal(dsp.signer.contract_address).accruing_interest_APR
+    );
+    assert_eq!(decoded_proposal.duration, proposal(dsp.signer.contract_address).duration);
+    assert_eq!(decoded_proposal.expiration, proposal(dsp.signer.contract_address).expiration);
+    assert_eq!(
+        decoded_proposal.allowed_acceptor, proposal(dsp.signer.contract_address).allowed_acceptor
+    );
+    assert_eq!(decoded_proposal.proposer, proposal(dsp.signer.contract_address).proposer);
+    assert_eq!(
+        decoded_proposal.proposer_spec_hash,
+        proposal(dsp.signer.contract_address).proposer_spec_hash
+    );
+    assert_eq!(decoded_proposal.is_offer, proposal(dsp.signer.contract_address).is_offer);
+    assert_eq!(
+        decoded_proposal.refinancing_loan_id,
+        proposal(dsp.signer.contract_address).refinancing_loan_id
+    );
+    assert_eq!(decoded_proposal.nonce_space, proposal(dsp.signer.contract_address).nonce_space);
+    assert_eq!(decoded_proposal.nonce, proposal(dsp.signer.contract_address).nonce);
+    assert_eq!(decoded_proposal.loan_contract, proposal(dsp.signer.contract_address).loan_contract);
 
     assert_eq!(decoded_proposal_values.collateral_amount, proposal_values().collateral_amount);
 }
@@ -404,7 +452,7 @@ fn test_should_return_credit_amount(
 fn test_should_fail_when_zero_min_collateral_amount() {
     let dsp = deploy();
 
-    let mut _proposal = proposal();
+    let mut _proposal = proposal(dsp.signer.contract_address);
     _proposal.min_collateral_amount = 0;
 
     let proposal_hash = dsp.proposal.get_proposal_hash(_proposal);
@@ -432,7 +480,7 @@ fn test_should_fail_when_collateral_amount_less_than_min_collateral_amount(
 ) {
     let dsp = deploy();
 
-    let mut _proposal = proposal();
+    let mut _proposal = proposal(dsp.signer.contract_address);
     let mut _proposal_values = proposal_values();
 
     if min_collateral_amount == 0 {
@@ -473,7 +521,7 @@ fn test_should_call_loan_contract_with_loan_terms( // collateral_amount: u256, c
 
     let dsp = deploy();
 
-    let mut _proposal = proposal();
+    let mut _proposal = proposal(dsp.signer.contract_address);
     let mut _proposal_values = proposal_values();
 
     if (collateral_amount < _proposal.min_collateral_amount) {
@@ -524,7 +572,7 @@ fn test_should_call_loan_contract_with_loan_terms( // collateral_amount: u256, c
     let (proposal_hash, terms) = dsp
         .proposal
         .accept_proposal(
-            dsp.signer.contract_address,
+            ACCEPTOR(),
             0,
             dsp.proposal.encode_proposal_data(_proposal, _proposal_values),
             array![],
@@ -534,16 +582,16 @@ fn test_should_call_loan_contract_with_loan_terms( // collateral_amount: u256, c
     assert_eq!(proposal_hash, dsp.proposal.get_proposal_hash(_proposal));
     assert_eq!(
         terms.lender, if _proposal.is_offer {
-            PROPOSER()
-        } else {
             dsp.signer.contract_address
+        } else {
+            ACCEPTOR()
         }
     );
     assert_eq!(
         terms.borrower, if _proposal.is_offer {
-            dsp.signer.contract_address
+            ACCEPTOR()
         } else {
-            PROPOSER()
+            dsp.signer.contract_address
         }
     );
     assert_eq!(terms.duration, _proposal.duration);
