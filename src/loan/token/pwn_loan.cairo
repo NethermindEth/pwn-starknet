@@ -6,13 +6,13 @@ pub trait IPwnLoan<TState> {
     fn burn(ref self: TState, loan_id: felt252);
     fn name(self: @TState) -> ByteArray;
     fn symbol(self: @TState) -> ByteArray;
-    fn token_uri(self: @TState, loan_id: felt252) -> felt252;
-    fn tokenUri(self: @TState, loan_id: felt252) -> felt252;
+    fn token_uri(self: @TState, loan_id: felt252) -> ByteArray;
+    fn tokenUri(self: @TState, loan_id: felt252) -> ByteArray;
 }
 
 #[starknet::interface]
 pub trait IPwnLoadMetadataProvider<TState> {
-    fn loan_metadata_uri(ref self: TState) -> felt252;
+    fn loan_metadata_uri(ref self: TState) -> ByteArray;
 }
 
 #[starknet::contract]
@@ -30,7 +30,7 @@ pub mod PwnLoan {
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
 
     #[abi(embed_v0)]
-    impl ERC721Impl = ERC721Component::ERC721Impl<ContractState>;
+    impl ERC721MixinImpl = ERC721Component::ERC721Impl<ContractState>;
     #[abi(embed_v0)]
     impl ERC721CamelOnlyImpl = ERC721Component::ERC721CamelOnlyImpl<ContractState>;
     impl ERC721InternalImpl = ERC721Component::InternalImpl<ContractState>;
@@ -51,7 +51,7 @@ pub mod PwnLoan {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         LoanMinted: LoanMinted,
         LoanBurned: LoanBurned,
         #[flat]
@@ -61,15 +61,15 @@ pub mod PwnLoan {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct LoanMinted {
-        loan_id: felt252,
-        loan_contract: ContractAddress,
-        owner: ContractAddress,
+    pub struct LoanMinted {
+        pub loan_id: felt252,
+        pub loan_contract: ContractAddress,
+        pub owner: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct LoanBurned {
-        loan_id: felt252,
+    pub struct LoanBurned {
+        pub loan_id: felt252,
     }
 
     pub mod Err {
@@ -134,7 +134,7 @@ pub mod PwnLoan {
             self.erc721.ERC721_symbol.read()
         }
 
-        fn token_uri(self: @ContractState, loan_id: felt252) -> felt252 {
+        fn token_uri(self: @ContractState, loan_id: felt252) -> ByteArray {
             self.erc721._require_owned(loan_id.into());
 
             IPwnLoadMetadataProviderDispatcher {
@@ -143,7 +143,7 @@ pub mod PwnLoan {
                 .loan_metadata_uri()
         }
 
-        fn tokenUri(self: @ContractState, loan_id: felt252) -> felt252 {
+        fn tokenUri(self: @ContractState, loan_id: felt252) -> ByteArray {
             self.erc721._require_owned(loan_id.into());
 
             IPwnLoadMetadataProviderDispatcher {

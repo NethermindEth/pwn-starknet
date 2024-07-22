@@ -1,6 +1,7 @@
 use core::integer::BoundedInt;
 use core::poseidon::poseidon_hash_span;
 use core::starknet::SyscallResultTrait;
+use openzeppelin::account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
 use pwn::config::pwn_config::PwnConfig;
 use pwn::hub::{pwn_hub::{PwnHub, IPwnHubDispatcher, IPwnHubDispatcherTrait}, pwn_hub_tags};
 use pwn::loan::lib::serialization;
@@ -17,10 +18,10 @@ use pwn::loan::terms::simple::proposal::{
 };
 use pwn::multitoken::library::MultiToken;
 use pwn::nonce::revoked_nonce::{RevokedNonce, IRevokedNonceDispatcher};
-use snforge_std::signature::KeyPairTrait;
 use snforge_std::signature::stark_curve::{
     StarkCurveKeyPairImpl, StarkCurveSignerImpl, StarkCurveVerifierImpl
 };
+use snforge_std::signature::{KeyPairTrait, KeyPair};
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
     spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait, cheat_block_timestamp_global
@@ -53,9 +54,19 @@ trait ISimpleLoanListProposal<TState> {
     fn get_multiproposal_hash(self: @TState, multiproposal: starknet::ClassHash) -> felt252;
 }
 
-fn deploy() -> (ISimpleLoanListProposalDispatcher, IPwnHubDispatcher, IRevokedNonceDispatcher) {
+#[derive(Drop)]
+struct Setup {
+    proposal: ISimpleLoanListProposalDispatcher,
+    hub: IPwnHubDispatcher,
+    nonce: IRevokedNonceDispatcher,
+    signer: IPublicKeyDispatcher,
+    key_pair: KeyPair::<felt252, felt252>
+}
+
+fn deploy() -> Setup {
     let contract = declare("PwnHub").unwrap();
     let (hub_address, _) = contract.deploy(@array![]).unwrap();
+    let hub = IPwnHubDispatcher { contract_address: hub_address };
 
     let contract = declare("PwnConfig").unwrap();
     let (config_address, _) = contract.deploy(@array![]).unwrap();
@@ -64,6 +75,7 @@ fn deploy() -> (ISimpleLoanListProposalDispatcher, IPwnHubDispatcher, IRevokedNo
     let (nonce_address, _) = contract
         .deploy(@array![hub_address.into(), pwn_hub_tags::ACTIVE_LOAN])
         .unwrap();
+    let nonce = IRevokedNonceDispatcher { contract_address: nonce_address };
 
     let contract = declare("SimpleLoanListProposal").unwrap();
     let (contract_address, _) = contract
@@ -73,12 +85,15 @@ fn deploy() -> (ISimpleLoanListProposalDispatcher, IPwnHubDispatcher, IRevokedNo
             ]
         )
         .unwrap();
+    let proposal = ISimpleLoanListProposalDispatcher { contract_address };
 
-    (
-        ISimpleLoanListProposalDispatcher { contract_address },
-        IPwnHubDispatcher { contract_address: hub_address },
-        IRevokedNonceDispatcher { contract_address: nonce_address },
-    )
+    let key_pair = KeyPairTrait::<felt252, felt252>::generate();
+
+    let contract = declare("AccountUpgradeable").unwrap();
+    let (account_address, _) = contract.deploy(@array![key_pair.public_key]).unwrap();
+    let signer = IPublicKeyDispatcher { contract_address: account_address };
+
+    Setup { proposal, hub, nonce, signer, key_pair }
 }
 
 fn proposal() -> Proposal {
@@ -129,18 +144,18 @@ fn proposal_hash(proposal: Proposal, proposal_address: ContractAddress) -> felt2
 
 #[test]
 fn test_should_return_used_credit(used: u128) {
-    let (proposal, _, _) = deploy();
+    let dsp = deploy();
 
-    let proposal_hash = proposal_hash(proposal(), proposal.contract_address);
+    let proposal_hash = proposal_hash(proposal(), dsp.proposal.contract_address);
 
     store(
-        proposal.contract_address,
+        dsp.proposal.contract_address,
         map_entry_address(selector!("credit_used"), array![proposal_hash].span(),),
         array![used.into()].span()
     );
 
     let stored_used: u128 = (*load(
-        proposal.contract_address,
+        dsp.proposal.contract_address,
         map_entry_address(selector!("credit_used"), array![proposal_hash].span()),
         1
     )
@@ -153,63 +168,63 @@ fn test_should_return_used_credit(used: u128) {
 
 #[test]
 fn test_should_call_revoke_nonce(caller: u128, nonce_space: felt252, nonce: felt252) {
-    let (proposal, hub, _) = deploy();
+    let dsp = deploy();
 
     let caller: felt252 = caller.try_into().unwrap();
 
     store(
-        hub.contract_address,
+        dsp.hub.contract_address,
         map_entry_address(
             selector!("tags"),
-            array![proposal.contract_address.into(), pwn_hub_tags::ACTIVE_LOAN].span(),
+            array![dsp.proposal.contract_address.into(), pwn_hub_tags::ACTIVE_LOAN].span(),
         ),
         array![true.into()].span()
     );
 
-    start_cheat_caller_address(proposal.contract_address, caller.try_into().unwrap());
-    proposal.revoke_nonce(nonce_space, nonce);
+    start_cheat_caller_address(dsp.proposal.contract_address, caller.try_into().unwrap());
+    dsp.proposal.revoke_nonce(nonce_space, nonce);
 }
 
 #[test]
 fn test_should_return_proposal_hash() {
-    let (proposal, _, _) = deploy();
+    let dsp = deploy();
 
-    let proposal_hash = proposal_hash(proposal(), proposal.contract_address);
+    let proposal_hash = proposal_hash(proposal(), dsp.proposal.contract_address);
 
-    assert_eq!(proposal.get_proposal_hash(proposal()), proposal_hash);
+    assert_eq!(dsp.proposal.get_proposal_hash(proposal()), proposal_hash);
 }
 
 #[test]
 #[should_panic()]
 fn test_fuzz_should_fail_when_caller_is_not_proposer(_proposer: felt252) {
-    let (proposal, _, _) = deploy();
+    let dsp = deploy();
 
     let mut proposer: ContractAddress = _proposer.try_into().unwrap();
     if proposer == proposal().proposer {
         proposer = (_proposer + 1).try_into().unwrap();
     }
 
-    start_cheat_caller_address(proposal.contract_address, proposer);
-    proposal.make_proposal(proposal());
+    start_cheat_caller_address(dsp.proposal.contract_address, proposer);
+    dsp.proposal.make_proposal(proposal());
 }
 
 #[test]
 fn test_should_emit_proposal_made() {
-    let (proposal, _, _) = deploy();
+    let dsp = deploy();
 
     let mut spy = spy_events();
 
-    start_cheat_caller_address(proposal.contract_address, proposal().proposer);
-    proposal.make_proposal(proposal());
+    start_cheat_caller_address(dsp.proposal.contract_address, proposal().proposer);
+    dsp.proposal.make_proposal(proposal());
 
     spy
         .assert_emitted(
             @array![
                 (
-                    proposal.contract_address,
+                    dsp.proposal.contract_address,
                     SimpleLoanListProposal::Event::ProposalMade(
                         SimpleLoanListProposal::ProposalMade {
-                            proposal_hash: proposal_hash(proposal(), proposal.contract_address),
+                            proposal_hash: proposal_hash(proposal(), dsp.proposal.contract_address),
                             proposer: proposal().proposer,
                             proposal: proposal()
                         }
@@ -221,15 +236,15 @@ fn test_should_emit_proposal_made() {
 
 #[test]
 fn test_should_make_proposal() {
-    let (proposal, _, _) = deploy();
+    let dsp = deploy();
 
-    start_cheat_caller_address(proposal.contract_address, proposal().proposer);
-    proposal.make_proposal(proposal());
+    start_cheat_caller_address(dsp.proposal.contract_address, proposal().proposer);
+    dsp.proposal.make_proposal(proposal());
 
-    let proposal_hash = proposal_hash(proposal(), proposal.contract_address);
+    let proposal_hash = proposal_hash(proposal(), dsp.proposal.contract_address);
 
     let proposal_made = (*load(
-        proposal.contract_address,
+        dsp.proposal.contract_address,
         map_entry_address(selector!("proposal_made"), array![proposal_hash].span()),
         1
     )
@@ -240,9 +255,9 @@ fn test_should_make_proposal() {
 
 #[test]
 fn test_should_return_encoded_proposal_data() {
-    let (proposal, _, _) = deploy();
+    let dsp = deploy();
 
-    let encoded_data = proposal.encode_proposal_data(proposal(), proposal_values());
+    let encoded_data = dsp.proposal.encode_proposal_data(proposal(), proposal_values());
 
     let mut serialized_proposal = array![];
     proposal().serialize(ref serialized_proposal);
@@ -259,11 +274,13 @@ fn test_should_return_encoded_proposal_data() {
 
 #[test]
 fn test_should_return_decoded_proposal_data() {
-    let (proposal, _, _) = deploy();
+    let dsp = deploy();
 
-    let encoded_data = proposal.encode_proposal_data(proposal(), proposal_values());
+    let encoded_data = dsp.proposal.encode_proposal_data(proposal(), proposal_values());
 
-    let (decoded_proposal, decoded_proposal_values) = proposal.decode_proposal_data(encoded_data);
+    let (decoded_proposal, decoded_proposal_values) = dsp
+        .proposal
+        .decode_proposal_data(encoded_data);
 
     assert_eq!(decoded_proposal.collateral_category, proposal().collateral_category);
     assert_eq!(decoded_proposal.collateral_address, proposal().collateral_address);
@@ -303,7 +320,7 @@ fn test_should_return_decoded_proposal_data() {
 
 #[test]
 fn test_should_accept_any_collateral_id_when_merkle_root_is_zero(coll_id: felt252) {
-    let (proposal, hub, _) = deploy();
+    let dsp = deploy();
 
     let mut _proposal = proposal();
     let mut _proposal_values = proposal_values();
@@ -312,7 +329,7 @@ fn test_should_accept_any_collateral_id_when_merkle_root_is_zero(coll_id: felt25
     _proposal.collateral_ids_whitelist_merkle_root = 0;
 
     store(
-        hub.contract_address,
+        dsp.hub.contract_address,
         map_entry_address(
             selector!("tags"),
             array![_proposal.loan_contract.into(), pwn_hub_tags::ACTIVE_LOAN].span(),
@@ -321,28 +338,28 @@ fn test_should_accept_any_collateral_id_when_merkle_root_is_zero(coll_id: felt25
     );
 
     store(
-        hub.contract_address,
+        dsp.hub.contract_address,
         map_entry_address(
             selector!("tags"),
-            array![proposal.contract_address.into(), pwn_hub_tags::ACTIVE_LOAN].span(),
+            array![dsp.proposal.contract_address.into(), pwn_hub_tags::ACTIVE_LOAN].span(),
         ),
         array![true.into()].span()
     );
 
-    start_cheat_caller_address(proposal.contract_address, ACTIVATE_LOAN_CONTRACT());
+    start_cheat_caller_address(dsp.proposal.contract_address, ACTIVATE_LOAN_CONTRACT());
 
-    let proposal_hash = proposal.get_proposal_hash(_proposal);
+    let proposal_hash = dsp.proposal.get_proposal_hash(_proposal);
 
-    let key_pair = KeyPairTrait::<felt252, felt252>::generate();
-    let (r, s): (felt252, felt252) = key_pair.sign(proposal_hash).unwrap();
+    let (r, s): (felt252, felt252) = dsp.key_pair.sign(proposal_hash).unwrap();
 
-    let signature = Signature { pub_key: key_pair.public_key, r, s, };
+    let signature = Signature { r, s };
 
-    proposal
+    dsp
+        .proposal
         .accept_proposal(
-            ACCEPTOR(),
+            dsp.signer.contract_address,
             0,
-            proposal.encode_proposal_data(_proposal, _proposal_values),
+            dsp.proposal.encode_proposal_data(_proposal, _proposal_values),
             array![],
             signature
         );
@@ -352,7 +369,7 @@ fn test_should_accept_any_collateral_id_when_merkle_root_is_zero(coll_id: felt25
 fn test_should_pass_when_given_collateral_id_is_whitelisted(
     mut coll_id_1: u128, mut coll_id_2: u128, mut coll_id_3: u128
 ) {
-    let (proposal, hub, _) = deploy();
+    let dsp = deploy();
 
     let mut _proposal = proposal();
     let mut _proposal_values = proposal_values();
@@ -375,7 +392,7 @@ fn test_should_pass_when_given_collateral_id_is_whitelisted(
     _proposal_values.merkle_inclusion_proof = array![id_2_hash.try_into().unwrap()].span();
 
     store(
-        hub.contract_address,
+        dsp.hub.contract_address,
         map_entry_address(
             selector!("tags"),
             array![_proposal.loan_contract.into(), pwn_hub_tags::ACTIVE_LOAN].span(),
@@ -383,28 +400,28 @@ fn test_should_pass_when_given_collateral_id_is_whitelisted(
         array![true.into()].span()
     );
     store(
-        hub.contract_address,
+        dsp.hub.contract_address,
         map_entry_address(
             selector!("tags"),
-            array![proposal.contract_address.into(), pwn_hub_tags::ACTIVE_LOAN].span(),
+            array![dsp.proposal.contract_address.into(), pwn_hub_tags::ACTIVE_LOAN].span(),
         ),
         array![true.into()].span()
     );
 
-    start_cheat_caller_address(proposal.contract_address, ACTIVATE_LOAN_CONTRACT());
+    start_cheat_caller_address(dsp.proposal.contract_address, ACTIVATE_LOAN_CONTRACT());
 
-    let proposal_hash = proposal.get_proposal_hash(_proposal);
+    let proposal_hash = dsp.proposal.get_proposal_hash(_proposal);
 
-    let key_pair = KeyPairTrait::<felt252, felt252>::generate();
-    let (r, s): (felt252, felt252) = key_pair.sign(proposal_hash).unwrap();
+    let (r, s): (felt252, felt252) = dsp.key_pair.sign(proposal_hash).unwrap();
 
-    let signature = Signature { pub_key: key_pair.public_key, r, s, };
+    let signature = Signature { r, s };
 
-    proposal
+    dsp
+        .proposal
         .accept_proposal(
-            ACCEPTOR(),
+            dsp.signer.contract_address,
             0,
-            proposal.encode_proposal_data(_proposal, _proposal_values),
+            dsp.proposal.encode_proposal_data(_proposal, _proposal_values),
             array![],
             signature
         );
@@ -416,7 +433,7 @@ fn test_should_pass_when_given_collateral_id_is_whitelisted(
 fn test_should_fail_when_given_collateral_id_is_not_whitelisted(
     mut coll_id_1: u128, mut coll_id_2: u128, mut coll_id_3: u128
 ) {
-    let (proposal, hub, _) = deploy();
+    let dsp = deploy();
 
     let mut _proposal = proposal();
     let mut _proposal_values = proposal_values();
@@ -452,7 +469,7 @@ fn test_should_fail_when_given_collateral_id_is_not_whitelisted(
     _proposal_values.merkle_inclusion_proof = array![id_2_hash.try_into().unwrap()].span();
 
     store(
-        hub.contract_address,
+        dsp.hub.contract_address,
         map_entry_address(
             selector!("tags"),
             array![_proposal.loan_contract.into(), pwn_hub_tags::ACTIVE_LOAN].span(),
@@ -460,28 +477,28 @@ fn test_should_fail_when_given_collateral_id_is_not_whitelisted(
         array![true.into()].span()
     );
     store(
-        hub.contract_address,
+        dsp.hub.contract_address,
         map_entry_address(
             selector!("tags"),
-            array![proposal.contract_address.into(), pwn_hub_tags::ACTIVE_LOAN].span(),
+            array![dsp.proposal.contract_address.into(), pwn_hub_tags::ACTIVE_LOAN].span(),
         ),
         array![true.into()].span()
     );
 
-    start_cheat_caller_address(proposal.contract_address, ACTIVATE_LOAN_CONTRACT());
+    start_cheat_caller_address(dsp.proposal.contract_address, ACTIVATE_LOAN_CONTRACT());
 
-    let proposal_hash = proposal.get_proposal_hash(_proposal);
+    let proposal_hash = dsp.proposal.get_proposal_hash(_proposal);
 
-    let key_pair = KeyPairTrait::<felt252, felt252>::generate();
-    let (r, s): (felt252, felt252) = key_pair.sign(proposal_hash).unwrap();
+    let (r, s): (felt252, felt252) = dsp.key_pair.sign(proposal_hash).unwrap();
 
-    let signature = Signature { pub_key: key_pair.public_key, r, s, };
+    let signature = Signature { r, s };
 
-    proposal
+    dsp
+        .proposal
         .accept_proposal(
-            ACCEPTOR(),
+            dsp.signer.contract_address,
             0,
-            proposal.encode_proposal_data(_proposal, _proposal_values),
+            dsp.proposal.encode_proposal_data(_proposal, _proposal_values),
             array![],
             signature
         );
@@ -489,7 +506,7 @@ fn test_should_fail_when_given_collateral_id_is_not_whitelisted(
 
 #[test]
 fn test_should_call_loan_contract_with_loan_terms(is_offer: u8) {
-    let (proposal, hub, _) = deploy();
+    let dsp = deploy();
 
     let mut _proposal = proposal();
     let mut _proposal_values = proposal_values();
@@ -501,7 +518,7 @@ fn test_should_call_loan_contract_with_loan_terms(is_offer: u8) {
     };
 
     store(
-        hub.contract_address,
+        dsp.hub.contract_address,
         map_entry_address(
             selector!("tags"),
             array![_proposal.loan_contract.into(), pwn_hub_tags::ACTIVE_LOAN].span(),
@@ -509,43 +526,47 @@ fn test_should_call_loan_contract_with_loan_terms(is_offer: u8) {
         array![true.into()].span()
     );
     store(
-        hub.contract_address,
+        dsp.hub.contract_address,
         map_entry_address(
             selector!("tags"),
-            array![proposal.contract_address.into(), pwn_hub_tags::ACTIVE_LOAN].span(),
+            array![dsp.proposal.contract_address.into(), pwn_hub_tags::ACTIVE_LOAN].span(),
         ),
         array![true.into()].span()
     );
 
-    start_cheat_caller_address(proposal.contract_address, ACTIVATE_LOAN_CONTRACT());
+    start_cheat_caller_address(dsp.proposal.contract_address, ACTIVATE_LOAN_CONTRACT());
 
-    let proposal_hash = proposal.get_proposal_hash(_proposal);
+    let proposal_hash = dsp.proposal.get_proposal_hash(_proposal);
 
-    let key_pair = KeyPairTrait::<felt252, felt252>::generate();
-    let (r, s): (felt252, felt252) = key_pair.sign(proposal_hash).unwrap();
+    let (r, s): (felt252, felt252) = dsp.key_pair.sign(proposal_hash).unwrap();
 
-    let signature = Signature { pub_key: key_pair.public_key, r, s, };
+    let signature = Signature { r, s };
 
-    let (proposal_hash, terms) = proposal
+    let (proposal_hash, terms) = dsp
+        .proposal
         .accept_proposal(
-            ACCEPTOR(),
+            dsp.signer.contract_address,
             0,
-            proposal.encode_proposal_data(_proposal, _proposal_values),
+            dsp.proposal.encode_proposal_data(_proposal, _proposal_values),
             array![],
             signature
         );
 
-    assert_eq!(proposal_hash, proposal.get_proposal_hash(_proposal));
-    assert_eq!(terms.lender, if _proposal.is_offer {
-        PROPOSER()
-    } else {
-        ACCEPTOR()
-    });
-    assert_eq!(terms.borrower, if _proposal.is_offer {
-        ACCEPTOR()
-    } else {
-        PROPOSER()
-    });
+    assert_eq!(proposal_hash, dsp.proposal.get_proposal_hash(_proposal));
+    assert_eq!(
+        terms.lender, if _proposal.is_offer {
+            PROPOSER()
+        } else {
+            dsp.signer.contract_address
+        }
+    );
+    assert_eq!(
+        terms.borrower, if _proposal.is_offer {
+            dsp.signer.contract_address
+        } else {
+            PROPOSER()
+        }
+    );
     assert_eq!(terms.duration, _proposal.duration);
     assert_eq!(terms.collateral.category, _proposal.collateral_category);
     assert_eq!(terms.collateral.asset_address, _proposal.collateral_address);
