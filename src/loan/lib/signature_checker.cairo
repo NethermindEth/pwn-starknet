@@ -1,7 +1,7 @@
 use core::ecdsa::check_ecdsa_signature;
 use starknet::ContractAddress;
 
-#[derive(Debug, Drop, Serde)]
+#[derive(Debug, Default, Drop, Serde)]
 pub struct Signature {
     pub r: felt252,
     pub s: felt252,

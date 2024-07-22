@@ -40,9 +40,9 @@ use starknet::ContractAddress;
 pub const E18: u256 = 1_000_000_000_000_000_000;
 pub const _7_DAYS: u64 = 60 * 60 * 24 * 7;
 
-pub fn lender() -> ContractAddress {
-    starknet::contract_address_const::<'lenderPK'>()
-}
+// pub fn lender.contract_address -> ContractAddress {
+//     starknet::contract_address_const::<'lenderPK'>()
+// }
 // pub fn borrower() -> ContractAddress {
 //     starknet::contract_address_const::<'borrowerPK'>()
 // }
@@ -64,6 +64,8 @@ pub struct Setup {
     pub t1155: ERC1155ABIDispatcher,
     pub credit: ERC20ABIDispatcher,
     pub simple_proposal: Proposal,
+    pub lender: IPublicKeyDispatcher,
+    pub lender2: IPublicKeyDispatcher,
     pub borrower: IPublicKeyDispatcher,
     pub key_pair: KeyPair<felt252, felt252>
 }
@@ -145,11 +147,21 @@ pub fn setup() -> Setup {
     registry.register_category_value(credit_address, MultiToken::Category::ERC20.into());
     println!("credit_address: {:?}", credit_address);
 
-    let key_pair = KeyPairTrait::<felt252, felt252>::generate();
-
+    let lender_key_pair = KeyPairTrait::<felt252, felt252>::generate();
     let contract = declare("AccountUpgradeable").unwrap();
-    let (account_address, _) = contract.deploy(@array![key_pair.public_key]).unwrap();
-    let borrower = IPublicKeyDispatcher { contract_address: account_address };
+    let (lender_address, _) = contract.deploy(@array![lender_key_pair.public_key]).unwrap();
+    let lender = IPublicKeyDispatcher { contract_address: lender_address };
+    println!("lender_address: {:?}", lender_address);
+
+    let lender2_key_pair = KeyPairTrait::<felt252, felt252>::generate();
+    let (lender2_address, _) = contract.deploy(@array![lender2_key_pair.public_key]).unwrap();
+    let lender2 = IPublicKeyDispatcher { contract_address: lender2_address };
+    println!("lender2_address: {:?}", lender2_address);
+
+    let borrower_key_pair = KeyPairTrait::<felt252, felt252>::generate();
+    let (borrower_address, _) = contract.deploy(@array![borrower_key_pair.public_key]).unwrap();
+    let borrower = IPublicKeyDispatcher { contract_address: borrower_address };
+    println!("borrower_address: {:?}", borrower_address);
 
     hub.set_tag(proposal_address, pwn_hub_tags::LOAN_PROPOSAL, true);
     hub.set_tag(proposal_address, pwn_hub_tags::ACTIVE_LOAN, true);
@@ -170,8 +182,9 @@ pub fn setup() -> Setup {
         duration: 3000,
         expiration: starknet::get_block_timestamp() + _7_DAYS,
         allowed_acceptor: borrower.contract_address,
-        proposer: lender(),
-        proposer_spec_hash: loan.get_lender_spec_hash(LenderSpec { source_of_funds: lender() }),
+        proposer: lender.contract_address,
+        proposer_spec_hash: loan
+            .get_lender_spec_hash(LenderSpec { source_of_funds: lender.contract_address }),
         is_offer: true,
         refinancing_loan_id: 0,
         nonce_space: 0,
@@ -192,8 +205,10 @@ pub fn setup() -> Setup {
         t1155,
         credit,
         simple_proposal,
+        lender,
+        lender2,
         borrower,
-        key_pair
+        key_pair: lender_key_pair
     }
 }
 
@@ -257,10 +272,10 @@ pub(crate) fn _create_erc1155_loan_failing(setup: Setup, revert_data: felt252) -
 pub(crate) fn _create_loan(setup: Setup, _proposal: Proposal, revert_data: felt252) -> felt252 {
     let signature = _sign(setup.proposal.get_proposal_hash(_proposal), setup.key_pair);
 
-    erc20_mint(setup.credit.contract_address, lender(), 100 * E18);
+    erc20_mint(setup.credit.contract_address, setup.lender.contract_address, 100 * E18);
 
-    start_cheat_caller_address(setup.credit.contract_address, lender());
-    setup.credit.approve(setup.loan_token.contract_address, 100 * E18);
+    start_cheat_caller_address(setup.credit.contract_address, setup.lender.contract_address);
+    setup.credit.approve(setup.loan.contract_address, 100 * E18);
     stop_cheat_caller_address(setup.credit.contract_address);
 
     if revert_data != '' {
@@ -274,7 +289,7 @@ pub(crate) fn _create_loan(setup: Setup, _proposal: Proposal, revert_data: felt2
         proposal_inclusion_proof: array![],
         signature
     };
-    let lender_spec = LenderSpec { source_of_funds: lender() };
+    let lender_spec = LenderSpec { source_of_funds: setup.lender.contract_address };
     let caller_spec = CallerSpec {
         refinancing_loan_id: 0, revoke_nonce: false, nonce: 0, permit_data: 0
     };
@@ -294,7 +309,7 @@ pub(crate) fn _repay_loan_failing(setup: Setup, loan_id: felt252, revert_data: f
     erc20_mint(setup.credit.contract_address, setup.borrower.contract_address, 10 * E18);
 
     start_cheat_caller_address(setup.credit.contract_address, setup.borrower.contract_address);
-    setup.credit.approve(setup.loan_token.contract_address, 10 * E18);
+    setup.credit.approve(setup.loan.contract_address, 110 * E18);
     stop_cheat_caller_address(setup.credit.contract_address);
 
     if revert_data != '' {
@@ -307,15 +322,18 @@ pub(crate) fn _repay_loan_failing(setup: Setup, loan_id: felt252, revert_data: f
 }
 
 fn erc20_mint(erc20: ContractAddress, receiver: ContractAddress, amount: u256) {
+    let current_balance = ERC20ABIDispatcher { contract_address: erc20 }.balance_of(receiver);
+    let total_supply = ERC20ABIDispatcher { contract_address: erc20 }.total_supply();
+
     store(
         erc20,
         map_entry_address(selector!("ERC20_total_supply"), array![].span(),),
-        array![amount.try_into().unwrap()].span()
+        array![(total_supply + amount).try_into().unwrap()].span()
     );
     store(
         erc20,
         map_entry_address(selector!("ERC20_balances"), array![receiver.into()].span(),),
-        array![amount.try_into().unwrap()].span()
+        array![(current_balance + amount).try_into().unwrap()].span()
     );
 }
 
