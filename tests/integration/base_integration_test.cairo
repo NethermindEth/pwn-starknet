@@ -19,7 +19,7 @@ use pwn::loan::terms::simple::proposal::simple_loan_simple_proposal::{
 use pwn::loan::token::pwn_loan::IPwnLoanDispatcher;
 use pwn::mocks::{erc20::ERC20Mock, erc721::ERC721Mock, erc1155::ERC1155Mock};
 use pwn::multitoken::{
-    library::MultiToken, category_registry::IMultitokenCategoryRegistryDispatcher
+    library::MultiToken, category_registry::IMultiTokenCategoryRegistryDispatcher
 };
 use pwn::nonce::revoked_nonce::IRevokedNonceDispatcher;
 use snforge_std::signature::stark_curve::{
@@ -48,7 +48,7 @@ pub struct Setup {
     hub: IPwnHubDispatcher,
     config: IPwnConfigDispatcher,
     nonce: IRevokedNonceDispatcher,
-    registry: IMultitokenCategoryRegistryDispatcher,
+    registry: IMultiTokenCategoryRegistryDispatcher,
     proposal: ISimpleLoanSimpleProposalDispatcher,
     loan_token: IPwnLoanDispatcher,
     loan: IPwnSimpleLoanDispatcher,
@@ -92,7 +92,7 @@ fn set_up() -> Setup {
 
     let contract = declare("MultiTokenCategoryRegistry").unwrap();
     let (registry_address, _) = contract.deploy(@array![]).unwrap();
-    let registry = IMultitokenCategoryRegistryDispatcher { contract_address: registry_address };
+    let registry = IMultiTokenCategoryRegistryDispatcher { contract_address: registry_address };
 
     let contract = declare("PwnSimpleLoan").unwrap();
     let (loan_address, _) = contract
@@ -278,7 +278,7 @@ fn _repay_loan_failing(setup: Setup, loan_id: felt252, revert_data: felt252) {
     setup.loan.repay_loan(loan_id, '');
 }
 
-fn erc20_mint(erc20: ContractAddress, receiver: ContractAddress, amount: u256) {
+pub fn erc20_mint(erc20: ContractAddress, receiver: ContractAddress, amount: u256) {
     store(
         erc20,
         map_entry_address(selector!("ERC20_total_supply"), array![].span(),),
@@ -291,7 +291,7 @@ fn erc20_mint(erc20: ContractAddress, receiver: ContractAddress, amount: u256) {
     );
 }
 
-fn erc721_mint(erc721: ContractAddress, receiver: ContractAddress, id: u256) {
+pub fn erc721_mint(erc721: ContractAddress, receiver: ContractAddress, id: u256) {
     store(
         erc721,
         map_entry_address(selector!("ERC721_owners"), array![id.try_into().unwrap()].span(),),

@@ -6,8 +6,8 @@ use openzeppelin::token::erc721::interface::{
     ERC721ABI, ERC721ABIDispatcher, ERC721ABIDispatcherTrait
 };
 use pwn::mocks::{
-    erc20_mock::ERC20Mock, erc721_mock::ERC721Mock, erc1155_mock::ERC1155Mock,
-    account_mock::AccountMock
+    erc20::ERC20Mock, erc721::ERC721Mock, erc1155::ERC1155Mock,
+    account::AccountUpgradeable
 };
 use pwn::multitoken::{
     category_registry::MultiTokenCategoryRegistry, library::{MultiToken, MultiToken::AssetTrait}
@@ -32,6 +32,19 @@ struct Tokens {
     erc1155: ERC1155ABIDispatcher,
 }
 
+fn erc721_mint(erc721: ContractAddress, receiver: ContractAddress, id: u256) {
+    store(
+        erc721,
+        map_entry_address(selector!("ERC721_owners"), array![id.try_into().unwrap()].span(),),
+        array![receiver.into()].span()
+    );
+    store(
+        erc721,
+        map_entry_address(selector!("ERC721_balances"), array![receiver.into()].span(),),
+        array![1.try_into().unwrap()].span()
+    );
+}
+
 fn deploy() -> Tokens {
     let contract = declare("ERC20Mock").unwrap();
     let (contract_address, _) = contract.deploy(@array![]).unwrap();
@@ -48,13 +61,13 @@ fn deploy() -> Tokens {
     Tokens { erc20, erc721, erc1155 }
 }
 
-fn deploy_accounts() -> (ContractAddress, ContractAddress) {
-    let contract = declare("AccountMock").unwrap();
-    let (alice, _) = contract.deploy(@array!['PUBKEY1']).unwrap();
-    let (bob, _) = contract.deploy(@array!['PUBKEY2']).unwrap();
+// fn deploy_accounts() -> (ContractAddress, ContractAddress) {
+//     let contract = declare("AccountMock").unwrap();
+//     let (alice, _) = contract.deploy(@array!['PUBKEY1']).unwrap();
+//     let (bob, _) = contract.deploy(@array!['PUBKEY2']).unwrap();
 
-    (alice, bob)
-}
+//     (alice, bob)
+// }
 
 #[test]
 fn test_fuzz_should_return_erc20(asset_address: u128, amount: u256) {
@@ -203,12 +216,12 @@ fn test_should_call_transfer_from_when_erc721() {
     // let this_address = starknet::get_contract_address();
     let token_id : u256 = 1;
     // Mint ERC721 token
-    store(
-        tokens.erc721.contract_address,
-        map_entry_address(selector!("ERC721_owners"), array![1].span()),
-        array![ALICE().into()].span()
-    );
-
+    // store(
+    //     tokens.erc721.contract_address,
+    //     map_entry_address(selector!("ERC721_owners"), array![1].span()),
+    //     array![ALICE().into()].span()
+    // );
+    erc721_mint(tokens.erc721.contract_address, ALICE(), token_id);
     assert_eq!(tokens.erc721.owner_of(token_id), ALICE());
     
     // let asset = MultiToken::ERC721(tokens.erc721.contract_address, 1);
