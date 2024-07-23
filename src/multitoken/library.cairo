@@ -31,7 +31,7 @@ pub mod MultiToken {
         ERC1155,
     }
 
-    #[derive(Copy, Default, Drop, Serde, starknet::Store)]
+    #[derive(Copy, Debug, Default, Drop, Serde, starknet::Store)]
     pub struct Asset {
         pub category: Category,
         pub asset_address: ContractAddress,
@@ -72,24 +72,40 @@ pub mod MultiToken {
             _transfer_asset_from(*self, source, dest, is_safe);
         }
 
-        fn get_transfer_amount(asset: @Asset) {}
+        fn get_transfer_amount(self: @Asset) -> u256 {
+            if *self.category == Category::ERC20 {
+                return *self.amount;
+            } else if *self.category == Category::ERC1155 && *self.amount > 0 {
+                return *self.amount;
+            } else {
+                return 1;
+            }
+        }
 
         //  NOTE: tranferFromCallData not needed
 
         // NOTE: permit standard not available on starknet
 
         fn balance_of(self: @Asset, target: ContractAddress) -> u256 {
-            match self.category {
-                Category::ERC20 => {
-                    ERC20ABIDispatcher { contract_address: *self.asset_address }.balanceOf(target)
-                },
-                Category::ERC721 => {
-                    ERC721ABIDispatcher { contract_address: *self.asset_address }.balanceOf(target)
-                },
-                Category::ERC1155 => {
-                    ERC1155ABIDispatcher { contract_address: *self.asset_address }
-                        .balanceOf(target, (*self.id).into())
+            if *self.category != Category::ERC20
+                && *self.category != Category::ERC721
+                && *self.category != Category::ERC1155 {
+                Err::UNSUPPORTED_CATEGORY(*self.category);
+            }
+            if *self.category == Category::ERC20 {
+                return ERC20ABIDispatcher { contract_address: *self.asset_address }
+                    .balance_of(target);
+            } else if *self.category == Category::ERC721 {
+                let owner = ERC721ABIDispatcher { contract_address: *self.asset_address }
+                    .owner_of((*self.id).into());
+                if owner == target {
+                    return 1;
+                } else {
+                    return 0;
                 }
+            } else {
+                return ERC1155ABIDispatcher { contract_address: *self.asset_address }
+                    .balance_of(target, (*self.id).into());
             }
         }
 
@@ -128,25 +144,31 @@ pub mod MultiToken {
     fn _transfer_asset_from(
         asset: Asset, source: ContractAddress, dest: ContractAddress, is_safe: bool
     ) {
+        if asset.category != Category::ERC20
+            && asset.category != Category::ERC721
+            && asset.category != Category::ERC1155 {
+            Err::UNSUPPORTED_CATEGORY(asset.category);
+        }
+
         let this_address = starknet::get_contract_address();
 
         match asset.category {
             Category::ERC20 => {
                 if source == this_address {
                     ERC20ABIDispatcher { contract_address: asset.asset_address }
-                        .transferFrom(asset.asset_address, dest, asset.amount);
+                        .transfer(dest, asset.amount);
                 } else {
                     ERC20ABIDispatcher { contract_address: asset.asset_address }
-                        .transferFrom(source, dest, asset.amount);
+                        .transfer_from(source, dest, asset.amount);
                 }
             },
             Category::ERC721 => {
                 if !is_safe {
                     ERC721ABIDispatcher { contract_address: asset.asset_address }
-                        .transferFrom(source, dest, asset.id.into());
+                        .transfer_from(source, dest, asset.id.into());
                 } else {
                     ERC721ABIDispatcher { contract_address: asset.asset_address }
-                        .safeTransferFrom(source, dest, asset.id.into(), array![''].span());
+                        .safe_transfer_from(source, dest, asset.id.into(), array![].span());
                 }
             },
             Category::ERC1155 => {
@@ -155,9 +177,8 @@ pub mod MultiToken {
                 } else {
                     asset.amount
                 };
-
                 ERC1155ABIDispatcher { contract_address: asset.asset_address }
-                    .safeTransferFrom(source, dest, asset.id.into(), amount, array![''].span());
+                    .safe_transfer_from(source, dest, asset.id.into(), amount, array![].span());
             }
         }
     }

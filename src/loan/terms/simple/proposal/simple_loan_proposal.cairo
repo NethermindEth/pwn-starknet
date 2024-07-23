@@ -227,14 +227,14 @@ pub mod SimpleLoanProposalComponent {
             if proposal_inclusion_proof.len() == 0 {
                 if !self.proposal_made.read(proposal_hash) {
                     // should we also need to ensure it is signed by the proposer
-                    if !self._is_valid_signature_now(acceptor, proposal_hash, signature) {
+                    if !self._is_valid_signature_now(proposal.proposer, proposal_hash, signature) {
                         signature_checker::Err::INVALID_SIGNATURE(proposal.proposer, proposal_hash);
                     }
                 }
             } else {
                 // TODO: verify inclusion proof type with the pwn team
                 let multiproposal_hash = poseidon_hash_span(array!['multiProposalHash'].span());
-                if !self._is_valid_signature_now(acceptor, multiproposal_hash, signature) {
+                if !self._is_valid_signature_now(proposal.proposer, multiproposal_hash, signature) {
                     signature_checker::Err::INVALID_SIGNATURE(
                         proposal.proposer, multiproposal_hash
                     );

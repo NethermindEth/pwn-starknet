@@ -2,7 +2,7 @@
 // Compatible with OpenZeppelin Contracts for Cairo ^0.14.0
 
 #[starknet::contract]
-mod ERC1155Mock {
+pub mod ERC1155Mock {
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc1155::ERC1155Component;
     use openzeppelin::token::erc1155::ERC1155HooksEmptyImpl;
