@@ -54,10 +54,10 @@ pub mod PwnVaultComponent {
 
     pub mod Err {
         pub fn UNSUPPORTED_TRANSFER_FUNCTION() {
-            panic!("PWV Vault: Unsupported trasfer function");
+            panic!("PWN Vault: Unsupported transfer function");
         }
         pub fn INCOMPLETE_TRANSFER() {
-            panic!("PWV Vault: Incomplete transfer");
+            panic!("PWN Vault: Incomplete transfer");
         }
     }
 
