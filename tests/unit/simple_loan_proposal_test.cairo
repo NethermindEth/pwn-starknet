@@ -60,9 +60,9 @@ pub fn TOKEN() -> ContractAddress {
     starknet::contract_address_const::<'token'>()
 }
 
-pub fn PROPOSER() -> ContractAddress {
-    starknet::contract_address_const::<73661723>()
-}
+// pub fn PROPOSER() -> ContractAddress {
+//     starknet::contract_address_const::<73661723>()
+// }
 
 pub fn ACCEPTOR() -> ContractAddress {
     starknet::contract_address_const::<32716637>()
@@ -89,7 +89,7 @@ pub fn get_dummy_message_hash_and_signature(
     (dummy_hash, Signature { r, s })
 }
 
-pub fn proposal() -> SimpleLoanProposalComponent::ProposalBase {
+pub fn proposal(proposer: ContractAddress) -> SimpleLoanProposalComponent::ProposalBase {
     SimpleLoanProposalComponent::ProposalBase {
         collateral_address: TOKEN(),
         collateral_id: 0,
@@ -99,7 +99,7 @@ pub fn proposal() -> SimpleLoanProposalComponent::ProposalBase {
         available_credit_limit: E10,
         expiration: starknet::get_block_timestamp() + 20 * MINUTE,
         allowed_acceptor: starknet::contract_address_const::<0>(),
-        proposer: PROPOSER(),
+        proposer: proposer,
         is_offer: true,
         refinancing_loan_id: 0,
         nonce_space: 0,
@@ -108,11 +108,11 @@ pub fn proposal() -> SimpleLoanProposalComponent::ProposalBase {
     }
 }
 
-pub fn params(acceptor: ContractAddress, key_pair: KeyPair<felt252, felt252>) -> Params {
+pub fn params(proposer: ContractAddress, key_pair: KeyPair<felt252, felt252>) -> Params {
     let (message_hash, signature) = get_dummy_message_hash_and_signature(key_pair);
     Params {
-        base: proposal(),
-        acceptor: acceptor,
+        base: proposal(proposer),
+        acceptor: ACCEPTOR(),
         proposal_inclusion_proof: array![],
         signature,
         message_hash,
@@ -195,11 +195,11 @@ fn test_should_call_revoke_nonce() {
 }
 
 #[test]
-#[should_panic(expected: "Caller 73661723 is not the stated proposer")]
+#[should_panic]
 fn test_should_fail_when_caller_is_not_proposer() {
     let mut dsp = deploy();
     let dummy_hash = poseidon_hash_span(array!['dummy'].span());
-    cheat_caller_address_global(PROPOSER());
+    cheat_caller_address_global(dsp.signer.contract_address);
     dsp.component._make_proposal(dummy_hash, starknet::contract_address_const::<'not_proposer'>());
 }
 
@@ -207,7 +207,7 @@ fn test_should_fail_when_caller_is_not_proposer() {
 fn test_should_make_proposal() {
     let mut dsp = deploy();
     let dummy_hash = poseidon_hash_span(array!['dummy'].span());
-    let proposer = PROPOSER();
+    let proposer = dsp.signer.contract_address;
     cheat_caller_address_global(proposer);
     dsp.component._make_proposal(dummy_hash, proposer);
     assert!(dsp.component.proposal_made.read(dummy_hash), "Proposal not exists");

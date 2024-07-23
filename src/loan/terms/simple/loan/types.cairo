@@ -30,7 +30,7 @@ pub struct LenderSpec {
     pub source_of_funds: ContractAddress
 }
 
-#[derive(Drop, Serde)]
+#[derive(Default, Drop, Serde)]
 pub struct CallerSpec {
     pub refinancing_loan_id: felt252,
     pub revoke_nonce: bool,
