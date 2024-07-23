@@ -14,10 +14,10 @@ mod unit {
     mod vault_test;
 }
 
-mod integration {
-    mod base_integration_test;
-    mod protocol_integrity_test;
-    mod simple_loan_integration_test;
+pub mod integration {
+    pub mod base_integration_test;
+    pub mod protocol_integrity_test;
+    pub mod simple_loan_integration_test;
 }
 
 pub mod utils {
