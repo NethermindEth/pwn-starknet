@@ -53,7 +53,7 @@ pub mod SimpleLoanListProposal {
     pub struct Proposal {
         pub collateral_category: MultiToken::Category,
         pub collateral_address: ContractAddress,
-        pub collateral_ids_whitelist_merkle_root: felt252,
+        pub collateral_ids_whitelist_merkle_root: u256,
         pub collateral_amount: u256,
         pub check_collateral_state_fingerprint: bool,
         pub collateral_state_fingerprint: felt252,
@@ -78,7 +78,7 @@ pub mod SimpleLoanListProposal {
     #[derive(Copy, Drop, Serde)]
     pub struct ProposalValues {
         pub collateral_id: felt252,
-        pub merkle_inclusion_proof: Span<felt252>,
+        pub merkle_inclusion_proof: Span<u256>,
     }
 
     #[storage]
@@ -150,7 +150,7 @@ pub mod SimpleLoanListProposal {
                 if !merkle_proof::verify(
                     proposal_values.merkle_inclusion_proof,
                     proposal.collateral_ids_whitelist_merkle_root,
-                    poseidon_hash_span(array![proposal_values.collateral_id].span())
+                    merkle_proof::hash(proposal_values.collateral_id.into()),
                 ) {
                     Err::COLLATERAL_ID_NOT_WHITELISTED(proposal_values.collateral_id);
                 }
@@ -263,33 +263,38 @@ pub mod SimpleLoanListProposal {
                 _ => panic!("Invalid collateral category"),
             };
             let collateral_address: ContractAddress = (*data.at(1)).try_into().unwrap();
-            let collateral_low: u128 = (*data.at(3)).try_into().unwrap();
-            let collateral_high: u128 = (*data.at(4)).try_into().unwrap();
-            let credit_address: ContractAddress = (*data.at(7)).try_into().unwrap();
-            let credit_low: u128 = (*data.at(8)).try_into().unwrap();
-            let credit_high: u128 = (*data.at(9)).try_into().unwrap();
-            let credit_limit_low: u128 = (*data.at(10)).try_into().unwrap();
-            let credit_limit_high: u128 = (*data.at(11)).try_into().unwrap();
-            let fixed_interest_low: u128 = (*data.at(12)).try_into().unwrap();
-            let fixed_interest_high: u128 = (*data.at(13)).try_into().unwrap();
-            let accruing_interest_APR: u32 = (*data.at(14)).try_into().unwrap();
-            let duration: u64 = (*data.at(15)).try_into().unwrap();
-            let expiration: u64 = (*data.at(16)).try_into().unwrap();
-            let allowed_acceptor: ContractAddress = (*data.at(17)).try_into().unwrap();
-            let proposer: ContractAddress = (*data.at(18)).try_into().unwrap();
-            let loan_contract: ContractAddress = (*data.at(24)).try_into().unwrap();
+            let collateral_ids_whitelist_merkle_root_low: u128 = (*data.at(2)).try_into().unwrap();
+            let collateral_ids_whitelist_merkle_root_high: u128 = (*data.at(3)).try_into().unwrap();
+            let collateral_low: u128 = (*data.at(4)).try_into().unwrap();
+            let collateral_high: u128 = (*data.at(5)).try_into().unwrap();
+            let credit_address: ContractAddress = (*data.at(8)).try_into().unwrap();
+            let credit_low: u128 = (*data.at(9)).try_into().unwrap();
+            let credit_high: u128 = (*data.at(10)).try_into().unwrap();
+            let credit_limit_low: u128 = (*data.at(11)).try_into().unwrap();
+            let credit_limit_high: u128 = (*data.at(12)).try_into().unwrap();
+            let fixed_interest_low: u128 = (*data.at(13)).try_into().unwrap();
+            let fixed_interest_high: u128 = (*data.at(14)).try_into().unwrap();
+            let accruing_interest_APR: u32 = (*data.at(15)).try_into().unwrap();
+            let duration: u64 = (*data.at(16)).try_into().unwrap();
+            let expiration: u64 = (*data.at(17)).try_into().unwrap();
+            let allowed_acceptor: ContractAddress = (*data.at(18)).try_into().unwrap();
+            let proposer: ContractAddress = (*data.at(19)).try_into().unwrap();
+            let loan_contract: ContractAddress = (*data.at(25)).try_into().unwrap();
 
             Proposal {
                 collateral_category,
                 collateral_address,
-                collateral_ids_whitelist_merkle_root: *data.at(2),
+                collateral_ids_whitelist_merkle_root: u256 {
+                    low: collateral_ids_whitelist_merkle_root_low,
+                    high: collateral_ids_whitelist_merkle_root_high
+                },
                 collateral_amount: u256 { low: collateral_low, high: collateral_high },
-                check_collateral_state_fingerprint: if *data.at(5) == 1 {
+                check_collateral_state_fingerprint: if *data.at(6) == 1 {
                     true
                 } else {
                     false
                 },
-                collateral_state_fingerprint: *data.at(6),
+                collateral_state_fingerprint: *data.at(7),
                 credit_address,
                 credit_amount: u256 { low: credit_low, high: credit_high },
                 available_credit_limit: u256 { low: credit_limit_low, high: credit_limit_high },
@@ -299,15 +304,15 @@ pub mod SimpleLoanListProposal {
                 expiration,
                 allowed_acceptor,
                 proposer,
-                proposer_spec_hash: *data.at(19),
-                is_offer: if *data.at(20) == 1 {
+                proposer_spec_hash: *data.at(20),
+                is_offer: if *data.at(21) == 1 {
                     true
                 } else {
                     false
                 },
-                refinancing_loan_id: *data.at(21),
-                nonce_space: *data.at(22),
-                nonce: *data.at(23),
+                refinancing_loan_id: *data.at(22),
+                nonce_space: *data.at(23),
+                nonce: *data.at(24),
                 loan_contract,
             }
         }
@@ -316,12 +321,14 @@ pub mod SimpleLoanListProposal {
             self: @ContractState, data: Span<felt252>
         ) -> ProposalValues {
             // Extract the length of the merkle_inclusion_proof
-            let proof_len: usize = (*data.at(1)).try_into().expect('failed to convert length');
-            let mut merkle_inclusion_proof = array![];
-            let mut i = 0;
-            while i < proof_len {
-                merkle_inclusion_proof.append(*data.at(i + 2));
-                i += 1;
+            let proof_len: usize = (*data.at(1)).try_into().expect('failed to convert length') * 2;
+            let mut merkle_inclusion_proof: Array<u256> = array![];
+            let mut i = 2;
+            while i <= proof_len {
+                let low: u128 = (*data.at(i)).try_into().unwrap();
+                let high: u128 = (*data.at(i + 1)).try_into().unwrap();
+                merkle_inclusion_proof.append(u256 { low, high });
+                i += 2;
             };
 
             // Create ProposalValues with the collateral_id being the first element after the proof array
