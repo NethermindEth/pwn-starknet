@@ -5,7 +5,7 @@ use pwn::multitoken::library::{MultiToken, MultiToken::AssetTrait};
 use starknet::ContractAddress;
 
 #[starknet::interface]
-pub trait IMockPwnVaultTestContract<TState> {
+pub trait IPwnVaultTestContract<TState> {
     fn pull(ref self: TState, asset: MultiToken::Asset, origin: ContractAddress);
     fn push(ref self: TState, asset: MultiToken::Asset, beneficiary: ContractAddress);
     fn push_from(
@@ -33,7 +33,7 @@ pub trait IMockPwnVaultTestContract<TState> {
 #[starknet::contract]
 pub mod PwnVaultTestContract {
     use super::{
-        IMockPwnVaultTestContract, IPoolAdapterDispatcher, MultiToken, PwnVaultComponent,
+        IPwnVaultTestContract, IPoolAdapterDispatcher, MultiToken, PwnVaultComponent,
         ContractAddress
     };
 
@@ -55,7 +55,7 @@ pub mod PwnVaultTestContract {
 
     // External functions that call internal component functions
     #[abi(embed_v0)]
-    impl PwnVaultTestContractImpl of super::IMockPwnVaultTestContract<ContractState> {
+    impl PwnVaultTestContractImpl of super::IPwnVaultTestContract<ContractState> {
         fn pull(ref self: ContractState, asset: MultiToken::Asset, origin: ContractAddress) {
             self.PwnVaultStorage._pull(asset, origin);
         }
