@@ -119,11 +119,11 @@ fn test_should_fail_to_create_loan_terms_when_caller_is_not_active_loan() {
 
     dsp.hub.set_tag(dsp.loan.contract_address, pwn_hub_tags::ACTIVE_LOAN, false);
 
-    let proposal_data = dsp.proposal.encode_proposal_data(dsp.simple_proposal);
+    let proposal_data = dsp.proposal_simple.encode_proposal_data(dsp.simple_proposal);
 
     cheat_caller_address_global(dsp.loan.contract_address);
     dsp
-        .proposal
+        .proposal_simple
         .accept_proposal(
             dsp.borrower.contract_address, 0, proposal_data, array![], Default::default()
         );

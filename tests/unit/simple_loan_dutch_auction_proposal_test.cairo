@@ -236,11 +236,11 @@ fn test_should_make_proposal() {
     let loaded = load(
         dsp.proposal.contract_address,
         map_entry_address(
-            selector!("proposal_made"), // Providing variable name
+            selector!("proposal_made"),
             array![
                 proposal_hash(proposal(dsp.signer.contract_address), dsp.proposal.contract_address)
             ]
-                .span(), // Providing mapping key 
+                .span(),
         ),
         1,
     );

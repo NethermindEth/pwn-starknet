@@ -310,7 +310,6 @@ pub mod PwnSimpleLoan {
                 contract_address: self.loan_token.read().contract_address
             }
                 .owner_of(loan_id.try_into().unwrap());
-
             if (caller != loan_token_owner) {
                 Err::CALLER_NOT_LOAN_TOKEN_HOLDER();
             }
@@ -333,8 +332,6 @@ pub mod PwnSimpleLoan {
             credit_amount: u256,
             loan_owner: ContractAddress
         ) {
-            // NOTE: check that the caller is Vault is not needed since the vault is a component 
-            // of simple loan and the caller is the acceptor of the proposal
             let loan = self.loans.read(loan_id);
 
             if (loan.status != 3 || loan.original_lender != loan_owner) {

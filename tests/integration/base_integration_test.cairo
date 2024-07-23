@@ -13,21 +13,21 @@ use pwn::loan::terms::simple::loan::{
     interface::{IPwnSimpleLoanDispatcher, IPwnSimpleLoanDispatcherTrait},
     types::{LenderSpec, ProposalSpec, CallerSpec}
 };
-use pwn::loan::terms::simple::proposal::simple_loan_simple_proposal::{
-    SimpleLoanSimpleProposal::Proposal, ISimpleLoanSimpleProposalDispatcher,
-    ISimpleLoanSimpleProposalDispatcherTrait
+use pwn::loan::terms::simple::proposal::simple_loan_dutch_auction_proposal::{
+    SimpleLoanDutchAuctionProposal, ISimpleLoanDutchAuctionProposalDispatcher,
+    ISimpleLoanDutchAuctionProposalDispatcherTrait
 };
 use pwn::loan::terms::simple::proposal::simple_loan_fungible_proposal::{
     SimpleLoanFungibleProposal, ISimpleLoanFungibleProposalDispatcher,
     ISimpleLoanFungibleProposalDispatcherTrait
 };
-use pwn::loan::terms::simple::proposal::simple_loan_dutch_auction_proposal::{
-    SimpleLoanDutchAuctionProposal, ISimpleLoanDutchAuctionProposalDispatcher,
-    ISimpleLoanDutchAuctionProposalDispatcherTrait
-};
 use pwn::loan::terms::simple::proposal::simple_loan_list_proposal::{
     SimpleLoanListProposal, ISimpleLoanListProposalDispatcher,
     ISimpleLoanListProposalDispatcherTrait
+};
+use pwn::loan::terms::simple::proposal::simple_loan_simple_proposal::{
+    SimpleLoanSimpleProposal::Proposal, ISimpleLoanSimpleProposalDispatcher,
+    ISimpleLoanSimpleProposalDispatcherTrait
 };
 use pwn::loan::token::pwn_loan::IPwnLoanDispatcher;
 use pwn::mocks::{erc20::ERC20Mock, erc721::ERC721Mock, erc1155::ERC1155Mock};
@@ -52,6 +52,8 @@ use starknet::ContractAddress;
 pub const E18: u256 = 1_000_000_000_000_000_000;
 pub const _7_DAYS: u64 = 60 * 60 * 24 * 7;
 pub const _1_DAY: u64 = 60 * 60 * 24;
+pub const _30_HOURS: u64 = 60 * 60 * 30;
+pub const _4_HOURS: u64 = 60 * 60 * 4;
 
 // pub fn lender.contract_address -> ContractAddress {
 //     starknet::contract_address_const::<'lenderPK'>()
@@ -83,77 +85,80 @@ pub struct Setup {
     pub lender: IPublicKeyDispatcher,
     pub lender2: IPublicKeyDispatcher,
     pub borrower: IPublicKeyDispatcher,
-    pub lender_key_pair: KeyPair<felt252, felt252>
+    pub lender_key_pair: KeyPair<felt252, felt252>,
+    pub borrower_key_pair: KeyPair<felt252, felt252>,
 }
 
 pub fn setup() -> Setup {
     let contract = declare("PwnHub").unwrap();
     let (hub_address, _) = contract.deploy(@array![]).unwrap();
     let hub = IPwnHubDispatcher { contract_address: hub_address };
-    println!("hub_address: {:?}", hub_address);
 
     let contract = declare("PwnConfig").unwrap();
     let (config_address, _) = contract.deploy(@array![]).unwrap();
     let config = IPwnConfigDispatcher { contract_address: config_address };
-    println!("config_address: {:?}", config_address);
 
     let contract = declare("RevokedNonce").unwrap();
     let (nonce_address, _) = contract
         .deploy(@array![hub_address.into(), pwn_hub_tags::ACTIVE_LOAN])
         .unwrap();
     let nonce = IRevokedNonceDispatcher { contract_address: nonce_address };
-    println!("nonce_address: {:?}", nonce_address);
 
     let contract = declare("SimpleLoanSimpleProposal").unwrap();
-    let (proposal_address, _) = contract
+    let (proposal_simple_address, _) = contract
         .deploy(
             @array![
                 hub_address.into(), nonce_address.into(), config_address.into(), 'name', 'version'
             ]
         )
         .unwrap();
-    let proposal_simple = ISimpleLoanSimpleProposalDispatcher { contract_address: proposal_address };
-    println!("proposal_simple: {:?}", proposal_address);
+    let proposal_simple = ISimpleLoanSimpleProposalDispatcher {
+        contract_address: proposal_simple_address
+    };
 
     let contract = declare("SimpleLoanFungibleProposal").unwrap();
-    let (proposal_address, _) = contract
+    let (proposal_fungible_address, _) = contract
         .deploy(
             @array![
                 hub_address.into(), nonce_address.into(), config_address.into(), 'name', 'version'
             ]
         )
         .unwrap();
-    let proposal_fungible = ISimpleLoanFungibleProposalDispatcher { contract_address: proposal_address };
+    let proposal_fungible = ISimpleLoanFungibleProposalDispatcher {
+        contract_address: proposal_fungible_address
+    };
 
     let contract = declare("SimpleLoanDutchAuctionProposal").unwrap();
-    let (proposal_address, _) = contract
+    let (proposal_dutch_address, _) = contract
         .deploy(
             @array![
                 hub_address.into(), nonce_address.into(), config_address.into(), 'name', 'version'
             ]
         )
         .unwrap();
-    let proposal_dutch = ISimpleLoanDutchAuctionProposalDispatcher { contract_address: proposal_address };
+    let proposal_dutch = ISimpleLoanDutchAuctionProposalDispatcher {
+        contract_address: proposal_dutch_address
+    };
 
     let contract = declare("SimpleLoanListProposal").unwrap();
-    let (proposal_address, _) = contract
+    let (proposal_list_address, _) = contract
         .deploy(
             @array![
                 hub_address.into(), nonce_address.into(), config_address.into(), 'name', 'version'
             ]
         )
         .unwrap();
-    let proposal_list = ISimpleLoanListProposalDispatcher { contract_address: proposal_address };
+    let proposal_list = ISimpleLoanListProposalDispatcher {
+        contract_address: proposal_list_address
+    };
 
     let contract = declare("PwnLoan").unwrap();
     let (loan_token_address, _) = contract.deploy(@array![hub_address.into()]).unwrap();
     let loan_token = IPwnLoanDispatcher { contract_address: loan_token_address };
-    println!("loan_token_address: {:?}", loan_token_address);
 
     let contract = declare("MultiTokenCategoryRegistry").unwrap();
     let (registry_address, _) = contract.deploy(@array![]).unwrap();
     let registry = IMultitokenCategoryRegistryDispatcher { contract_address: registry_address };
-    println!("registry_address: {:?}", registry_address);
 
     let contract = declare("PwnSimpleLoan").unwrap();
     let (loan_address, _) = contract
@@ -168,49 +173,47 @@ pub fn setup() -> Setup {
         )
         .unwrap();
     let loan = IPwnSimpleLoanDispatcher { contract_address: loan_address };
-    println!("loan_address: {:?}", loan_address);
 
     let erc20_contract = declare("ERC20Mock").unwrap();
     let (t20_address, _) = erc20_contract.deploy(@array![]).unwrap();
     let t20 = ERC20ABIDispatcher { contract_address: t20_address };
     registry.register_category_value(t20_address, MultiToken::Category::ERC20.into());
-    println!("t20_address: {:?}", t20_address);
 
     let erc721_contract = declare("ERC721Mock").unwrap();
     let (t721_address, _) = erc721_contract.deploy(@array![]).unwrap();
     let t721 = ERC721ABIDispatcher { contract_address: t721_address };
     registry.register_category_value(t721_address, MultiToken::Category::ERC721.into());
-    println!("t721_address: {:?}", t721_address);
 
     let erc1155_contract = declare("ERC1155Mock").unwrap();
     let (t1155_address, _) = erc1155_contract.deploy(@array![]).unwrap();
     let t1155 = ERC1155ABIDispatcher { contract_address: t1155_address };
     registry.register_category_value(t1155_address, MultiToken::Category::ERC1155.into());
-    println!("t1155_address: {:?}", t1155_address);
 
     let (credit_address, _) = erc20_contract.deploy(@array![]).unwrap();
     let credit = ERC20ABIDispatcher { contract_address: credit_address };
     registry.register_category_value(credit_address, MultiToken::Category::ERC20.into());
-    println!("credit_address: {:?}", credit_address);
 
     let lender_key_pair = KeyPairTrait::<felt252, felt252>::generate();
     let contract = declare("AccountUpgradeable").unwrap();
     let (lender_address, _) = contract.deploy(@array![lender_key_pair.public_key]).unwrap();
     let lender = IPublicKeyDispatcher { contract_address: lender_address };
-    println!("lender_address: {:?}", lender_address);
 
     let lender2_key_pair = KeyPairTrait::<felt252, felt252>::generate();
     let (lender2_address, _) = contract.deploy(@array![lender2_key_pair.public_key]).unwrap();
     let lender2 = IPublicKeyDispatcher { contract_address: lender2_address };
-    println!("lender2_address: {:?}", lender2_address);
 
     let borrower_key_pair = KeyPairTrait::<felt252, felt252>::generate();
     let (borrower_address, _) = contract.deploy(@array![borrower_key_pair.public_key]).unwrap();
     let borrower = IPublicKeyDispatcher { contract_address: borrower_address };
-    println!("borrower_address: {:?}", borrower_address);
 
-    hub.set_tag(proposal_address, pwn_hub_tags::LOAN_PROPOSAL, true);
-    hub.set_tag(proposal_address, pwn_hub_tags::ACTIVE_LOAN, true);
+    hub.set_tag(proposal_simple_address, pwn_hub_tags::LOAN_PROPOSAL, true);
+    hub.set_tag(proposal_simple_address, pwn_hub_tags::ACTIVE_LOAN, true);
+    hub.set_tag(proposal_fungible_address, pwn_hub_tags::LOAN_PROPOSAL, true);
+    hub.set_tag(proposal_fungible_address, pwn_hub_tags::ACTIVE_LOAN, true);
+    hub.set_tag(proposal_dutch_address, pwn_hub_tags::LOAN_PROPOSAL, true);
+    hub.set_tag(proposal_dutch_address, pwn_hub_tags::ACTIVE_LOAN, true);
+    hub.set_tag(proposal_list_address, pwn_hub_tags::LOAN_PROPOSAL, true);
+    hub.set_tag(proposal_list_address, pwn_hub_tags::ACTIVE_LOAN, true);
     hub.set_tag(loan_address, pwn_hub_tags::ACTIVE_LOAN, true);
 
     let simple_proposal = Proposal {
@@ -257,7 +260,8 @@ pub fn setup() -> Setup {
         lender,
         lender2,
         borrower,
-        lender_key_pair
+        lender_key_pair,
+        borrower_key_pair,
     }
 }
 
@@ -276,7 +280,7 @@ pub(crate) fn _create_erc20_loan(setup: Setup) -> felt252 {
     erc20_mint(setup.t20.contract_address, setup.borrower.contract_address, 10 * E18);
 
     start_cheat_caller_address(setup.t20.contract_address, setup.borrower.contract_address);
-    setup.t20.approve(setup.loan.contract_address, E18);
+    setup.t20.approve(setup.loan.contract_address, 10 * E18);
     stop_cheat_caller_address(setup.t20.contract_address);
 
     _create_loan(setup, simple_proposal, '')
@@ -319,7 +323,9 @@ pub(crate) fn _create_erc1155_loan_failing(setup: Setup, revert_data: felt252) -
 }
 
 pub(crate) fn _create_loan(setup: Setup, _proposal: Proposal, revert_data: felt252) -> felt252 {
-    let signature = _sign(setup.proposal_simple.get_proposal_hash(_proposal), setup.lender_key_pair);
+    let signature = _sign(
+        setup.proposal_simple.get_proposal_hash(_proposal), setup.lender_key_pair
+    );
 
     erc20_mint(setup.credit.contract_address, setup.lender.contract_address, 100 * E18);
 
@@ -387,15 +393,23 @@ pub(crate) fn erc20_mint(erc20: ContractAddress, receiver: ContractAddress, amou
 }
 
 fn erc721_mint(erc721: ContractAddress, receiver: ContractAddress, id: u256) {
+    let mut id_serialized: Array<felt252> = array![];
+    id.serialize(ref id_serialized);
+
+    let mut receiver_serialized: Array<felt252> = array![];
+    receiver.serialize(ref receiver_serialized);
     store(
         erc721,
-        map_entry_address(selector!("ERC721_owners"), array![id.try_into().unwrap()].span(),),
-        array![receiver.into()].span()
+        map_entry_address(selector!("ERC721_owners"), id_serialized.span(),),
+        receiver_serialized.span()
     );
+    let new_balance: u256 = 1;
+    let mut balance_serialized: Array<felt252> = array![];
+    new_balance.serialize(ref balance_serialized);
     store(
         erc721,
-        map_entry_address(selector!("ERC721_balances"), array![receiver.into()].span(),),
-        array![1.try_into().unwrap()].span()
+        map_entry_address(selector!("ERC721_balances"), receiver_serialized.span(),),
+        balance_serialized.span()
     );
 }
 
