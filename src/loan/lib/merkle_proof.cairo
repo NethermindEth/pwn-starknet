@@ -149,6 +149,7 @@ pub fn proof() -> (u256, u256, Span<u256>) {
         0xcc73ab41c84b6f3730ee4f5685205e72de987062c17581b1b4b771b9eab2d7f1,
         0x05374ac461e238a744dd7e328423f7721959d2e4eeec8aeb775ebb58e60d5407,
         0xbf7c4aef9eaad8cec3e6691084f849a4a8c4bdfd93979a9ebf494e98d91e3903
-    ].span();
+    ]
+        .span();
     (leaf, root, proof)
 }

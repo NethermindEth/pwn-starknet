@@ -289,12 +289,12 @@ pub mod SimpleLoanListProposal {
                     high: collateral_ids_whitelist_merkle_root_high
                 },
                 collateral_amount: u256 { low: collateral_low, high: collateral_high },
-                check_collateral_state_fingerprint: if *data.at(5) == 1 {
+                check_collateral_state_fingerprint: if *data.at(6) == 1 {
                     true
                 } else {
                     false
                 },
-                collateral_state_fingerprint: *data.at(6),
+                collateral_state_fingerprint: *data.at(7),
                 credit_address,
                 credit_amount: u256 { low: credit_low, high: credit_high },
                 available_credit_limit: u256 { low: credit_limit_low, high: credit_limit_high },
@@ -321,12 +321,12 @@ pub mod SimpleLoanListProposal {
             self: @ContractState, data: Span<felt252>
         ) -> ProposalValues {
             // Extract the length of the merkle_inclusion_proof
-            let proof_len: usize = (*data.at(1)).try_into().expect('failed to convert length');
+            let proof_len: usize = (*data.at(1)).try_into().expect('failed to convert length') * 2;
             let mut merkle_inclusion_proof: Array<u256> = array![];
-            let mut i = 0;
-            while i < proof_len {
-                let low: u128 = (*data.at(i + 2)).try_into().unwrap();
-                let high: u128 = (*data.at(i + 3)).try_into().unwrap();
+            let mut i = 2;
+            while i <= proof_len {
+                let low: u128 = (*data.at(i)).try_into().unwrap();
+                let high: u128 = (*data.at(i + 1)).try_into().unwrap();
                 merkle_inclusion_proof.append(u256 { low, high });
                 i += 2;
             };

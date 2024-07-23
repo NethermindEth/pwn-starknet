@@ -4,6 +4,7 @@ use core::starknet::SyscallResultTrait;
 use openzeppelin::account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
 use pwn::config::pwn_config::PwnConfig;
 use pwn::hub::{pwn_hub::{PwnHub, IPwnHubDispatcher, IPwnHubDispatcherTrait}, pwn_hub_tags};
+use pwn::loan::lib::merkle_proof::{proof, hash, hash_2};
 use pwn::loan::lib::serialization;
 use pwn::loan::lib::signature_checker::Signature;
 use pwn::loan::terms::simple::loan::types::Terms;
@@ -28,10 +29,7 @@ use snforge_std::{
 };
 use starknet::secp256k1::{Secp256k1Point};
 use starknet::{ContractAddress, testing};
-use super::simple_loan_proposal_test::{
-    TOKEN, ACTIVATE_LOAN_CONTRACT, ACCEPTOR, Params, E70, E40
-};
-use pwn::loan::lib::merkle_proof::{proof, hash, hash_2};
+use super::simple_loan_proposal_test::{TOKEN, ACTIVATE_LOAN_CONTRACT, ACCEPTOR, Params, E70, E40};
 
 #[starknet::interface]
 trait ISimpleLoanListProposal<TState> {
@@ -98,11 +96,10 @@ fn deploy() -> Setup {
 }
 
 fn proposal(proposer: ContractAddress) -> Proposal {
-    let (_, merkle_root, _) = proof();
     Proposal {
         collateral_category: MultiToken::Category::ERC1155(()),
         collateral_address: TOKEN(),
-        collateral_ids_whitelist_merkle_root: merkle_root,
+        collateral_ids_whitelist_merkle_root: 0,
         collateral_amount: 1032,
         check_collateral_state_fingerprint: false,
         collateral_state_fingerprint: 'some state fingerprint',
@@ -125,7 +122,7 @@ fn proposal(proposer: ContractAddress) -> Proposal {
 }
 
 fn proposal_values() -> ProposalValues {
-    let (_,_,merkle_inclusion_proof) = proof();
+    let merkle_inclusion_proof: Span<u256> = array![].span();
     ProposalValues { collateral_id: 32, merkle_inclusion_proof }
 }
 
@@ -371,7 +368,7 @@ fn test_should_accept_any_collateral_id_when_merkle_root_is_zero(coll_id: felt25
     dsp
         .proposal
         .accept_proposal(
-            dsp.signer.contract_address,
+            ACCEPTOR(),
             0,
             dsp.proposal.encode_proposal_data(_proposal, _proposal_values),
             array![],
@@ -429,7 +426,7 @@ fn test_should_pass_when_given_collateral_id_is_whitelisted(
     dsp
         .proposal
         .accept_proposal(
-            dsp.signer.contract_address,
+            ACCEPTOR(),
             0,
             dsp.proposal.encode_proposal_data(_proposal, _proposal_values),
             array![],
@@ -502,7 +499,7 @@ fn test_should_fail_when_given_collateral_id_is_not_whitelisted(
     dsp
         .proposal
         .accept_proposal(
-            dsp.signer.contract_address,
+            ACCEPTOR(),
             0,
             dsp.proposal.encode_proposal_data(_proposal, _proposal_values),
             array![],
@@ -551,7 +548,7 @@ fn test_should_call_loan_contract_with_loan_terms(is_offer: u8) {
     let (proposal_hash, terms) = dsp
         .proposal
         .accept_proposal(
-            dsp.signer.contract_address,
+            ACCEPTOR(),
             0,
             dsp.proposal.encode_proposal_data(_proposal, _proposal_values),
             array![],
@@ -599,5 +596,4 @@ fn test_should_call_loan_contract_with_loan_terms(is_offer: u8) {
         }
     );
 }
-
 
