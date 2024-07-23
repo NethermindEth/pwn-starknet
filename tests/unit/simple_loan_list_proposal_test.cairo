@@ -29,7 +29,7 @@ use snforge_std::{
 use starknet::secp256k1::{Secp256k1Point};
 use starknet::{ContractAddress, testing};
 use super::simple_loan_proposal_test::{
-    TOKEN, PROPOSER, ACTIVATE_LOAN_CONTRACT, ACCEPTOR, Params, E70, E40
+    TOKEN, ACTIVATE_LOAN_CONTRACT, ACCEPTOR, Params, E70, E40
 };
 use pwn::loan::lib::merkle_proof::{proof, hash, hash_2};
 
@@ -97,7 +97,7 @@ fn deploy() -> Setup {
     Setup { proposal, hub, nonce, signer, key_pair }
 }
 
-fn proposal() -> Proposal {
+fn proposal(proposer: ContractAddress) -> Proposal {
     let (_, merkle_root, _) = proof();
     Proposal {
         collateral_category: MultiToken::Category::ERC1155(()),
@@ -371,7 +371,7 @@ fn test_should_accept_any_collateral_id_when_merkle_root_is_zero(coll_id: felt25
     dsp
         .proposal
         .accept_proposal(
-            ACCEPTOR(),
+            dsp.signer.contract_address,
             0,
             dsp.proposal.encode_proposal_data(_proposal, _proposal_values),
             array![],
@@ -429,7 +429,7 @@ fn test_should_pass_when_given_collateral_id_is_whitelisted(
     dsp
         .proposal
         .accept_proposal(
-            ACCEPTOR(),
+            dsp.signer.contract_address,
             0,
             dsp.proposal.encode_proposal_data(_proposal, _proposal_values),
             array![],
@@ -502,7 +502,7 @@ fn test_should_fail_when_given_collateral_id_is_not_whitelisted(
     dsp
         .proposal
         .accept_proposal(
-            ACCEPTOR(),
+            dsp.signer.contract_address,
             0,
             dsp.proposal.encode_proposal_data(_proposal, _proposal_values),
             array![],
@@ -551,7 +551,7 @@ fn test_should_call_loan_contract_with_loan_terms(is_offer: u8) {
     let (proposal_hash, terms) = dsp
         .proposal
         .accept_proposal(
-            ACCEPTOR(),
+            dsp.signer.contract_address,
             0,
             dsp.proposal.encode_proposal_data(_proposal, _proposal_values),
             array![],
