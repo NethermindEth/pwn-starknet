@@ -1,5 +1,9 @@
+use super::super::integration::base_integration_test::setup;
+
 #[test]
-fn test_deployed_protocol_ethereum() {
+#[fork("mainnet")]
+fn test_deployed_protocol_starknet() {
+    setup();
     assert(true, '');
 }
 

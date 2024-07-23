@@ -208,12 +208,20 @@ pub fn setup() -> Setup {
 
     hub.set_tag(proposal_simple_address, pwn_hub_tags::LOAN_PROPOSAL, true);
     hub.set_tag(proposal_simple_address, pwn_hub_tags::ACTIVE_LOAN, true);
+    hub.set_tag(proposal_simple_address, pwn_hub_tags::NONCE_MANAGER, true);
+
     hub.set_tag(proposal_fungible_address, pwn_hub_tags::LOAN_PROPOSAL, true);
     hub.set_tag(proposal_fungible_address, pwn_hub_tags::ACTIVE_LOAN, true);
+    hub.set_tag(proposal_fungible_address, pwn_hub_tags::NONCE_MANAGER, true);
+
     hub.set_tag(proposal_dutch_address, pwn_hub_tags::LOAN_PROPOSAL, true);
     hub.set_tag(proposal_dutch_address, pwn_hub_tags::ACTIVE_LOAN, true);
+    hub.set_tag(proposal_dutch_address, pwn_hub_tags::NONCE_MANAGER, true);
+
     hub.set_tag(proposal_list_address, pwn_hub_tags::LOAN_PROPOSAL, true);
     hub.set_tag(proposal_list_address, pwn_hub_tags::ACTIVE_LOAN, true);
+    hub.set_tag(proposal_list_address, pwn_hub_tags::NONCE_MANAGER, true);
+    
     hub.set_tag(loan_address, pwn_hub_tags::ACTIVE_LOAN, true);
 
     let simple_proposal = Proposal {

@@ -21,3 +21,8 @@ sort-module-level-items = true
 
 [tool.snforge]
 exit-first = true
+
+[[tool.snforge.fork]]
+name = "mainnet"
+url = "https://rpc.starknet.lava.build"
+block_id.tag = "Latest"
