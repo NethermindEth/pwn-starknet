@@ -107,10 +107,38 @@ mod revoke_nonce {
 }
 
 mod revoke_nonces {
+    use core::option::OptionTrait;
+    use core::traits::TryInto;
     use super::{
         deploy, ALICE, IRevokedNonceDispatcherTrait, map_entry_address, spy_events, EventSpy,
         RevokedNonce, EventSpyTrait, EventSpyAssertionsTrait
     };
+
+    fn ensure_unique_nonces(a: felt252, b: felt252, c: felt252) -> (felt252, felt252, felt252) {
+        let mut a: u256 = a.into();
+        let mut b: u256 = b.into();
+        let mut c: u256 = c.into();
+        if a == b && b == c {
+            c += 1
+        } else if a == b {
+            b += 1
+        }
+        if b == c {
+            b += 1
+        } else if b == c {
+            c += 1
+        }
+        if c == a {
+            c += 1
+        } else if a == c {
+            a += 1
+        }
+        if a == b {
+            a += 1
+        }
+
+        (a.try_into().unwrap(), b.try_into().unwrap(), c.try_into().unwrap())
+    }
 
     #[test]
     #[should_panic()]
@@ -149,6 +177,7 @@ mod revoke_nonces {
             array![nonce_space].span()
         );
 
+        let (nonce1, nonce2, nonce3) = ensure_unique_nonces(nonce1, nonce2, nonce3);
         let nonces = array![nonce1, nonce2, nonce3];
 
         super::start_cheat_caller_address(nonce.contract_address, ALICE());
@@ -171,6 +200,7 @@ mod revoke_nonces {
             array![nonce_space].span()
         );
 
+        let (nonce1, nonce2, nonce3) = ensure_unique_nonces(nonce1, nonce2, nonce3);
         let nonces = array![nonce1, nonce2, nonce3];
 
         let mut spy = spy_events();

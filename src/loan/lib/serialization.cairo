@@ -70,7 +70,6 @@ mod tests {
 
         let mut serialized_proposal = array![];
         proposal.serialize(ref serialized_proposal);
-        // println!("serialized_proposal: {:?}", serialized_proposal);
 
         let mut serialized_proposal_values = array![];
         proposal_values.serialize(ref serialized_proposal_values);

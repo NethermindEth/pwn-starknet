@@ -1,9 +1,10 @@
 #[starknet::contract]
 pub mod PwnSimpleLoan {
     use core::poseidon::poseidon_hash_span;
+    use openzeppelin::account::interface::{ISRC6Dispatcher, ISRC6DispatcherTrait};
 
     use openzeppelin::introspection::src5::SRC5Component;
-    use openzeppelin::token::erc1155::erc1155_receiver::ERC1155ReceiverComponent;
+    use openzeppelin::token::erc1155::{interface, erc1155_receiver::ERC1155ReceiverComponent};
     use openzeppelin::token::erc721::{
         erc721_receiver::{ERC721ReceiverComponent}, interface::IERC721_ID
     };
@@ -49,6 +50,12 @@ pub mod PwnSimpleLoan {
 
     #[abi(embed_v0)]
     impl ERC1155Impl = ERC1155ReceiverComponent::ERC1155ReceiverImpl<ContractState>;
+
+    #[abi(embed_v0)]
+    impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
+    impl SRC5InternalImpl = SRC5Component::InternalImpl<ContractState>;
+
+    impl VaultImpl = PwnVaultComponent::InternalImpl<ContractState>;
 
     const ACCRUING_INTEREST_APR_DECIMALS: u256 = 100;
     const MIN_LOAN_DURATION: u64 = 600;
@@ -113,7 +120,7 @@ pub mod PwnSimpleLoan {
         refinancing_loan_id: felt252,
         terms: Terms,
         lender_spec: LenderSpec,
-        extra: Array<felt252>
+        extra: Option<Array<felt252>>
     }
 
     #[derive(Drop, starknet::Event)]
@@ -167,6 +174,7 @@ pub mod PwnSimpleLoan {
         ];
         let domain_separator = poseidon_hash_span(hash_elements.span());
         self.domain_separator.write(domain_separator);
+        self.src5.register_interface(interface::IERC1155_RECEIVER_ID);
     }
 
     impl IPwnVault = PwnVaultComponent::InternalImpl<ContractState>;
@@ -247,7 +255,6 @@ pub mod PwnSimpleLoan {
 
             let loan_id = self
                 ._create_loan(loan_terms: loan_terms.clone(), lender_spec: lender_spec.clone());
-
             self
                 .emit(
                     LoanCreated {
@@ -257,10 +264,9 @@ pub mod PwnSimpleLoan {
                         refinancing_loan_id: caller_spec.refinancing_loan_id,
                         terms: loan_terms.clone(),
                         lender_spec: lender_spec.clone(),
-                        extra: extra.unwrap()
+                        extra
                     }
                 );
-
             if (caller_spec.refinancing_loan_id == 0) {
                 self._settle_new_loan(loan_terms, lender_spec);
             } else {
@@ -304,7 +310,6 @@ pub mod PwnSimpleLoan {
                 contract_address: self.loan_token.read().contract_address
             }
                 .owner_of(loan_id.try_into().unwrap());
-
             if (caller != loan_token_owner) {
                 Err::CALLER_NOT_LOAN_TOKEN_HOLDER();
             }
@@ -327,10 +332,6 @@ pub mod PwnSimpleLoan {
             credit_amount: u256,
             loan_owner: ContractAddress
         ) {
-            if (starknet::get_caller_address() != starknet::get_contract_address()) {
-                Err::CALLER_NOT_VAULT();
-            }
-
             let loan = self.loans.read(loan_id);
 
             if (loan.status != 3 || loan.original_lender != loan_owner) {
@@ -396,7 +397,7 @@ pub mod PwnSimpleLoan {
             let extension_hash = self.get_extension_hash(extension.clone());
 
             if (!self.extension_proposal_made.read(extension_hash)) {
-                if (!signature_checker::is_valid_signature_now(extension_hash, signature)) {
+                if (!self._is_valid_signature_now(caller, extension_hash, signature)) {
                     signature_checker::Err::INVALID_SIGNATURE(
                         signer: extension.proposer, digest: extension_hash
                     );
@@ -647,7 +648,6 @@ pub mod PwnSimpleLoan {
             if (lender_spec.source_of_funds != loan_terms.lender) {
                 self._withdraw_credit_from_pool(loan_terms.credit, loan_terms, lender_spec);
             }
-
             let (fee_amount, new_loan_amount) = fee_calculator::calculate_fee_amount(
                 self.config.read().get_fee(), loan_terms.credit.amount
             );
@@ -769,7 +769,6 @@ pub mod PwnSimpleLoan {
             if (status == 0) {
                 Err::NON_EXISTING_LOAN();
             }
-
             if (status != 2) {
                 Err::LOAN_NOT_RUNNING();
             }
@@ -851,6 +850,18 @@ pub mod PwnSimpleLoan {
                     amount: asset.amount
                 );
             }
+        }
+
+        fn _is_valid_signature_now(
+            self: @ContractState,
+            signer: ContractAddress,
+            message_hash: felt252,
+            signature: signature_checker::Signature
+        ) -> bool {
+            ISRC6Dispatcher { contract_address: signer }
+                .is_valid_signature(
+                    message_hash, array![signature.r, signature.s]
+                ) == starknet::VALIDATED
         }
     }
 }

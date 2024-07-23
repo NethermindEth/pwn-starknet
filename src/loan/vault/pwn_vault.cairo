@@ -54,10 +54,10 @@ pub mod PwnVaultComponent {
 
     pub mod Err {
         pub fn UNSUPPORTED_TRANSFER_FUNCTION() {
-            panic!("Unsupported transfer function");
+            panic!("PWV Vault: Unsupported trasfer function");
         }
         pub fn INCOMPLETE_TRANSFER() {
-            panic!("Incomplete transfer");
+            panic!("PWV Vault: Incomplete transfer");
         }
     }
 
@@ -74,7 +74,8 @@ pub mod PwnVaultComponent {
             let original_balance = asset.balance_of(this_address);
 
             asset.transfer_asset_from(origin, this_address, false);
-            self._check_transfer(asset, original_balance, origin, false);
+            self._check_transfer(asset, original_balance, this_address, true);
+
             self.emit(VaultPull { asset, origin });
         }
 
@@ -97,10 +98,8 @@ pub mod PwnVaultComponent {
             beneficiary: ContractAddress
         ) {
             let original_balance = asset.balance_of(beneficiary);
-
             asset.transfer_asset_from(origin, beneficiary, false);
             self._check_transfer(asset, original_balance, beneficiary, true);
-
             self.emit(VaultPushFrom { asset, origin, beneficiary });
         }
 
@@ -149,9 +148,9 @@ pub mod PwnVaultComponent {
             check_increasing_balance: bool
         ) {
             let expected_balance = if check_increasing_balance {
-                original_balance + asset.amount
+                original_balance + asset.get_transfer_amount()
             } else {
-                original_balance - asset.amount
+                original_balance - asset.get_transfer_amount()
             };
             if expected_balance != asset.balance_of(checked_address) {
                 Err::INCOMPLETE_TRANSFER();
