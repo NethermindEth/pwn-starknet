@@ -17,9 +17,7 @@ use pwn::mocks::erc20::ERC20Mock;
 use pwn::mocks::erc721::ERC721Mock;
 use pwn::mocks::pool_adapter::MockPoolAdapter;
 use pwn::mocks::pwn_vault::PwnVaultTestContract;
-use pwn::mocks::pwn_vault::{
-    IMockPwnVaultTestContractDispatcher, IMockPwnVaultTestContractDispatcherTrait
-};
+use pwn::mocks::pwn_vault::{IPwnVaultTestContractDispatcher, IPwnVaultTestContractDispatcherTrait};
 use pwn::multitoken::library::{
     MultiToken, MultiToken::Asset, MultiToken::Category, MultiToken::AssetTrait
 };
@@ -42,10 +40,7 @@ fn BOB() -> ContractAddress {
 }
 
 fn deploy() -> (
-    IMockPwnVaultTestContractDispatcher,
-    ERC721ABIDispatcher,
-    ERC20ABIDispatcher,
-    IPoolAdapterDispatcher
+    IPwnVaultTestContractDispatcher, ERC721ABIDispatcher, ERC20ABIDispatcher, IPoolAdapterDispatcher
 ) {
     // Deployments
     let pwn_vault = declare("PwnVaultTestContract").unwrap();
@@ -57,7 +52,7 @@ fn deploy() -> (
     let pool_adapter = declare("MockPoolAdapter").unwrap();
     let (pool_adapter_contract, _) = pool_adapter.deploy(@array![]).unwrap();
     // Dispatchers
-    let vault_dispatcher = IMockPwnVaultTestContractDispatcher { contract_address: vault_contract };
+    let vault_dispatcher = IPwnVaultTestContractDispatcher { contract_address: vault_contract };
     let erc721dispatcher = ERC721ABIDispatcher { contract_address: erc721_contract };
     let erc20dispatcher = ERC20ABIDispatcher { contract_address: erc20_contract };
     let pool_adapter_dispatcher = IPoolAdapterDispatcher {
@@ -68,7 +63,7 @@ fn deploy() -> (
 }
 
 fn pool_setup() -> (
-    IMockPwnVaultTestContractDispatcher,
+    IPwnVaultTestContractDispatcher,
     ContractAddress,
     ERC20ABIDispatcher,
     IPoolAdapterDispatcher,
@@ -95,9 +90,8 @@ mod pwn_vault_pull_test {
     use super::{
         ERC721ABIDispatcher, ERC721ABIDispatcherTrait, PwnVaultTestContract, deploy, ALICE, BOB,
         store, map_entry_address, CheatSpan, cheat_caller_address, mock_call, spy_events,
-        EventSpyTrait, EventSpyAssertionsTrait, ContractAddress,
-        IMockPwnVaultTestContractDispatcher, IMockPwnVaultTestContractDispatcherTrait,
-        PwnVaultComponent
+        EventSpyTrait, EventSpyAssertionsTrait, ContractAddress, IPwnVaultTestContractDispatcher,
+        IPwnVaultTestContractDispatcherTrait, PwnVaultComponent
     };
 
     #[test]
@@ -147,6 +141,7 @@ mod pwn_vault_pull_test {
         vault.pull(asset, ALICE);
     }
 }
+
 mod pwn_vault_push_test {
     use pwn::loan::vault::pwn_vault::PwnVaultComponent;
     use pwn::multitoken::library::{
@@ -155,8 +150,8 @@ mod pwn_vault_push_test {
     use super::{
         ERC721ABIDispatcher, ERC721ABIDispatcherTrait, PwnVaultTestContract, deploy, ALICE, BOB,
         CheatSpan, cheat_caller_address, mock_call, spy_events, EventSpyTrait,
-        EventSpyAssertionsTrait, ContractAddress, IMockPwnVaultTestContractDispatcher,
-        IMockPwnVaultTestContractDispatcherTrait
+        EventSpyAssertionsTrait, ContractAddress, IPwnVaultTestContractDispatcher,
+        IPwnVaultTestContractDispatcherTrait
     };
 
     #[test]
@@ -167,38 +162,6 @@ mod pwn_vault_push_test {
             erc721.contract_address, vault.contract_address, 42
         ); // Vault got minted an ERC721 token with id 42
         assert!(erc721.owner_of(42) == vault.contract_address, "Token ID 42 owner is not Vault");
-
-        let asset: Asset = Asset {
-            category: Category::ERC721, asset_address: erc721.contract_address, id: 42, amount: 1
-        };
-
-        vault.push(asset, ALICE);
-
-        assert!(erc721.balance_of(ALICE) == 1, "Alice balance not updated");
-        assert!(erc721.owner_of(42) == ALICE, "Token ID 42 owner is not Alice");
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_should_fail_when_incomplete_transaction() {
-        let (vault, erc721, _, _) = deploy();
-        let ALICE: ContractAddress = ALICE();
-        let asset: Asset = Asset {
-            category: Category::ERC721, asset_address: erc721.contract_address, id: 42, amount: 1
-        };
-
-        mock_call(erc721.contract_address, selector!("transferFrom"), true, 1);
-
-        vault.push(asset, ALICE);
-    }
-
-    #[test]
-    fn test_should_emit_event_vault_push() {
-        let (vault, erc721, _, _) = deploy();
-        let ALICE: ContractAddress = ALICE();
-        super::erc721_mint(
-            erc721.contract_address, vault.contract_address, 42
-        ); // Vault got minted an ERC721 token with id 42
 
         let asset: Asset = Asset {
             category: Category::ERC721, asset_address: erc721.contract_address, id: 42, amount: 1
@@ -217,6 +180,22 @@ mod pwn_vault_push_test {
                     )
                 ]
             );
+        assert!(erc721.balance_of(ALICE) == 1, "Alice balance not updated");
+        assert!(erc721.owner_of(42) == ALICE, "Token ID 42 owner is not Alice");
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_should_fail_when_incomplete_transaction() {
+        let (vault, erc721, _, _) = deploy();
+        let ALICE: ContractAddress = ALICE();
+        let asset: Asset = Asset {
+            category: Category::ERC721, asset_address: erc721.contract_address, id: 42, amount: 1
+        };
+
+        mock_call(erc721.contract_address, selector!("transferFrom"), true, 1);
+
+        vault.push(asset, ALICE);
     }
 }
 
@@ -228,8 +207,8 @@ mod pwn_vault_push_from_test {
     use super::{
         ERC721ABIDispatcher, ERC721ABIDispatcherTrait, PwnVaultTestContract, deploy, ALICE, BOB,
         CheatSpan, cheat_caller_address, mock_call, spy_events, EventSpyTrait,
-        EventSpyAssertionsTrait, ContractAddress, IMockPwnVaultTestContractDispatcher,
-        IMockPwnVaultTestContractDispatcherTrait
+        EventSpyAssertionsTrait, ContractAddress, IPwnVaultTestContractDispatcher,
+        IPwnVaultTestContractDispatcherTrait
     };
 
     #[test]
@@ -293,9 +272,8 @@ mod pwn_vault_withdraw_from_pool_test {
     use super::{
         ERC20ABIDispatcher, ERC20ABIDispatcherTrait, declare, PwnVaultTestContract, MockPoolAdapter,
         deploy, ALICE, BOB, CheatSpan, cheat_caller_address, mock_call, spy_events, EventSpyTrait,
-        EventSpyAssertionsTrait, ContractAddress, IMockPwnVaultTestContractDispatcher,
-        IMockPwnVaultTestContractDispatcherTrait, IPoolAdapterDispatcher,
-        IPoolAdapterDispatcherTrait
+        EventSpyAssertionsTrait, ContractAddress, IPwnVaultTestContractDispatcher,
+        IPwnVaultTestContractDispatcherTrait, IPoolAdapterDispatcher, IPoolAdapterDispatcherTrait
     };
 
     #[test]
@@ -348,9 +326,8 @@ mod pwn_vault_supply_to_pool_test {
     use super::{
         ERC20ABIDispatcher, ERC20ABIDispatcherTrait, declare, PwnVaultTestContract, MockPoolAdapter,
         deploy, ALICE, BOB, CheatSpan, cheat_caller_address, mock_call, spy_events, EventSpyTrait,
-        EventSpyAssertionsTrait, ContractAddress, IMockPwnVaultTestContractDispatcher,
-        IMockPwnVaultTestContractDispatcherTrait, IPoolAdapterDispatcher,
-        IPoolAdapterDispatcherTrait
+        EventSpyAssertionsTrait, ContractAddress, IPwnVaultTestContractDispatcher,
+        IPwnVaultTestContractDispatcherTrait, IPoolAdapterDispatcher, IPoolAdapterDispatcherTrait
     };
 
     #[test]
