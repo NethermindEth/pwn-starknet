@@ -23,6 +23,43 @@ pub trait ISimpleLoanDutchAuctionProposal<TState> {
     fn get_credit_amount(self: @TState, proposal: Proposal, timestamp: u64) -> u256;
 }
 
+//! The `SimpleLoanDutchAuctionProposal` module provides a mechanism for creating and accepting 
+//! loan proposals using a Dutch auction model . This module 
+//! integrates multiple components to offer a comprehensive solution for handling loan proposals, 
+//! including encoding and decoding proposal data, computing proposal hashes, and managing auction 
+//! dynamics.
+//! 
+//! # Features
+//! 
+//! - **Proposal Creation**: Allows the creation of loan proposals with specific terms and conditions.
+//! - **Proposal Acceptance**: Facilitates the acceptance of loan proposals, including the 
+//!   verification of signatures and proposal data.
+//! - **Proposal Hashing**: Computes unique hashes for proposals to ensure data integrity and 
+//!   security.
+//! - **Proposal Encoding/Decoding**: Provides functionality to encode and decode proposal data 
+//!   for efficient storage and retrieval.
+//! - **Auction Dynamics**: Manages the auction process, including calculating the credit amount 
+//!   based on the auction's progress.
+//! 
+//! # Components
+//! 
+//! - `SimpleLoanProposalComponent`: A reusable component that provides the base functionality 
+//!   for loan proposals.
+//! - `Storage`: Defines the storage structure for the module, including the simple loan proposal 
+//!   substorage.
+//! - `Event`: Defines events emitted by the contract, such as proposal creation and acceptance.
+//! - `Err`: Contains error handling functions for various invalid operations and input data.
+//! 
+//! # Constants
+//! 
+//! - `PROPOSAL_TYPEHASH`: The type hash for proposals.
+//! - `MINUTE`: Represents one minute in seconds.
+//! - `DUTCH_PROPOSAL_DATA_LEN`: The expected length of the encoded proposal data.
+//! 
+//! This module is designed to provide a robust and flexible framework for managing loan proposals 
+//! using a Dutch auction model, integrating seamlessly with other components of the Starknet 
+//! ecosystem.
+
 #[starknet::contract]
 pub mod SimpleLoanDutchAuctionProposal {
     use core::integer::BoundedInt;
@@ -50,30 +87,54 @@ pub mod SimpleLoanDutchAuctionProposal {
     pub const MINUTE: u64 = 60;
     pub const DUTCH_PROPOSAL_DATA_LEN: usize = 34;
 
+    /// Represents a loan proposal with specific terms and conditions for a Dutch auction.
     #[derive(Copy, Default, Drop, Serde)]
     pub struct Proposal {
+        /// Category of the collateral asset.
         pub collateral_category: MultiToken::Category,
+        /// Address of the collateral asset.
         pub collateral_address: ContractAddress,
+        /// ID of the collateral asset.
         pub collateral_id: felt252,
+        /// Amount of the collateral asset.
         pub collateral_amount: u256,
+        /// Flag indicating if collateral state fingerprint should be checked.
         pub check_collateral_state_fingerprint: bool,
+        /// Fingerprint of the collateral state.
         pub collateral_state_fingerprint: felt252,
+        /// Address of the credit asset.
         pub credit_address: ContractAddress,
+        /// Minimum amount of credit offered.
         pub min_credit_amount: u256,
+        /// Maximum amount of credit offered.
         pub max_credit_amount: u256,
+        /// Available credit limit for the proposal.
         pub available_credit_limit: u256,
+        /// Fixed interest amount for the loan.
         pub fixed_interest_amount: u256,
+        /// Annual percentage rate of the accruing interest.
         pub accruing_interest_APR: u32,
+        /// Duration of the loan in seconds.
         pub duration: u64,
+        /// Start time of the auction in seconds since the Unix epoch.
         pub auction_start: u64,
+        /// Duration of the auction in seconds.
         pub auction_duration: u64,
+        /// Address allowed to accept the proposal.
         pub allowed_acceptor: ContractAddress,
+        /// Address of the proposer.
         pub proposer: ContractAddress,
+        /// Hash of the proposer's specifications.
         pub proposer_spec_hash: felt252,
+        /// Flag indicating if the proposal is an offer.
         pub is_offer: bool,
+        /// ID of the loan being refinanced, if applicable.
         pub refinancing_loan_id: felt252,
+        /// Namespace for the nonce used in the proposal.
         pub nonce_space: felt252,
+        /// Nonce used to prevent replay attacks.
         pub nonce: felt252,
+        /// Address of the loan contract.
         pub loan_contract: ContractAddress,
     }
 
@@ -164,6 +225,17 @@ pub mod SimpleLoanDutchAuctionProposal {
     impl ISimpleLoanDutchAuctionProposalImpl of super::ISimpleLoanDutchAuctionProposal<
         ContractState
     > {
+        /// Makes a loan proposal using the provided proposal details.
+        ///
+        /// # Arguments
+        ///
+        /// - `proposal`: The details of the proposal.
+        ///
+        /// # Actions
+        ///
+        /// - Computes the hash of the proposal.
+        /// - Calls the internal method to make the proposal.
+        /// - Emits a `ProposalMade` event.
         fn make_proposal(ref self: ContractState, proposal: Proposal) {
             let proposal_hash = self.get_proposal_hash(proposal);
             self.simple_loan._make_proposal(proposal_hash, proposal.proposer);
@@ -171,6 +243,33 @@ pub mod SimpleLoanDutchAuctionProposal {
             self.emit(ProposalMade { proposal_hash, proposer: proposal.proposer, proposal, });
         }
 
+        /// Accepts a loan proposal using the provided details and signature.
+        ///
+        /// # Arguments
+        ///
+        /// - `acceptor`: The address of the acceptor.
+        /// - `refinancing_loan_id`: The ID of the loan being refinanced, if applicable.
+        /// - `proposal_data`: The encoded data of the proposal.
+        /// - `proposal_inclusion_proof`: The inclusion proof for the proposal.
+        /// - `signature`: The signature for validating the proposal.
+        ///
+        /// # Returns
+        ///
+        /// - A tuple containing the proposal hash and the loan terms.
+        ///
+        /// # Requirements
+        ///
+        /// - The length of `proposal_data` must match `DUTCH_PROPOSAL_DATA_LEN`.
+        /// - The credit amount must be within the valid range specified by the proposal.
+        ///
+        /// # Actions
+        ///
+        /// - Decodes the proposal data.
+        /// - Computes the proposal hash.
+        /// - Calculates the credit amount based on the auction progress.
+        /// - Validates the credit amount against the intended credit amount and slippage.
+        /// - Creates the proposal base and calls the componet's internal method to accept the proposal.
+        /// - Constructs the loan terms and returns them along with the proposal hash.
         fn accept_proposal(
             ref self: ContractState,
             acceptor: starknet::ContractAddress,
@@ -279,12 +378,31 @@ pub mod SimpleLoanDutchAuctionProposal {
             (proposal_hash, loan_terms)
         }
 
+        /// Computes the hash of a loan proposal.
+        ///
+        /// # Arguments
+        ///
+        /// - `proposal`: The proposal details.
+        ///
+        /// # Returns
+        ///
+        /// - The computed hash as `felt252`.
         fn get_proposal_hash(self: @ContractState, proposal: Proposal) -> felt252 {
             let mut serialized_proposal = array![];
             proposal.serialize(ref serialized_proposal);
             self.simple_loan._get_proposal_hash(PROPOSAL_TYPEHASH, serialized_proposal)
         }
 
+        /// Encodes the proposal data and values into a single array.
+        ///
+        /// # Arguments
+        ///
+        /// - `proposal`: The proposal details.
+        /// - `proposal_values`: The proposal values.
+        ///
+        /// # Returns
+        ///
+        /// - The encoded proposal data as `Array<felt252>`.
         fn encode_proposal_data(
             self: @ContractState, proposal: Proposal, proposal_values: ProposalValues
         ) -> Array<felt252> {
@@ -299,6 +417,19 @@ pub mod SimpleLoanDutchAuctionProposal {
             )
         }
 
+        /// Decodes the encoded proposal data into proposal and proposal values.
+        ///
+        /// # Arguments
+        ///
+        /// - `encoded_data`: The encoded proposal data.
+        ///
+        /// # Returns
+        ///
+        /// - A tuple containing the decoded `Proposal` and `ProposalValues`.
+        ///
+        /// # Requirements
+        ///
+        /// - The length of `encoded_data` must match `DUTCH_PROPOSAL_DATA_LEN`.
         fn decode_proposal_data(
             self: @ContractState, encoded_data: Array<felt252>
         ) -> (Proposal, ProposalValues) {
@@ -315,6 +446,31 @@ pub mod SimpleLoanDutchAuctionProposal {
             (proposal, proposal_values)
         }
 
+        /// Calculates the credit amount for a proposal based on the auction progress.
+        ///
+        /// # Arguments
+        ///
+        /// - `proposal`: The proposal details.
+        /// - `timestamp`: The current timestamp.
+        ///
+        /// # Returns
+        ///
+        /// - The calculated credit amount as `u256`.
+        ///
+        /// # Requirements
+        ///
+        /// - The auction duration must be within valid limits.
+        /// - The auction duration must be in full minutes.
+        /// - The max credit amount must be greater than the min credit amount.
+        /// - The auction must be in progress based on the current timestamp.
+        ///
+        /// # Errors
+        ///
+        /// - `INVALID_AUCTION_DURATION`: If the auction duration is out of bounds.
+        /// - `AUCTION_DURATION_NOT_IN_FULL_MINUTES`: If the auction duration is not in full minutes.
+        /// - `INVALID_CREDIT_AMOUNT_RANGE`: If the max credit amount is not greater than the min credit amount.
+        /// - `AUCTION_NOT_IN_PROGRESS`: If the auction is not currently in progress.
+        /// - `EXPIRED`: If the auction has expired.
         fn get_credit_amount(self: @ContractState, proposal: Proposal, timestamp: u64) -> u256 {
             if proposal.auction_duration < MINUTE || proposal.auction_duration > BoundedInt::max()
                 - MINUTE {
@@ -361,25 +517,41 @@ pub mod SimpleLoanDutchAuctionProposal {
                 2 => MultiToken::Category::ERC1155,
                 _ => panic!("Invalid collateral category"),
             };
-            let collateral_address: ContractAddress = (*data.at(1)).try_into().unwrap();
-            let collateral_low: u128 = (*data.at(3)).try_into().unwrap();
-            let collateral_high: u128 = (*data.at(4)).try_into().unwrap();
-            let credit_address: ContractAddress = (*data.at(7)).try_into().unwrap();
-            let min_credit_low: u128 = (*data.at(8)).try_into().unwrap();
-            let min_credit_high: u128 = (*data.at(9)).try_into().unwrap();
-            let max_credit_low: u128 = (*data.at(10)).try_into().unwrap();
-            let max_credit_high: u128 = (*data.at(11)).try_into().unwrap();
-            let credit_limit_low: u128 = (*data.at(12)).try_into().unwrap();
-            let credit_limit_high: u128 = (*data.at(13)).try_into().unwrap();
-            let fixed_interest_low: u128 = (*data.at(14)).try_into().unwrap();
-            let fixed_interest_high: u128 = (*data.at(15)).try_into().unwrap();
-            let accruing_interest_APR: u32 = (*data.at(16)).try_into().unwrap();
-            let duration: u64 = (*data.at(17)).try_into().unwrap();
-            let auction_start: u64 = (*data.at(18)).try_into().unwrap();
-            let auction_duration: u64 = (*data.at(19)).try_into().unwrap();
-            let allowed_acceptor: ContractAddress = (*data.at(20)).try_into().unwrap();
-            let proposer: ContractAddress = (*data.at(21)).try_into().unwrap();
-            let loan_contract: ContractAddress = (*data.at(27)).try_into().unwrap();
+            let collateral_address: ContractAddress = (*data.at(1))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let collateral_low: u128 = (*data.at(3)).try_into().expect('decode_serde_proposal');
+            let collateral_high: u128 = (*data.at(4)).try_into().expect('decode_serde_proposal');
+            let credit_address: ContractAddress = (*data.at(7))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let min_credit_low: u128 = (*data.at(8)).try_into().expect('decode_serde_proposal');
+            let min_credit_high: u128 = (*data.at(9)).try_into().expect('decode_serde_proposal');
+            let max_credit_low: u128 = (*data.at(10)).try_into().expect('decode_serde_proposal');
+            let max_credit_high: u128 = (*data.at(11)).try_into().expect('decode_serde_proposal');
+            let credit_limit_low: u128 = (*data.at(12)).try_into().expect('decode_serde_proposal');
+            let credit_limit_high: u128 = (*data.at(13)).try_into().expect('decode_serde_proposal');
+            let fixed_interest_low: u128 = (*data.at(14))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let fixed_interest_high: u128 = (*data.at(15))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let accruing_interest_APR: u32 = (*data.at(16))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let duration: u64 = (*data.at(17)).try_into().expect('decode_serde_proposal');
+            let auction_start: u64 = (*data.at(18)).try_into().expect('decode_serde_proposal');
+            let auction_duration: u64 = (*data.at(19)).try_into().expect('decode_serde_proposal');
+            let allowed_acceptor: ContractAddress = (*data.at(20))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let proposer: ContractAddress = (*data.at(21))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let loan_contract: ContractAddress = (*data.at(27))
+                .try_into()
+                .expect('decode_serde_proposal');
 
             Proposal {
                 collateral_category,
@@ -419,10 +591,18 @@ pub mod SimpleLoanDutchAuctionProposal {
         fn decode_serde_proposal_values(
             self: @ContractState, data: Span<felt252>
         ) -> ProposalValues {
-            let intended_credit_low: u128 = (*data.at(0)).try_into().unwrap();
-            let intended_credit_high: u128 = (*data.at(1)).try_into().unwrap();
-            let slippage_low: u128 = (*data.at(2)).try_into().unwrap();
-            let slippage_high: u128 = (*data.at(3)).try_into().unwrap();
+            let intended_credit_low: u128 = (*data.at(0))
+                .try_into()
+                .expect('decode_serde_proposal_values');
+            let intended_credit_high: u128 = (*data.at(1))
+                .try_into()
+                .expect('decode_serde_proposal_values');
+            let slippage_low: u128 = (*data.at(2))
+                .try_into()
+                .expect('decode_serde_proposal_values');
+            let slippage_high: u128 = (*data.at(3))
+                .try_into()
+                .expect('decode_serde_proposal_values');
 
             ProposalValues {
                 intended_credit_amount: u256 {

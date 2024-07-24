@@ -3,12 +3,11 @@ name = "pwn"
 version = "0.1.0"
 edition = "2023_11"
 
-# See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest.html
-
 [dependencies]
 starknet = "2.6.4"
 openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v0.14.0" }
-
+alexandria_math = { git = "https://github.com/keep-starknet-strange/alexandria.git" }
+alexandria_data_structures = { git = "https://github.com/keep-starknet-strange/alexandria.git" }
 
 [dev-dependencies]
 snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.26.0" }
@@ -21,3 +20,8 @@ sort-module-level-items = true
 
 [tool.snforge]
 exit-first = true
+
+[[tool.snforge.fork]]
+name = "mainnet"
+url = "https://starknet-mainnet.public.blastapi.io/rpc/v0_7"
+block_id.tag = "Latest"
