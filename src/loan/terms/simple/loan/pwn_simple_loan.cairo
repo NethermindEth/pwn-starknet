@@ -4,9 +4,11 @@ pub mod PwnSimpleLoan {
     use openzeppelin::account::interface::{ISRC6Dispatcher, ISRC6DispatcherTrait};
 
     use openzeppelin::introspection::src5::SRC5Component;
-    use openzeppelin::token::erc1155::{interface, erc1155_receiver::ERC1155ReceiverComponent};
+    use openzeppelin::token::erc1155::{
+        interface::IERC1155_RECEIVER_ID, erc1155_receiver::ERC1155ReceiverComponent
+    };
     use openzeppelin::token::erc721::{
-        erc721_receiver::{ERC721ReceiverComponent}, interface::IERC721_ID
+        erc721_receiver::{ERC721ReceiverComponent}, interface::IERC721_RECEIVER_ID
     };
     use openzeppelin::token::erc721::{interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait}};
     use pwn::ContractAddressDefault;
@@ -174,7 +176,8 @@ pub mod PwnSimpleLoan {
         ];
         let domain_separator = poseidon_hash_span(hash_elements.span());
         self.domain_separator.write(domain_separator);
-        self.src5.register_interface(interface::IERC1155_RECEIVER_ID);
+        self.src5.register_interface(IERC1155_RECEIVER_ID);
+        self.src5.register_interface(IERC721_RECEIVER_ID);
     }
 
     impl IPwnVault = PwnVaultComponent::InternalImpl<ContractState>;

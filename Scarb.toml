@@ -23,5 +23,5 @@ exit-first = true
 
 [[tool.snforge.fork]]
 name = "mainnet"
-url = "https://rpc.starknet.lava.build"
+url = "https://starknet-mainnet.public.blastapi.io/rpc/v0_7"
 block_id.tag = "Latest"

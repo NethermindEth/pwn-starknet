@@ -400,7 +400,7 @@ pub(crate) fn erc20_mint(erc20: ContractAddress, receiver: ContractAddress, amou
     );
 }
 
-fn erc721_mint(erc721: ContractAddress, receiver: ContractAddress, id: u256) {
+pub(crate) fn erc721_mint(erc721: ContractAddress, receiver: ContractAddress, id: u256) {
     let mut id_serialized: Array<felt252> = array![];
     id.serialize(ref id_serialized);
 

@@ -17,7 +17,7 @@ pub struct Terms {
     pub borrower_spec_hash: felt252
 }
 
-#[derive(Drop, Serde)]
+#[derive(Clone, Drop, Serde)]
 pub struct ProposalSpec {
     pub proposal_contract: ContractAddress,
     pub proposal_data: Array<felt252>,
@@ -30,7 +30,7 @@ pub struct LenderSpec {
     pub source_of_funds: ContractAddress
 }
 
-#[derive(Default, Drop, Serde)]
+#[derive(Copy, Default, Drop, Serde)]
 pub struct CallerSpec {
     pub refinancing_loan_id: felt252,
     pub revoke_nonce: bool,
