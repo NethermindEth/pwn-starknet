@@ -159,28 +159,14 @@ pub mod PwnSimpleLoan {
         revoked_nonce: ContractAddress,
         category_registry: ContractAddress,
     ) {
-        let hub_dispatcher = IPwnHubDispatcher { contract_address: hub };
-        let loan_token_dispatcher = IPwnLoanDispatcher { contract_address: loan_token };
-        let config_dispatcher = IPwnConfigDispatcher { contract_address: config };
-        let revoked_nonce_dispatcher = IRevokedNonceDispatcher { contract_address: revoked_nonce };
-        let category_registry_dispatcher = IMultitokenCategoryRegistryDispatcher {
-            contract_address: category_registry
-        };
-        self.hub.write(hub_dispatcher);
-        self.loan_token.write(loan_token_dispatcher);
-        self.config.write(config_dispatcher);
-        self.revoked_nonce.write(revoked_nonce_dispatcher);
-        self.category_registry.write(category_registry_dispatcher);
-        let hash_elements: Array<felt252> = array![
-            BASE_DOMAIN_SEPARATOR, starknet::get_contract_address().into()
-        ];
-        let domain_separator = poseidon_hash_span(hash_elements.span());
-        self.domain_separator.write(domain_separator);
-        self.src5.register_interface(IERC1155_RECEIVER_ID);
-        self.src5.register_interface(IERC721_RECEIVER_ID);
+        self.initializer(
+            hub: hub,
+            loan_token: loan_token,
+            config: config,
+            revoked_nonce: revoked_nonce,
+            category_registry: category_registry
+        );
     }
-
-    impl IPwnVault = PwnVaultComponent::InternalImpl<ContractState>;
 
     #[abi(embed_v0)]
     impl PwnSimpleLoanImpl of IPwnSimpleLoan<ContractState> {
@@ -586,6 +572,35 @@ pub mod PwnSimpleLoan {
 
     #[generate_trait]
     impl Private of PrivateTrait {
+        fn initializer(
+            ref self: ContractState,
+            hub: ContractAddress,
+            loan_token: ContractAddress,
+            config: ContractAddress,
+            revoked_nonce: ContractAddress,
+            category_registry: ContractAddress
+        ) {
+            let hub_dispatcher = IPwnHubDispatcher { contract_address: hub };
+            let loan_token_dispatcher = IPwnLoanDispatcher { contract_address: loan_token };
+            let config_dispatcher = IPwnConfigDispatcher { contract_address: config };
+            let revoked_nonce_dispatcher = IRevokedNonceDispatcher { contract_address: revoked_nonce };
+            let category_registry_dispatcher = IMultitokenCategoryRegistryDispatcher {
+                contract_address: category_registry
+            };
+            self.hub.write(hub_dispatcher);
+            self.loan_token.write(loan_token_dispatcher);
+            self.config.write(config_dispatcher);
+            self.revoked_nonce.write(revoked_nonce_dispatcher);
+            self.category_registry.write(category_registry_dispatcher);
+            let hash_elements: Array<felt252> = array![
+                BASE_DOMAIN_SEPARATOR, starknet::get_contract_address().into()
+            ];
+            let domain_separator = poseidon_hash_span(hash_elements.span());
+            self.domain_separator.write(domain_separator);
+            self.src5.register_interface(IERC1155_RECEIVER_ID);
+            self.src5.register_interface(IERC721_RECEIVER_ID);
+        }
+
         fn _check_permit(ref self: ContractState, credit_address: ContractAddress, permit: Permit) {
             let caller = starknet::get_caller_address();
             if (permit.asset != Default::default()) {
