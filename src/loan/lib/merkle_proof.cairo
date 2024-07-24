@@ -2,7 +2,19 @@ use alexandria_data_structures::array_ext::ArrayTraitExt;
 use alexandria_math::{keccak256::keccak256, BitShift};
 use keccak::cairo_keccak;
 
-
+/// Converts a `u256` value to a big-endian byte array, removing leading zeroes.
+///
+/// # Parameters
+///
+/// - `a`: The `u256` value to convert.
+///
+/// # Returns
+///
+/// - A `Array<u8>` containing the big-endian representation of `a`.
+///
+/// # Panics
+///
+/// - Panics if any `u256` to `u8` conversion fails.
 fn u256_to_be_bytes(a: u256) -> Array<u8> {
     let mut bytes: Array<u8> = array![];
     let mut i = 0;
@@ -26,10 +38,29 @@ fn u256_to_be_bytes(a: u256) -> Array<u8> {
     significant_bytes
 }
 
+/// Hashes a `u256` value using the Keccak-256 hash function.
+///
+/// # Parameters
+///
+/// - `a`: The `u256` value to hash.
+///
+/// # Returns
+///
+/// - A `u256` hash of the input value.
 pub fn hash(a: u256) -> u256 {
     keccak256(u256_to_be_bytes(a).span())
 }
 
+/// Hashes two `u256` values together using Keccak-256, ensuring a stable ordering.
+///
+/// # Parameters
+///
+/// - `a`: The first `u256` value.
+/// - `b`: The second `u256` value.
+///
+/// # Returns
+///
+/// - A `u256` hash of the combined values.
 pub fn hash_2(a: u256, b: u256) -> u256 {
     let a_array = if a < b {
         u256_to_be_bytes(a)
@@ -55,10 +86,31 @@ pub fn hash_2(a: u256, b: u256) -> u256 {
     keccak256(combined.span())
 }
 
+/// Verifies a Merkle proof against a given root and leaf.
+///
+/// # Parameters
+///
+/// - `proof`: The proof path as a `Span<u256>`.
+/// - `root`: The expected root of the Merkle tree.
+/// - `leaf`: The leaf value to verify.
+///
+/// # Returns
+///
+/// - `true` if the proof is valid, `false` otherwise.
 pub fn verify(proof: Span<u256>, root: u256, leaf: u256) -> bool {
     process_proof(proof, leaf) == root
 }
 
+/// Computes the root hash of a Merkle proof.
+///
+/// # Parameters
+///
+/// - `proof`: The proof path as a `Span<u256>`.
+/// - `leaf`: The leaf value to start the proof computation from.
+///
+/// # Returns
+///
+/// - The computed root hash as a `u256`.
 fn process_proof(proof: Span<u256>, leaf: u256) -> u256 {
     let mut computed_hash = leaf;
     let length = proof.len();

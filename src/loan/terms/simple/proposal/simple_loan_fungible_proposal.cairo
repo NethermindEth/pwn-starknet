@@ -25,6 +25,42 @@ pub trait ISimpleLoanFungibleProposal<TState> {
     ) -> u256;
 }
 
+//! The `SimpleLoanFungibleProposal` module provides a mechanism for creating and accepting loan 
+//! proposals for fungible assets . This module integrates multiple 
+//! components to offer a comprehensive solution for handling loan proposals, including encoding 
+//! and decoding proposal data, computing proposal hashes, and managing credit calculations.
+//! 
+//! # Features
+//! 
+//! - **Proposal Creation**: Allows the creation of loan proposals with specific terms and conditions.
+//! - **Proposal Acceptance**: Facilitates the acceptance of loan proposals, including the 
+//!   verification of signatures and proposal data.
+//! - **Proposal Hashing**: Computes unique hashes for proposals to ensure data integrity and 
+//!   security.
+//! - **Proposal Encoding/Decoding**: Provides functionality to encode and decode proposal data 
+//!   for efficient storage and retrieval.
+//! - **Credit Calculation**: Manages the calculation of credit amounts based on collateral and 
+//!   credit per collateral unit values.
+//! 
+//! # Components
+//! 
+//! - `SimpleLoanProposalComponent`: A reusable component that provides the base functionality 
+//!   for loan proposals.
+//! - `Storage`: Defines the storage structure for the module, including the simple loan proposal 
+//!   substorage.
+//! - `Event`: Defines events emitted by the contract, such as proposal creation and acceptance.
+//! - `Err`: Contains error handling functions for various invalid operations and input data.
+//! 
+//! # Constants
+//! 
+//! - `PROPOSAL_TYPEHASH`: The type hash for proposals.
+//! - `CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR`: The denominator for credit per collateral unit 
+//!   calculations.
+//! - `FUNGIBLE_PROPOSAL_DATA_LEN`: The expected length of the encoded proposal data.
+//! 
+//! This module is designed to provide a robust and flexible framework for managing loan proposals 
+//! involving fungible assets, integrating seamlessly with other components of the Starknet 
+//! ecosystem.
 #[starknet::contract]
 pub mod SimpleLoanFungibleProposal {
     use pwn::ContractAddressDefault;
@@ -52,28 +88,51 @@ pub mod SimpleLoanFungibleProposal {
         100_000_000_000_000_000_000_000_000_000_000_000_000;
     pub const FUNGIBLE_PROPOSAL_DATA_LEN: usize = 29;
 
+
+    /// Represents a loan proposal with specific terms and conditions.
     #[derive(Copy, Default, Drop, Serde)]
     pub struct Proposal {
+        /// Category of the collateral asset.
         pub collateral_category: MultiToken::Category,
+        /// Address of the collateral asset.
         pub collateral_address: ContractAddress,
+        /// ID of the collateral asset.
         pub collateral_id: felt252,
+        /// Minimum amount of the collateral asset.
         pub min_collateral_amount: u256,
+        /// Flag indicating if collateral state fingerprint should be checked.
         pub check_collateral_state_fingerprint: bool,
+        /// Fingerprint of the collateral state.
         pub collateral_state_fingerprint: felt252,
+        /// Address of the credit asset.
         pub credit_address: ContractAddress,
+        /// Credit amount per unit of collateral.
         pub credit_per_collateral_unit: u256,
+        /// Available credit limit for the proposal.
         pub available_credit_limit: u256,
+        /// Fixed interest amount for the loan.
         pub fixed_interest_amount: u256,
+        /// Annual percentage rate of the accruing interest.
         pub accruing_interest_APR: u32,
+        /// Duration of the loan in seconds.
         pub duration: u64,
+        /// Expiration time of the proposal in seconds since the Unix epoch.
         pub expiration: u64,
+        /// Address allowed to accept the proposal.
         pub allowed_acceptor: ContractAddress,
+        /// Address of the proposer.
         pub proposer: ContractAddress,
+        /// Hash of the proposer's specifications.
         pub proposer_spec_hash: felt252,
+        /// Flag indicating if the proposal is an offer.
         pub is_offer: bool,
+        /// ID of the loan being refinanced, if applicable.
         pub refinancing_loan_id: felt252,
+        /// Namespace for the nonce used in the proposal.
         pub nonce_space: felt252,
+        /// Nonce used to prevent replay attacks.
         pub nonce: felt252,
+        /// Address of the loan contract.
         pub loan_contract: ContractAddress,
     }
 
@@ -135,6 +194,22 @@ pub mod SimpleLoanFungibleProposal {
 
     #[abi(embed_v0)]
     impl SimpleLoanDutchAuctionProposalImpl of super::ISimpleLoanFungibleProposal<ContractState> {
+        /// Creates a loan proposal using the provided proposal details.
+        ///
+        /// # Arguments
+        ///
+        /// - `proposal`: The details of the proposal.
+        ///
+        /// # Returns
+        ///
+        /// - The computed hash of the proposal as `felt252`.
+        ///
+        /// # Actions
+        ///
+        /// - Computes the hash of the proposal.
+        /// - Calls the internal method to make the proposal.
+        /// - Emits a `ProposalMade` event.
+        /// - Returns the proposal hash.
         fn make_proposal(ref self: ContractState, proposal: Proposal) -> felt252 {
             let proposal_hash = self.get_proposal_hash(proposal);
             self.simple_loan._make_proposal(proposal_hash, proposal.proposer);
@@ -144,6 +219,34 @@ pub mod SimpleLoanFungibleProposal {
             proposal_hash
         }
 
+        /// Accepts a loan proposal using the provided details and signature.
+        ///
+        /// # Arguments
+        ///
+        /// - `acceptor`: The address of the acceptor.
+        /// - `refinancing_loan_id`: The ID of the loan being refinanced, if applicable.
+        /// - `proposal_data`: The encoded data of the proposal.
+        /// - `proposal_inclusion_proof`: The inclusion proof for the proposal.
+        /// - `signature`: The signature for validating the proposal.
+        ///
+        /// # Returns
+        ///
+        /// - A tuple containing the proposal hash and the loan terms.
+        ///
+        /// # Requirements
+        ///
+        /// - The length of `proposal_data` must match `FUNGIBLE_PROPOSAL_DATA_LEN`.
+        /// - The proposal must have a minimum collateral amount set.
+        /// - The collateral amount in `proposal_values` must meet or exceed the minimum collateral amount.
+        ///
+        /// # Actions
+        ///
+        /// - Decodes the proposal data.
+        /// - Computes the proposal hash.
+        /// - Validates the collateral amount against the minimum required collateral.
+        /// - Calculates the credit amount based on the collateral amount and credit per collateral unit.
+        /// - Creates the proposal base and calls the internal method to accept the proposal.
+        /// - Constructs the loan terms and returns them along with the proposal hash.
         fn accept_proposal(
             ref self: ContractState,
             acceptor: starknet::ContractAddress,
@@ -244,12 +347,31 @@ pub mod SimpleLoanFungibleProposal {
             (proposal_hash, loan_terms)
         }
 
+        /// Computes the hash of a loan proposal.
+        ///
+        /// # Arguments
+        ///
+        /// - `proposal`: The proposal details.
+        ///
+        /// # Returns
+        ///
+        /// - The computed hash as `felt252`.
         fn get_proposal_hash(self: @ContractState, proposal: Proposal) -> felt252 {
             let mut serialized_proposal = array![];
             proposal.serialize(ref serialized_proposal);
             self.simple_loan._get_proposal_hash(PROPOSAL_TYPEHASH, serialized_proposal)
         }
 
+        /// Encodes the proposal data and values into a single array.
+        ///
+        /// # Arguments
+        ///
+        /// - `proposal`: The proposal details.
+        /// - `proposal_values`: The proposal values.
+        ///
+        /// # Returns
+        ///
+        /// - The encoded proposal data as `Array<felt252>`.
         fn encode_proposal_data(
             self: @ContractState, proposal: Proposal, proposal_values: ProposalValues
         ) -> Array<felt252> {
@@ -264,6 +386,19 @@ pub mod SimpleLoanFungibleProposal {
             )
         }
 
+        /// Decodes the encoded proposal data into proposal and proposal values.
+        ///
+        /// # Arguments
+        ///
+        /// - `encoded_data`: The encoded proposal data.
+        ///
+        /// # Returns
+        ///
+        /// - A tuple containing the decoded `Proposal` and `ProposalValues`.
+        ///
+        /// # Requirements
+        ///
+        /// - The length of `encoded_data` must match `FUNGIBLE_PROPOSAL_DATA_LEN`.
         fn decode_proposal_data(
             self: @ContractState, encoded_data: Array<felt252>
         ) -> (Proposal, ProposalValues) {
@@ -280,6 +415,16 @@ pub mod SimpleLoanFungibleProposal {
             (proposal, proposal_values)
         }
 
+        /// Calculates the credit amount based on the collateral amount and credit per collateral unit.
+        ///
+        /// # Arguments
+        ///
+        /// - `collateral_amount`: The amount of collateral.
+        /// - `credit_per_collateral_unit`: The amount of credit per unit of collateral.
+        ///
+        /// # Returns
+        ///
+        /// - The calculated credit amount as `u256`.
         fn get_credit_amount(
             self: @ContractState, collateral_amount: u256, credit_per_collateral_unit: u256
         ) -> u256 {
