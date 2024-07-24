@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 #[starknet::interface]
-pub trait IMultitokenCategoryRegistry<TState> {
+pub trait IMultiTokenCategoryRegistry<TState> {
     fn register_category_value(ref self: TState, asset_address: ContractAddress, category: u8);
     fn unregister_category_value(ref self: TState, asset_address: ContractAddress);
     fn registered_category_value(self: @TState, asset_address: ContractAddress) -> u8;
@@ -41,6 +41,7 @@ pub trait IMultitokenCategoryRegistry<TState> {
 #[starknet::contract]
 pub mod MultiTokenCategoryRegistry {
     use openzeppelin::access::ownable::OwnableComponent;
+    use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
     use openzeppelin::introspection::src5::SRC5Component;
     use starknet::{ContractAddress, get_caller_address};
 
@@ -62,7 +63,7 @@ pub mod MultiTokenCategoryRegistry {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         CategoryRegistered: CategoryRegistered,
         CategoryUnregistered: CategoryUnregistered,
         #[flat]
@@ -72,17 +73,17 @@ pub mod MultiTokenCategoryRegistry {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct CategoryRegistered {
+    pub struct CategoryRegistered {
         #[key]
-        asset_address: ContractAddress,
+        pub asset_address: ContractAddress,
         #[key]
-        category: u8,
+        pub category: u8,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct CategoryUnregistered {
+    pub struct CategoryUnregistered {
         #[key]
-        asset_address: ContractAddress,
+        pub asset_address: ContractAddress,
     }
 
     pub mod Err {
@@ -99,7 +100,7 @@ pub mod MultiTokenCategoryRegistry {
     pub const CATEGORY_NOT_REGISTERED: u8 = 255;
 
     #[abi(embed_v0)]
-    impl IMultitokenCategoryRegistry of super::IMultitokenCategoryRegistry<ContractState> {
+    impl IMultiTokenCategoryRegistry of super::IMultiTokenCategoryRegistry<ContractState> {
         /// Registers a category value for a given asset address. Only the contract owner
         /// is authorized to call this function. It ensures that the category value is not
         /// set to a reserved value (e.g., `CATEGORY_NOT_REGISTERED`).
@@ -135,6 +136,8 @@ pub mod MultiTokenCategoryRegistry {
         ///
         /// * `asset_address` - The address of the asset to unregister.
         fn unregister_category_value(ref self: ContractState, asset_address: ContractAddress) {
+            self.ownable.assert_only_owner();
+
             self.registered_category.write(asset_address, 0);
 
             self.emit(CategoryUnregistered { asset_address, });

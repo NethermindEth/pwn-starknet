@@ -7,7 +7,7 @@ use pwn::loan::terms::simple::loan::{
 use pwn::loan::terms::simple::proposal::simple_loan_simple_proposal::{
     ISimpleLoanSimpleProposalDispatcherTrait, SimpleLoanSimpleProposal::Proposal
 };
-use pwn::multitoken::category_registry::IMultitokenCategoryRegistryDispatcherTrait;
+use pwn::multitoken::category_registry::IMultiTokenCategoryRegistryDispatcherTrait;
 use pwn::multitoken::library::MultiToken;
 use snforge_std::{
     start_cheat_caller_address, stop_cheat_caller_address, cheat_block_timestamp_global
