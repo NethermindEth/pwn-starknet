@@ -1,3 +1,37 @@
+//! The `PwnVaultComponent` module provides vault functionalities within the Simple Loan 
+//! contract on the Starknet platform. This component manages the transfer and storage of 
+//! multi-token assets, including ERC20, ERC721, and ERC1155 tokens.
+//!
+//! # Features
+//! 
+//! - **Vault Operations**: Provides functions to pull, push, and transfer assets to and 
+//!   from the vault, ensuring secure and controlled asset management.
+//! - **Pool Operations**: Facilitates interactions with liquidity pools, allowing assets 
+//!   to be supplied or withdrawn.
+//! - **Event Emissions**: Emits events for various actions, such as pulling, pushing, and 
+//!   interacting with pools, to ensure transparency and traceability.
+//! - **Error Handling**: Defines specific errors to handle unsupported or incomplete 
+//!   operations.
+//!
+//! # Components
+//! 
+//! - `Storage`: Defines the storage structure for the module, including mappings and state 
+//!   variables necessary for vault operations.
+//! - `Event`: Enum defining the various events emitted by the module, such as `VaultPull`, 
+//!   `VaultPush`, `PoolWithdraw`, and `PoolSupply`.
+//! - `Err`: Module containing error handling functions for unsupported or incomplete 
+//!   transfer operations.
+//!
+//! # Constants
+//! 
+//! This module currently does not define specific constants but integrates directly with 
+//! other components and modules.
+//!
+//! The `PwnVaultComponent` is designed to integrate seamlessly with the Simple Loan 
+//! contract, providing essential vault functionalities that ensure secure asset management 
+//! and interaction with external liquidity pools. This component is a critical part of the 
+//! broader PWN ecosystem on Starknet, facilitating secure and efficient loan operations.
+
 #[starknet::component]
 pub mod PwnVaultComponent {
     use pwn::interfaces::pool_adapter::{IPoolAdapterDispatcher, IPoolAdapterDispatcherTrait};
@@ -65,6 +99,11 @@ pub mod PwnVaultComponent {
     pub impl InternalImpl<
         TContractState, +HasComponent<TContractState>
     > of InternalTrait<TContractState> {
+        /// Pulls the specified `asset` from the `origin` address into the contract's vault.
+        /// This function emits a `VaultPull` event upon successful transfer.
+        /// 
+        /// - `asset`: The asset to be transferred.
+        /// - `origin`: The address from which the asset is pulled.
         fn _pull(
             ref self: ComponentState<TContractState>,
             asset: MultiToken::Asset,
@@ -79,6 +118,11 @@ pub mod PwnVaultComponent {
             self.emit(VaultPull { asset, origin });
         }
 
+        /// Pushes the specified `asset` to the `beneficiary` address from the contract's vault.
+        /// This function emits a `VaultPush` event upon successful transfer.
+        /// 
+        /// - `asset`: The asset to be transferred.
+        /// - `beneficiary`: The address receiving the asset.
         fn _push(
             ref self: ComponentState<TContractState>,
             asset: MultiToken::Asset,
@@ -92,6 +136,12 @@ pub mod PwnVaultComponent {
             self.emit(VaultPush { asset, beneficiary });
         }
 
+        /// Transfers the specified `asset` from the `origin` address to the `beneficiary` address.
+        /// This function emits a `VaultPushFrom` event upon successful transfer.
+        /// 
+        /// - `asset`: The asset to be transferred.
+        /// - `origin`: The address from which the asset is transferred.
+        /// - `beneficiary`: The address receiving the asset.
         fn _push_from(
             ref self: ComponentState<TContractState>,
             asset: MultiToken::Asset,
@@ -104,6 +154,14 @@ pub mod PwnVaultComponent {
             self.emit(VaultPushFrom { asset, origin, beneficiary });
         }
 
+        /// Withdraws the specified `asset` from a liquidity pool using the provided `pool_adapter`.
+        /// The withdrawn assets are transferred to the `owner` address.
+        /// This function emits a `PoolWithdraw` event upon successful withdrawal.
+        /// 
+        /// - `asset`: The asset to be withdrawn.
+        /// - `pool_adapter`: The adapter for the liquidity pool.
+        /// - `pool`: The address of the liquidity pool.
+        /// - `owner`: The address to receive the withdrawn asset.
         fn _withdraw_from_pool(
             ref self: ComponentState<TContractState>,
             asset: MultiToken::Asset,
@@ -122,6 +180,15 @@ pub mod PwnVaultComponent {
                 );
         }
 
+        /// Supplies the specified `asset` to a liquidity pool using the provided `pool_adapter`.
+        /// The asset is transferred from the contract's address to the pool, with the `owner` address
+        /// specified as the owner of the supplied asset.
+        /// This function emits a `PoolSupply` event upon successful supply.
+        /// 
+        /// - `asset`: The asset to be supplied.
+        /// - `pool_adapter`: The adapter for the liquidity pool.
+        /// - `pool`: The address of the liquidity pool.
+        /// - `owner`: The address associated with the supplied asset.
         fn _supply_to_pool(
             ref self: ComponentState<TContractState>,
             asset: MultiToken::Asset,
@@ -142,6 +209,14 @@ pub mod PwnVaultComponent {
                 );
         }
 
+        /// Checks the balance of the `checked_address` after a transfer operation to ensure 
+        /// the transfer was successful. If the balance does not match the expected value, 
+        /// an `INCOMPLETE_TRANSFER` error is thrown.
+        /// 
+        /// - `asset`: The asset being checked.
+        /// - `original_balance`: The balance before the transfer.
+        /// - `checked_address`: The address whose balance is being checked.
+        /// - `check_increasing_balance`: If `true`, expects the balance to increase; if `false`, expects the balance to decrease.
         fn _check_transfer(
             ref self: ComponentState<TContractState>,
             asset: MultiToken::Asset,

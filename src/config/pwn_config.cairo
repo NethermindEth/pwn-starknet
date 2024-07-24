@@ -1,3 +1,39 @@
+//! The `PwnConfig` module provides a comprehensive configuration management system for the Pwn 
+//! protocol. This module integrates with OpenZeppelin's `Ownable` 
+//! and `Initializable` components to manage ownership and initialization processes securely 
+//! and efficiently.
+//! 
+//! # Features
+//! 
+//! - **Ownable Component**: Ensures that critical functions can only be executed by the contract 
+//!   owner.
+//! - **Initializable Component**: Manages the initialization process, ensuring the contract can 
+//!   only be initialized once.
+//! - **Fee Management**: Allows the contract owner to set and update fees associated with the 
+//!   protocol.
+//! - **Fee Collector Management**: Allows setting and updating of the fee collector address.
+//! - **LOAN Metadata URI Management**: Supports setting and updating metadata URIs for loan 
+//!   contracts.
+//! - **Registry Management**: Allows registration of state fingerprint computers and pool 
+//!   adapters, ensuring they support the specified assets.
+//! 
+//! # Components
+//! 
+//! - `OwnableComponent`: Provides ownership control with the ability to transfer ownership in a 
+//!   two-step process.
+//! - `InitializableComponent`: Manages contract initialization with checks to ensure it occurs 
+//!   only once.
+//! - `Storage`: Defines the storage structure for the module, including fee, fee collector, 
+//!   metadata URIs, and registries.
+//! - `Event`: Defines events emitted by the contract, including updates to fees, fee collectors, 
+//!   and metadata URIs.
+//! - `Err`: Contains error handling functions for invalid operations such as setting an invalid 
+//!   fee or zero addresses.
+//! 
+//! # Constants
+//! 
+//! - `VERSION`: The current version of the module.
+//! - `MAX_FEE`: The maximum allowable fee, set to 10% (1000 basis points).
 #[starknet::contract]
 pub mod PwnConfig {
     use core::clone::Clone;
@@ -95,6 +131,24 @@ pub mod PwnConfig {
 
     #[abi(embed_v0)]
     impl PwnConfigImpl of IPwnConfig<ContractState> {
+        /// Initializes the PwnConfig contract with the provided owner, fee, and fee collector address.
+        ///
+        /// # Arguments
+        ///
+        /// - `owner`: The address of the contract owner.
+        /// - `fee`: The initial fee to be set.
+        /// - `fee_collector`: The address where the fees will be collected.
+        ///
+        /// # Requirements
+        ///
+        /// - `owner` must not be the zero address.
+        ///
+        /// # Actions
+        ///
+        /// - Initializes the `OwnableComponent` with the provided owner address.
+        /// - Sets the fee collector address using `_set_fee_collector`.
+        /// - Sets the fee using `_set_fee`.
+        /// - Initializes the `InitializableComponent`.
         fn initialize(
             ref self: ContractState,
             owner: ContractAddress,
@@ -110,25 +164,63 @@ pub mod PwnConfig {
             self.initializable.initialize();
         }
 
+        /// Sets the fee for the PwnConfig contract.
+        ///
+        /// # Arguments
+        ///
+        /// - `fee`: The new fee to be set.
+        ///
+        /// # Requirements
+        ///
+        /// - Only the contract owner can call this function.
         fn set_fee(ref self: ContractState, fee: u16) {
             self.ownable.assert_only_owner();
             self._set_fee(fee);
         }
 
+        /// Retrieves the current fee of the PwnConfig contract.
+        ///
+        /// # Returns
+        ///
+        /// - The current fee as a `u16`.
         fn get_fee(self: @ContractState) -> u16 {
             self.fee.read()
         }
 
-
+        /// Sets the fee collector address for the PwnConfig contract.
+        ///
+        /// # Arguments
+        ///
+        /// - `fee_collector`: The new fee collector address.
+        ///
+        /// # Requirements
+        ///
+        /// - Only the contract owner can call this function.
         fn set_fee_collector(ref self: ContractState, fee_collector: ContractAddress) {
             self.ownable.assert_only_owner();
             self._set_fee_collector(fee_collector);
         }
 
+        /// Retrieves the current fee collector address of the PwnConfig contract.
+        ///
+        /// # Returns
+        ///
+        /// - The current fee collector address as a `ContractAddress`.
         fn get_fee_collector(self: @ContractState) -> ContractAddress {
             self.fee_collector.read()
         }
 
+        /// Sets the metadata URI for a specific loan contract.
+        ///
+        /// # Arguments
+        ///
+        /// - `loan_contract`: The address of the loan contract.
+        /// - `metadata_uri`: The metadata URI to be set.
+        ///
+        /// # Requirements
+        ///
+        /// - Only the contract owner can call this function.
+        /// - `loan_contract` must not be the zero address.
         fn set_loan_metadata_uri(
             ref self: ContractState, loan_contract: ContractAddress, metadata_uri: ByteArray
         ) {
@@ -143,6 +235,15 @@ pub mod PwnConfig {
             self.emit(LOANMetadataUriUpdated { loan_contract, new_uri: metadata_copy });
         }
 
+        /// Sets the default metadata URI for loan contracts.
+        ///
+        /// # Arguments
+        ///
+        /// - `metadata_uri`: The default metadata URI to be set.
+        ///
+        /// # Requirements
+        ///
+        /// - Only the contract owner can call this function.
         fn set_default_loan_metadata_uri(ref self: ContractState, metadata_uri: ByteArray) {
             self.ownable.assert_only_owner();
             let metadata_copy = metadata_uri.clone();
@@ -151,7 +252,17 @@ pub mod PwnConfig {
             self.emit(DefaultLOANMetadataUriUpdated { new_uri: metadata_copy });
         }
 
-
+        /// Registers a state fingerprint computer for a specific asset.
+        ///
+        /// # Arguments
+        ///
+        /// - `asset`: The address of the asset.
+        /// - `computer`: The address of the state fingerprint computer.
+        ///
+        /// # Requirements
+        ///
+        /// - Only the contract owner can call this function.
+        /// - If `computer` is not the zero address, it must support the specified asset.
         fn register_state_fingerprint_computer(
             ref self: ContractState, asset: ContractAddress, computer: ContractAddress
         ) {
@@ -168,6 +279,16 @@ pub mod PwnConfig {
             self.sf_computer_registry.write(asset, computer);
         }
 
+        /// Registers a pool adapter for a specific pool.
+        ///
+        /// # Arguments
+        ///
+        /// - `pool`: The address of the pool.
+        /// - `adapter`: The address of the pool adapter.
+        ///
+        /// # Requirements
+        ///
+        /// - Only the contract owner can call this function.
         fn register_pool_adapter(
             ref self: ContractState, pool: ContractAddress, adapter: ContractAddress
         ) {
@@ -175,6 +296,15 @@ pub mod PwnConfig {
             self.pool_adapter_registry.write(pool, adapter);
         }
 
+        /// Retrieves the state fingerprint computer for a specific asset.
+        ///
+        /// # Arguments
+        ///
+        /// - `asset`: The address of the asset.
+        ///
+        /// # Returns
+        ///
+        /// - The `IStateFingerpringComputerDispatcher` for the asset.
         fn get_state_fingerprint_computer(
             ref self: ContractState, asset: ContractAddress
         ) -> IStateFingerpringComputerDispatcher {
@@ -183,12 +313,30 @@ pub mod PwnConfig {
             IStateFingerpringComputerDispatcher { contract_address: computer }
         }
 
+        /// Retrieves the pool adapter for a specific pool.
+        ///
+        /// # Arguments
+        ///
+        /// - `pool`: The address of the pool.
+        ///
+        /// # Returns
+        ///
+        /// - The `IPoolAdapterDispatcher` for the pool.
         fn get_pool_adapter(self: @ContractState, pool: ContractAddress) -> IPoolAdapterDispatcher {
             let pool_adapter = self.pool_adapter_registry.read(pool);
 
             IPoolAdapterDispatcher { contract_address: pool_adapter }
         }
 
+        /// Retrieves the metadata URI for a specific loan contract.
+        ///
+        /// # Arguments
+        ///
+        /// - `loan_contract`: The address of the loan contract.
+        ///
+        /// # Returns
+        ///
+        /// - The metadata URI as a `ByteArray`.
         fn loan_metadata_uri(self: @ContractState, loan_contract: ContractAddress) -> ByteArray {
             let uri = self.loan_metadata_uri.read(loan_contract);
 
