@@ -33,7 +33,7 @@
 //! - `BASE_DOMAIN_SEPARATOR`: The base domain separator for hashing purposes.
 //! 
 //! This module is designed to provide a secure and flexible framework for managing simple loans, 
-//! integrating seamlessly with other components of the .
+//! integrating seamlessly with other components.
 #[starknet::contract]
 pub mod PwnSimpleLoan {
     use core::poseidon::poseidon_hash_span;
