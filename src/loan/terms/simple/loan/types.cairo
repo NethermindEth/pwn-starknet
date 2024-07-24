@@ -34,7 +34,7 @@ pub struct ProposalSpec {
     /// The data associated with the proposal.
     pub proposal_data: Array<felt252>,
     /// The inclusion proof for the proposal.
-    pub proposal_inclusion_proof: Array<felt252>,
+    pub proposal_inclusion_proof: Array<u256>,
     /// The signature for the proposal.
     pub signature: Signature
 }

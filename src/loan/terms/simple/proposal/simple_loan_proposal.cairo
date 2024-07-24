@@ -1,5 +1,4 @@
-use alexandria_math::keccak256::keccak256;
-use pwn::loan::lib::signature_checker::Signature;
+use pwn::loan::lib::{signature_checker::Signature};
 use pwn::loan::terms::simple::loan::types::Terms;
 use starknet::{ContractAddress, ClassHash};
 
@@ -8,7 +7,7 @@ pub trait ISimpleLoanProposal<TState> {
     fn revoke_nonce(ref self: TState, nonce_space: felt252, nonce: felt252);
     fn get_multiproposal_hash(
         self: @TState, multiproposal: SimpleLoanProposalComponent::Multiproposal
-    ) -> felt252;
+    ) -> u256;
 }
 
 #[starknet::interface]
@@ -18,7 +17,7 @@ pub trait ISimpleLoanAcceptProposal<TState> {
         acceptor: starknet::ContractAddress,
         refinancing_loan_id: felt252,
         proposal_data: Array<felt252>,
-        proposal_inclusion_proof: Array<felt252>,
+        proposal_inclusion_proof: Array<u256>,
         signature: Signature
     ) -> (felt252, Terms);
 }
@@ -52,6 +51,7 @@ pub trait ISimpleLoanAcceptProposal<TState> {
 //! integrating seamlessly with other components to ensure secure and efficient loan transactions.
 #[starknet::component]
 pub mod SimpleLoanProposalComponent {
+    use alexandria_math::keccak256::keccak256;
     use core::poseidon::poseidon_hash_span;
     use openzeppelin::account::interface::{ISRC6Dispatcher, ISRC6DispatcherTrait};
     use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
@@ -60,17 +60,18 @@ pub mod SimpleLoanProposalComponent {
         IStateFingerpringComputerDispatcher, IStateFingerpringComputerDispatcherTrait
     };
     use pwn::loan::lib::signature_checker;
+    use pwn::loan::lib::{merkle_proof, merkle_proof::abi_encoded_packed};
     use pwn::nonce::revoked_nonce::{
         IRevokedNonceDispatcher, IRevokedNonceDispatcherTrait, RevokedNonce
     };
     use super::{ContractAddress, ClassHash};
 
-    const MULTIPROPOSAL_TYPEHASH: felt252 =
-        0x03af92d8ed4d3261ba61cd686d2f8a9cceb2563cc7c4c5355eb121316fc5358d;
     pub const BASE_DOMAIN_SEPARATOR: felt252 =
-        0x0373c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
-    const MULTIPROPOSAL_DOMAIN_SEPARATOR: felt252 =
-        0x0341fc24aa498aaa42e724a6afc72d16d7b6c7a324a7efbcac56e17d75e6e678;
+        0x1bd2de01ef5d7c9a15011e481320b91a90156eb700f8a5a99a373fa2dea9b10;
+    const MULTIPROPOSAL_DOMAIN_SEPARATOR: u256 =
+        0xb1acfe094760154fa8ea8fc7c07e76f65332b482350070b57df884171f2ddb56;
+    const MULTIPROPOSAL_TYPEHASH: u256 =
+        0x73af92d8ed4d3261ba61cd686d2f8a9cceb2563cc7c4c5355eb121316fc5358d;
 
     #[derive(Drop, Serde)]
     pub struct Multiproposal {
@@ -183,25 +184,23 @@ pub mod SimpleLoanProposalComponent {
                 );
         }
 
-        /// Computes the hash for a multiproposal using the Poseidon hash function.
+        /// Computes the hash for a multiproposal using the Keccac hash function.
         /// 
         /// # Parameters
         /// - `multiproposal`: The multiproposal data for which the hash is to be computed.
         /// 
         /// # Returns
-        /// The computed hash value as `felt252`.
+        /// The computed hash value as `u256`.
         fn get_multiproposal_hash(
             self: @ComponentState<TContractState>, multiproposal: Multiproposal
-        ) -> felt252 {
-            let hash_elements: Array<felt252> = array![
+        ) -> u256 {
+            let hash_elements: Array<u256> = array![
                 1901,
-                MULTIPROPOSAL_DOMAIN_SEPARATOR,
+                MULTIPROPOSAL_DOMAIN_SEPARATOR.into(),
                 MULTIPROPOSAL_TYPEHASH,
-                multiproposal.merkle_root.low.into(),
-                multiproposal.merkle_root.high.into()
+                multiproposal.merkle_root
             ];
-
-            poseidon_hash_span(hash_elements.span())
+            keccak256(abi_encoded_packed(hash_elements).span())
         }
     }
 
@@ -209,7 +208,6 @@ pub mod SimpleLoanProposalComponent {
     pub impl InternalImpl<
         TContractState, +HasComponent<TContractState>,
     > of InternalTrait<TContractState> {
-        // NOTE: This is the constuctor of the Solidity contract.
         fn _initialize(
             ref self: ComponentState<TContractState>,
             hub: ContractAddress,
@@ -222,15 +220,17 @@ pub mod SimpleLoanProposalComponent {
             self.revoked_nonce.write(IRevokedNonceDispatcher { contract_address: revoked_nonce });
             self.config.write(IPwnConfigDispatcher { contract_address: config });
 
-            let hash_elements = array![
-                BASE_DOMAIN_SEPARATOR, name, version, starknet::get_contract_address().into()
+            let hash_elements: Array<felt252> = array![
+                BASE_DOMAIN_SEPARATOR,
+                name.into(),
+                version.into(),
+                starknet::get_contract_address().into()
             ];
             let domain_separator = poseidon_hash_span(hash_elements.span());
 
             self.DOMAIN_SEPARATOR.write(domain_separator);
         }
 
-        // NOTE: here will we use Poseidon hash function to hash the proposal data.
         fn _get_proposal_hash(
             self: @ComponentState<TContractState>,
             proposal_type_hash: felt252,
@@ -261,7 +261,7 @@ pub mod SimpleLoanProposalComponent {
             acceptor: ContractAddress,
             refinancing_loan_id: felt252,
             proposal_hash: felt252,
-            proposal_inclusion_proof: Array<felt252>,
+            proposal_inclusion_proof: Array<u256>,
             signature: signature_checker::Signature,
             proposal: ProposalBase
         ) {
@@ -281,17 +281,36 @@ pub mod SimpleLoanProposalComponent {
 
             if proposal_inclusion_proof.len() == 0 {
                 if !self.proposal_made.read(proposal_hash) {
-                    // should we also need to ensure it is signed by the proposer
                     if !self._is_valid_signature_now(proposal.proposer, proposal_hash, signature) {
                         signature_checker::Err::INVALID_SIGNATURE(proposal.proposer, proposal_hash);
                     }
                 }
             } else {
                 // TODO: verify inclusion proof type with the pwn team
-                let multiproposal_hash = poseidon_hash_span(array!['multiProposalHash'].span());
-                if !self._is_valid_signature_now(proposal.proposer, multiproposal_hash, signature) {
+                // bytes32 multiproposalHash = getMultiproposalHash(
+                //     Multiproposal({
+                //         multiproposalMerkleRoot: MerkleProof.processProofCalldata({
+                //             proof: proposalInclusionProof,
+                //             leaf: proposalHash
+                //         })
+                //     })
+                // );
+                let multiproposal_merkle_root = merkle_proof::process_proof(
+                    proposal_inclusion_proof.span(), proposal_hash.into()
+                );
+                let multiproposal_hash = self
+                    .get_multiproposal_hash(
+                        Multiproposal { merkle_root: multiproposal_merkle_root }
+                    );
+                let multiproposal_hash_felt = poseidon_hash_span(
+                    array![multiproposal_hash.low.into(), multiproposal_hash.high.into()].span()
+                );
+                if !self
+                    ._is_valid_signature_now(
+                        proposal.proposer, multiproposal_hash_felt, signature
+                    ) {
                     signature_checker::Err::INVALID_SIGNATURE(
-                        proposal.proposer, multiproposal_hash
+                        proposal.proposer, multiproposal_hash_felt
                     );
                 }
             }

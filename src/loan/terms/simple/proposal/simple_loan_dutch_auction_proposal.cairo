@@ -10,7 +10,7 @@ pub trait ISimpleLoanDutchAuctionProposal<TState> {
         acceptor: starknet::ContractAddress,
         refinancing_loan_id: felt252,
         proposal_data: Array<felt252>,
-        proposal_inclusion_proof: Array<felt252>,
+        proposal_inclusion_proof: Array<u256>,
         signature: Signature,
     ) -> (felt252, Terms);
     fn get_proposal_hash(self: @TState, proposal: Proposal) -> felt252;
@@ -272,7 +272,7 @@ pub mod SimpleLoanDutchAuctionProposal {
             acceptor: starknet::ContractAddress,
             refinancing_loan_id: felt252,
             proposal_data: Array<felt252>,
-            proposal_inclusion_proof: Array<felt252>,
+            proposal_inclusion_proof: Array<u256>,
             signature: Signature,
         ) -> (felt252, Terms) {
             if proposal_data.len() != DUTCH_PROPOSAL_DATA_LEN {

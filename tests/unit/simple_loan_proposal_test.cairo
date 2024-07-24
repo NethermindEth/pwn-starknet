@@ -43,7 +43,7 @@ pub const MAX_U256: u256 =
 pub struct Params {
     pub base: SimpleLoanProposalComponent::ProposalBase,
     pub acceptor: ContractAddress,
-    pub proposal_inclusion_proof: Array<felt252>,
+    pub proposal_inclusion_proof: Array<u256>,
     pub signature: Signature,
     pub message_hash: felt252,
     pub refinancing_loan_id: felt252

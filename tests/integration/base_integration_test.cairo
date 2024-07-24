@@ -1,5 +1,3 @@
-use core::result::ResultTrait;
-use core::traits::Into;
 use openzeppelin::account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
 use openzeppelin::token::{
     erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},

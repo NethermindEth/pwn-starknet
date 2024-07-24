@@ -10,7 +10,7 @@ pub trait ISimpleLoanFungibleProposal<TState> {
         acceptor: starknet::ContractAddress,
         refinancing_loan_id: felt252,
         proposal_data: Array<felt252>,
-        proposal_inclusion_proof: Array<felt252>,
+        proposal_inclusion_proof: Array<u256>,
         signature: Signature,
     ) -> (felt252, Terms);
     fn get_proposal_hash(self: @TState, proposal: Proposal) -> felt252;
@@ -249,7 +249,7 @@ pub mod SimpleLoanFungibleProposal {
             acceptor: starknet::ContractAddress,
             refinancing_loan_id: felt252,
             proposal_data: Array<felt252>,
-            proposal_inclusion_proof: Array<felt252>,
+            proposal_inclusion_proof: Array<u256>,
             signature: Signature
         ) -> (felt252, super::Terms) {
             if proposal_data.len() != FUNGIBLE_PROPOSAL_DATA_LEN {
@@ -257,7 +257,6 @@ pub mod SimpleLoanFungibleProposal {
             }
 
             let (proposal, proposal_values) = self.decode_proposal_data(proposal_data);
-            // NOTE: add check for proposal data integrity to this and all other proposals
 
             let mut serialized_proposal = array![];
             proposal.serialize(ref serialized_proposal);
