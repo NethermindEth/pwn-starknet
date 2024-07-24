@@ -159,14 +159,7 @@ pub mod PwnSimpleLoan {
         revoked_nonce: ContractAddress,
         category_registry: ContractAddress,
     ) {
-        self
-            .initializer(
-                hub: hub,
-                loan_token: loan_token,
-                config: config,
-                revoked_nonce: revoked_nonce,
-                category_registry: category_registry
-            );
+        self.initializer(hub, loan_token, config, revoked_nonce, category_registry);
     }
 
     #[abi(embed_v0)]
