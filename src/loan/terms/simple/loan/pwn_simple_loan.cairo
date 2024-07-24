@@ -282,7 +282,7 @@ pub mod PwnSimpleLoan {
                     ERC721ABIDispatcher {
                         contract_address: self.loan_token.read().contract_address
                     }
-                        .owner_of(loan_id.try_into().unwrap())
+                        .owner_of(loan_id.try_into().expect('repay_loan'))
                 );
         }
 
@@ -292,7 +292,7 @@ pub mod PwnSimpleLoan {
             let loan_token_owner = ERC721ABIDispatcher {
                 contract_address: self.loan_token.read().contract_address
             }
-                .owner_of(loan_id.try_into().unwrap());
+                .owner_of(loan_id.try_into().expect('claim_loan'));
             if (caller != loan_token_owner) {
                 Err::CALLER_NOT_LOAN_TOKEN_HOLDER();
             }
@@ -410,7 +410,7 @@ pub mod PwnSimpleLoan {
             let loan_owner = ERC721ABIDispatcher {
                 contract_address: self.loan_token.read().contract_address
             }
-                .owner_of(extension.loan_id.try_into().unwrap());
+                .owner_of(extension.loan_id.try_into().expect('extend_loan'));
 
             if (caller == loan_owner) {
                 if (extension.proposer != loan.borrower) {
@@ -476,7 +476,7 @@ pub mod PwnSimpleLoan {
 
         fn get_lender_spec_hash(self: @ContractState, calladata: LenderSpec) -> felt252 {
             let hash_elements: Array<felt252> = array![
-                calladata.source_of_funds.try_into().unwrap()
+                calladata.source_of_funds.try_into().expect('get_lender_spec_hash')
             ];
             poseidon_hash_span(hash_elements.span())
         }
@@ -493,7 +493,8 @@ pub mod PwnSimpleLoan {
 
         fn get_extension_hash(self: @ContractState, extension: ExtensionProposal) -> felt252 {
             let hash_elements: Array<felt252> = array![
-                self.domain_separator.read(), starknet::get_contract_address().try_into().unwrap()
+                self.domain_separator.read(),
+                starknet::get_contract_address().try_into().expect('get_extension_hash')
             ];
             let domain_seperator_hash = poseidon_hash_span(hash_elements.span());
 
@@ -502,11 +503,11 @@ pub mod PwnSimpleLoan {
                 domain_seperator_hash,
                 EXTENSION_PROPOSAL_TYPEHASH,
                 extension.loan_id,
-                extension.compensation_address.try_into().unwrap(),
-                extension.compensation_amount.try_into().unwrap(),
+                extension.compensation_address.try_into().expect('get_extension_hash'),
+                extension.compensation_amount.try_into().expect('get_extension_hash'),
                 extension.duration.into(),
                 extension.expiration.into(),
-                extension.proposer.try_into().unwrap(),
+                extension.proposer.try_into().expect('get_extension_hash'),
                 extension.nonce_space,
                 extension.nonce
             ];
@@ -517,7 +518,7 @@ pub mod PwnSimpleLoan {
             let loan = self.loans.read(loan_id);
             let loan_owner: ContractAddress = if (loan.status != 0) {
                 ERC721ABIDispatcher { contract_address: self.loan_token.read().contract_address }
-                    .owner_of(loan_id.try_into().unwrap())
+                    .owner_of(loan_id.try_into().expect('get_loan'))
             } else {
                 Default::default()
             };
@@ -669,7 +670,7 @@ pub mod PwnSimpleLoan {
             let mut credit_helper = loan_terms.credit;
 
             if (fee_amount > 0) {
-                credit_helper.amount = fee_amount.try_into().unwrap();
+                credit_helper.amount = fee_amount.try_into().expect('_settle_new_loan');
                 self
                     .vault
                     ._push_from(
@@ -691,7 +692,8 @@ pub mod PwnSimpleLoan {
             let erc721_dispatcher = ERC721ABIDispatcher {
                 contract_address: self.loan_token.read().contract_address
             };
-            let loan_owner = erc721_dispatcher.owner_of(refinancing_loan_id.try_into().unwrap());
+            let loan_owner = erc721_dispatcher
+                .owner_of(refinancing_loan_id.try_into().expect('_settle_loan_refinance'));
             let repayment_amount = self.get_loan_repayment_amount(refinancing_loan_id);
             let (fee_amount, new_loan_amount) = fee_calculator::calculate_fee_amount(
                 self.config.read().get_fee(), loan_terms.credit.amount

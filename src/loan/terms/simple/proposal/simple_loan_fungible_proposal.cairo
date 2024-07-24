@@ -300,22 +300,44 @@ pub mod SimpleLoanFungibleProposal {
                 2 => MultiToken::Category::ERC1155,
                 _ => panic!("Invalid collateral category"),
             };
-            let collateral_address: ContractAddress = (*data.at(1)).try_into().unwrap();
-            let min_collateral_low: u128 = (*data.at(3)).try_into().unwrap();
-            let min_collateral_high: u128 = (*data.at(4)).try_into().unwrap();
-            let credit_address: ContractAddress = (*data.at(7)).try_into().unwrap();
-            let collateral_unit_low: u128 = (*data.at(8)).try_into().unwrap();
-            let collateral_unit_high: u128 = (*data.at(9)).try_into().unwrap();
-            let credit_limit_low: u128 = (*data.at(10)).try_into().unwrap();
-            let credit_limit_high: u128 = (*data.at(11)).try_into().unwrap();
-            let fixed_interest_low: u128 = (*data.at(12)).try_into().unwrap();
-            let fixed_interest_high: u128 = (*data.at(13)).try_into().unwrap();
-            let accruing_interest_APR: u32 = (*data.at(14)).try_into().unwrap();
-            let duration: u64 = (*data.at(15)).try_into().unwrap();
-            let expiration: u64 = (*data.at(16)).try_into().unwrap();
-            let allowed_acceptor: ContractAddress = (*data.at(17)).try_into().unwrap();
-            let proposer: ContractAddress = (*data.at(18)).try_into().unwrap();
-            let loan_contract: ContractAddress = (*data.at(24)).try_into().unwrap();
+            let collateral_address: ContractAddress = (*data.at(1))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let min_collateral_low: u128 = (*data.at(3)).try_into().expect('decode_serde_proposal');
+            let min_collateral_high: u128 = (*data.at(4))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let credit_address: ContractAddress = (*data.at(7))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let collateral_unit_low: u128 = (*data.at(8))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let collateral_unit_high: u128 = (*data.at(9))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let credit_limit_low: u128 = (*data.at(10)).try_into().expect('decode_serde_proposal');
+            let credit_limit_high: u128 = (*data.at(11)).try_into().expect('decode_serde_proposal');
+            let fixed_interest_low: u128 = (*data.at(12))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let fixed_interest_high: u128 = (*data.at(13))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let accruing_interest_APR: u32 = (*data.at(14))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let duration: u64 = (*data.at(15)).try_into().expect('decode_serde_proposal');
+            let expiration: u64 = (*data.at(16)).try_into().expect('decode_serde_proposal');
+            let allowed_acceptor: ContractAddress = (*data.at(17))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let proposer: ContractAddress = (*data.at(18))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let loan_contract: ContractAddress = (*data.at(24))
+                .try_into()
+                .expect('decode_serde_proposal');
 
             Proposal {
                 collateral_category,
@@ -355,8 +377,8 @@ pub mod SimpleLoanFungibleProposal {
         fn decode_serde_proposal_values(
             self: @ContractState, data: Span<felt252>
         ) -> ProposalValues {
-            let amount_low: u128 = (*data.at(0)).try_into().unwrap();
-            let amount_high: u128 = (*data.at(1)).try_into().unwrap();
+            let amount_low: u128 = (*data.at(0)).try_into().expect('decode_serde_proposal_values');
+            let amount_high: u128 = (*data.at(1)).try_into().expect('decode_serde_proposal_values');
 
             ProposalValues { collateral_amount: u256 { low: amount_low, high: amount_high, }, }
         }

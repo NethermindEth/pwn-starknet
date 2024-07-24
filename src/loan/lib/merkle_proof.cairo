@@ -8,7 +8,7 @@ fn u256_to_be_bytes(a: u256) -> Array<u8> {
     let mut i = 0;
 
     while i < 32 {
-        let mut byte: u8 = (BitShift::shr(a, 8 * i) & 0xFF).try_into().unwrap();
+        let mut byte: u8 = (BitShift::shr(a, 8 * i) & 0xFF).try_into().expect('u256_to_be_bytes');
         bytes.append(byte);
         i += 1;
     };
@@ -17,7 +17,7 @@ fn u256_to_be_bytes(a: u256) -> Array<u8> {
     let mut significant_bytes: Array<u8> = array![];
     while bytes
         .len() > 0 {
-            let byte = bytes.pop_front().unwrap();
+            let byte = bytes.pop_front().expect('u256_to_be_bytes');
 
             if byte != 0 {
                 significant_bytes.append(byte);

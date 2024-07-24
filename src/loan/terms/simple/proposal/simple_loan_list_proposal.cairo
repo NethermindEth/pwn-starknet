@@ -262,24 +262,44 @@ pub mod SimpleLoanListProposal {
                 2 => MultiToken::Category::ERC1155,
                 _ => panic!("Invalid collateral category"),
             };
-            let collateral_address: ContractAddress = (*data.at(1)).try_into().unwrap();
-            let collateral_ids_whitelist_merkle_root_low: u128 = (*data.at(2)).try_into().unwrap();
-            let collateral_ids_whitelist_merkle_root_high: u128 = (*data.at(3)).try_into().unwrap();
-            let collateral_low: u128 = (*data.at(4)).try_into().unwrap();
-            let collateral_high: u128 = (*data.at(5)).try_into().unwrap();
-            let credit_address: ContractAddress = (*data.at(8)).try_into().unwrap();
-            let credit_low: u128 = (*data.at(9)).try_into().unwrap();
-            let credit_high: u128 = (*data.at(10)).try_into().unwrap();
-            let credit_limit_low: u128 = (*data.at(11)).try_into().unwrap();
-            let credit_limit_high: u128 = (*data.at(12)).try_into().unwrap();
-            let fixed_interest_low: u128 = (*data.at(13)).try_into().unwrap();
-            let fixed_interest_high: u128 = (*data.at(14)).try_into().unwrap();
-            let accruing_interest_APR: u32 = (*data.at(15)).try_into().unwrap();
-            let duration: u64 = (*data.at(16)).try_into().unwrap();
-            let expiration: u64 = (*data.at(17)).try_into().unwrap();
-            let allowed_acceptor: ContractAddress = (*data.at(18)).try_into().unwrap();
-            let proposer: ContractAddress = (*data.at(19)).try_into().unwrap();
-            let loan_contract: ContractAddress = (*data.at(25)).try_into().unwrap();
+            let collateral_address: ContractAddress = (*data.at(1))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let collateral_ids_whitelist_merkle_root_low: u128 = (*data.at(2))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let collateral_ids_whitelist_merkle_root_high: u128 = (*data.at(3))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let collateral_low: u128 = (*data.at(4)).try_into().expect('decode_serde_proposal');
+            let collateral_high: u128 = (*data.at(5)).try_into().expect('decode_serde_proposal');
+            let credit_address: ContractAddress = (*data.at(8))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let credit_low: u128 = (*data.at(9)).try_into().expect('decode_serde_proposal');
+            let credit_high: u128 = (*data.at(10)).try_into().expect('decode_serde_proposal');
+            let credit_limit_low: u128 = (*data.at(11)).try_into().expect('decode_serde_proposal');
+            let credit_limit_high: u128 = (*data.at(12)).try_into().expect('decode_serde_proposal');
+            let fixed_interest_low: u128 = (*data.at(13))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let fixed_interest_high: u128 = (*data.at(14))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let accruing_interest_APR: u32 = (*data.at(15))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let duration: u64 = (*data.at(16)).try_into().expect('decode_serde_proposal');
+            let expiration: u64 = (*data.at(17)).try_into().expect('decode_serde_proposal');
+            let allowed_acceptor: ContractAddress = (*data.at(18))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let proposer: ContractAddress = (*data.at(19))
+                .try_into()
+                .expect('decode_serde_proposal');
+            let loan_contract: ContractAddress = (*data.at(25))
+                .try_into()
+                .expect('decode_serde_proposal');
 
             Proposal {
                 collateral_category,
@@ -321,12 +341,15 @@ pub mod SimpleLoanListProposal {
             self: @ContractState, data: Span<felt252>
         ) -> ProposalValues {
             // Extract the length of the merkle_inclusion_proof
-            let proof_len: usize = (*data.at(1)).try_into().expect('failed to convert length') * 2;
+            let proof_len: usize = (*data.at(1)).try_into().expect('decode_serde_proposal_values')
+                * 2;
             let mut merkle_inclusion_proof: Array<u256> = array![];
             let mut i = 2;
             while i <= proof_len {
-                let low: u128 = (*data.at(i)).try_into().unwrap();
-                let high: u128 = (*data.at(i + 1)).try_into().unwrap();
+                let low: u128 = (*data.at(i)).try_into().expect('decode_serde_proposal_values');
+                let high: u128 = (*data.at(i + 1))
+                    .try_into()
+                    .expect('decode_serde_proposal_values');
                 merkle_inclusion_proof.append(u256 { low, high });
                 i += 2;
             };
