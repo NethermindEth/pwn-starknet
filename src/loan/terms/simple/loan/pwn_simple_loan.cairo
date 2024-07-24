@@ -15,10 +15,6 @@
 //! # Components
 //! 
 //! - `OwnableComponent`: Ensures ownership control for sensitive operations.
-//! - `Storage`: Defines the storage structure for loans, extension proposals, and various 
-//!   dispatchers for configuration and token management.
-//! - `Event`: Defines events emitted by the contract, including loan creation, repayment, 
-//!   extension, and claiming.
 //! - `Err`: Contains error handling functions for invalid operations and input data.
 //! 
 //! # Constants

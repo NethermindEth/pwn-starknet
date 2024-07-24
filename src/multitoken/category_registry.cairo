@@ -26,10 +26,6 @@ pub trait IMultitokenCategoryRegistry<TState> {
 //! - `OwnableComponent`: Ensures that only the owner can modify category registrations, providing 
 //!   access control for critical operations.
 //! - `SRC5Component`: Integrates with the SRC5 interface standard for introspection capabilities.
-//! - `Storage`: Defines the storage structure for the module, including mappings for registered 
-//!   categories and ownership data.
-//! - `Event`: Defines events emitted by the contract, such as category registration and 
-//!   unregistration.
 //! - `Err`: Contains error handling functions for invalid operations, such as attempting to use 
 //!   reserved category values.
 //! 

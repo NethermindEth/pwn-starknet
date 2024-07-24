@@ -45,9 +45,6 @@ pub trait ISimpleLoanDutchAuctionProposal<TState> {
 //! 
 //! - `SimpleLoanProposalComponent`: A reusable component that provides the base functionality 
 //!   for loan proposals.
-//! - `Storage`: Defines the storage structure for the module, including the simple loan proposal 
-//!   substorage.
-//! - `Event`: Defines events emitted by the contract, such as proposal creation and acceptance.
 //! - `Err`: Contains error handling functions for various invalid operations and input data.
 //! 
 //! # Constants

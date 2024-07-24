@@ -32,9 +32,6 @@ pub trait IPwnLoadMetadataProvider<TState> {
 //!
 //! - `ERC721Component`: A component that provides ERC721 standard functionalities.
 //! - `SRC5Component`: A component that ensures SRC5 compliance for introspection capabilities.
-//! - `Storage`: Defines the storage layout for the module, including mappings for loan contracts
-//!   and token details.
-//! - `Event`: Defines the events emitted by the contract, such as `LoanMinted` and `LoanBurned`.
 //! - `Err`: Contains error handling functions for various invalid operations and conditions.
 //!
 //! # Constants

@@ -40,8 +40,6 @@ pub trait ISimpleLoanAcceptProposal<TState> {
 //! 
 //! - `SimpleLoanProposalComponent`: The core component providing base functionality for loan 
 //!   proposals.
-//! - `Storage`: Defines the storage structure for the module, managing hub, revoked nonces, 
-//!   configurations, proposal states, and credit usage.
 //! - `Err`: Contains error handling functions for various invalid operations and input data.
 //! 
 //! # Constants
