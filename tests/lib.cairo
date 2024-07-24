@@ -24,4 +24,5 @@ mod integration {
 
 pub mod utils {
     pub mod simple_loan_proposal_component_mock;
+    pub mod token;
 }

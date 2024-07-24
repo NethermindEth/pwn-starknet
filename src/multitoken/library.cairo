@@ -331,7 +331,6 @@ pub mod MultiToken {
         }
 
         #[test]
-        #[ignore]
         fn test_check_category_should_return_true_when_category_not_registered_when_check_via_src5_returns_true(
             category: u8,
         ) {
@@ -349,8 +348,8 @@ pub mod MultiToken {
             let category_not_registered = 255;
             mock_call(registry, selector!("registered_category_value"), category_not_registered, 1);
 
-            mock_call(token, selector!("supports_interface"), super::ERC1155_INTERFACE_ID, 1);
-            mock_call(token, selector!("supports_interface"), super::ERC721_INTERFACE_ID, 1);
+            mock_call(token, selector!("supports_interface"), super::ERC1155_INTERFACE_ID, 2);
+            mock_call(token, selector!("supports_interface"), super::ERC721_INTERFACE_ID, 2);
 
             assert_eq!(
                 super::_check_category(asset, registry), super::_check_category_via_rsc5(asset)
