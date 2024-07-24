@@ -56,6 +56,8 @@ pub mod mocks {
     pub mod erc1155;
     pub mod erc20;
     pub mod erc721;
+    pub mod pool_adapter;
+    pub mod pwn_vault;
 }
 
 pub mod multitoken {
