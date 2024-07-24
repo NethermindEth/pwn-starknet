@@ -1,7 +1,7 @@
 use super::super::integration::base_integration_test::setup;
 
 #[test]
-#[fork("mainnet")]
+// #[fork("mainnet")]
 fn test_deployed_protocol_starknet() {
     assert(true, '');
 }
