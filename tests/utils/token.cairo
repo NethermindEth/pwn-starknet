@@ -1,10 +1,10 @@
-use starknet::ContractAddress;
-use snforge_std::{store, map_entry_address};
 use openzeppelin::token::{
     erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
     erc721::interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait},
     erc1155::interface::{ERC1155ABIDispatcher, ERC1155ABIDispatcherTrait}
 };
+use snforge_std::{store, map_entry_address};
+use starknet::ContractAddress;
 
 pub(crate) fn erc20_mint(erc20: ContractAddress, receiver: ContractAddress, amount: u256) {
     let current_balance = ERC20ABIDispatcher { contract_address: erc20 }.balance_of(receiver);
@@ -58,10 +58,14 @@ pub(crate) fn erc1155_mint(
     );
 }
 
-pub fn erc20_approve(erc20: ContractAddress, owner: ContractAddress, spender: ContractAddress, amount: u256) {
+pub fn erc20_approve(
+    erc20: ContractAddress, owner: ContractAddress, spender: ContractAddress, amount: u256
+) {
     store(
         erc20,
-        map_entry_address(selector!("ERC20_allowances"), array![owner.into(), spender.into()].span(),),
+        map_entry_address(
+            selector!("ERC20_allowances"), array![owner.into(), spender.into()].span(),
+        ),
         array![amount.try_into().unwrap()].span()
     );
 }
@@ -88,7 +92,9 @@ pub fn erc1155_approve(erc1155: ContractAddress, owner: ContractAddress, spender
 
     store(
         erc1155,
-        map_entry_address(selector!("ERC1155_operator_approvals"), array![owner.into(), spender.into()].span(),),
+        map_entry_address(
+            selector!("ERC1155_operator_approvals"), array![owner.into(), spender.into()].span(),
+        ),
         array![true.try_into().unwrap()].span()
     );
 }

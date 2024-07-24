@@ -6,18 +6,20 @@ use openzeppelin::token::erc721::interface::{
     ERC721ABI, ERC721ABIDispatcher, ERC721ABIDispatcherTrait
 };
 use pwn::mocks::{
-    erc20::ERC20Mock, erc721::ERC721Mock, erc1155::ERC1155Mock,
-    account::AccountUpgradeable
+    erc20::ERC20Mock, erc721::ERC721Mock, erc1155::ERC1155Mock, account::AccountUpgradeable
 };
 use pwn::multitoken::{
     category_registry::MultiTokenCategoryRegistry, library::{MultiToken, MultiToken::AssetTrait}
 };
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
-    cheat_caller_address, CheatSpan, mock_call, start_mock_call, stop_mock_call, cheat_caller_address_global, stop_cheat_caller_address_global,
+    cheat_caller_address, CheatSpan, mock_call, start_mock_call, stop_mock_call,
+    cheat_caller_address_global, stop_cheat_caller_address_global,
 };
 use starknet::ContractAddress;
-use super::super::utils::token::{erc20_mint, erc721_mint, erc1155_mint, erc20_approve, erc721_approve, erc1155_approve};
+use super::super::utils::token::{
+    erc20_mint, erc721_mint, erc1155_mint, erc20_approve, erc721_approve, erc1155_approve
+};
 
 fn ALICE() -> ContractAddress {
     starknet::contract_address_const::<'alice'>()
@@ -189,10 +191,10 @@ fn test_should_fail_when_erc20_when_source_is_not_this_when_call_to_non_contract
 fn test_should_call_transfer_from_when_erc721() {
     let tokens = deploy_tokens();
     let this_address = starknet::get_contract_address();
-    let token_id : u256 = 1;
+    let token_id: u256 = 1;
     erc721_mint(tokens.erc721.contract_address, ALICE(), token_id);
     assert_eq!(tokens.erc721.owner_of(token_id), ALICE());
-    
+
     let asset = MultiToken::ERC721(tokens.erc721.contract_address, token_id.try_into().unwrap());
 
     erc721_approve(tokens.erc721.contract_address, this_address, token_id);
@@ -206,8 +208,8 @@ fn test_should_call_safe_transfer_from_when_erc721() {
     let (alice, bob) = deploy_accounts();
     let tokens = deploy_tokens();
     let this_address = starknet::get_contract_address();
-    let token_id : u256 = 1;
-    
+    let token_id: u256 = 1;
+
     erc721_mint(tokens.erc721.contract_address, alice, token_id);
     assert_eq!(tokens.erc721.owner_of(token_id), alice);
 
@@ -308,9 +310,7 @@ fn test_erc20_transfer_asset_from_should_succeed_when_approved() {
     let this_address = starknet::get_contract_address();
     erc20_mint(tokens.erc20.contract_address, ALICE(), 1000);
 
-    assert_eq!(
-        tokens.erc20.balance_of(ALICE()), 1000
-    );
+    assert_eq!(tokens.erc20.balance_of(ALICE()), 1000);
     assert_eq!(tokens.erc20.balance_of(BOB()), 0);
 
     let asset = MultiToken::ERC20(tokens.erc20.contract_address, 1000);
@@ -371,9 +371,7 @@ fn test_erc1155_transfer_asset_from_should_succeed_when_approved() {
     let this_address = starknet::get_contract_address();
     erc1155_mint(tokens.erc1155.contract_address, alice, 1, 10);
 
-    assert_eq!(
-        tokens.erc1155.balance_of(alice, 1), 10
-    );
+    assert_eq!(tokens.erc1155.balance_of(alice, 1), 10);
     assert_eq!(tokens.erc1155.balance_of(bob, 1), 0);
 
     let asset = MultiToken::ERC1155(tokens.erc1155.contract_address, 1, Option::Some(5));
@@ -383,9 +381,7 @@ fn test_erc1155_transfer_asset_from_should_succeed_when_approved() {
     stop_cheat_caller_address_global();
 
     asset.transfer_asset_from(alice, bob, false);
-    assert_eq!(
-        tokens.erc1155.balance_of(alice, 1), 5
-    );
+    assert_eq!(tokens.erc1155.balance_of(alice, 1), 5);
     assert_eq!(tokens.erc1155.balance_of(bob, 1), 5);
 }
 
