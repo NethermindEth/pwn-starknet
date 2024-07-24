@@ -159,13 +159,14 @@ pub mod PwnSimpleLoan {
         revoked_nonce: ContractAddress,
         category_registry: ContractAddress,
     ) {
-        self.initializer(
-            hub: hub,
-            loan_token: loan_token,
-            config: config,
-            revoked_nonce: revoked_nonce,
-            category_registry: category_registry
-        );
+        self
+            .initializer(
+                hub: hub,
+                loan_token: loan_token,
+                config: config,
+                revoked_nonce: revoked_nonce,
+                category_registry: category_registry
+            );
     }
 
     #[abi(embed_v0)]
@@ -583,7 +584,9 @@ pub mod PwnSimpleLoan {
             let hub_dispatcher = IPwnHubDispatcher { contract_address: hub };
             let loan_token_dispatcher = IPwnLoanDispatcher { contract_address: loan_token };
             let config_dispatcher = IPwnConfigDispatcher { contract_address: config };
-            let revoked_nonce_dispatcher = IRevokedNonceDispatcher { contract_address: revoked_nonce };
+            let revoked_nonce_dispatcher = IRevokedNonceDispatcher {
+                contract_address: revoked_nonce
+            };
             let category_registry_dispatcher = IMultitokenCategoryRegistryDispatcher {
                 contract_address: category_registry
             };
