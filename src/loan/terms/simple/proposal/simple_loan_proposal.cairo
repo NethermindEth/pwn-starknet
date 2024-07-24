@@ -1,7 +1,7 @@
+use alexandria_math::keccak256::keccak256;
 use pwn::loan::lib::signature_checker::Signature;
 use pwn::loan::terms::simple::loan::types::Terms;
 use starknet::{ContractAddress, ClassHash};
-
 
 #[starknet::interface]
 pub trait ISimpleLoanProposal<TState> {
@@ -23,7 +23,33 @@ pub trait ISimpleLoanAcceptProposal<TState> {
     ) -> (felt252, Terms);
 }
 
-
+//! The `SimpleLoanProposalComponent` module is a component that provides essential functionality for creating, 
+//! managing, and accepting loan proposals . It is shared between the four
+//! proposal types.
+//! This module is designed to facilitate a secure and efficient process for handling loan proposals 
+//! through robust verification and hashing mechanisms.
+//! 
+//! # Features
+//! 
+//! - **Nonce Management**: Ability to revoke nonces to prevent replay attacks.
+//! - **Multiproposal Hashing**: Compute unique hashes for multiproposals to ensure data integrity.
+//! - **Proposal Acceptance**: Securely accept loan proposals with detailed verification processes 
+//!   including signature checks, inclusion proof validation, and nonce management.
+//! 
+//! # Components
+//! 
+//! - `SimpleLoanProposalComponent`: The core component providing base functionality for loan 
+//!   proposals.
+//! - `Err`: Contains error handling functions for various invalid operations and input data.
+//! 
+//! # Constants
+//! 
+//! - `MULTIPROPOSAL_TYPEHASH`: The type hash for multiproposals.
+//! - `BASE_DOMAIN_SEPARATOR`: The base domain separator used in hashing.
+//! - `MULTIPROPOSAL_DOMAIN_SEPARATOR`: The domain separator for multiproposals.
+//! 
+//! This module is designed to provide a comprehensive framework for managing loan proposals, 
+//! integrating seamlessly with other components to ensure secure and efficient loan transactions.
 #[starknet::component]
 pub mod SimpleLoanProposalComponent {
     use core::poseidon::poseidon_hash_span;
@@ -51,23 +77,40 @@ pub mod SimpleLoanProposalComponent {
         merkle_root: u256
     }
 
+    /// `ProposalBase` represents the fundamental details of a loan proposal, 
+    /// encapsulating the necessary information for processing and verification.
     #[derive(Drop)]
     pub struct ProposalBase {
+        /// The address of the collateral.
         pub collateral_address: ContractAddress,
+        /// The identifier of the collateral.
         pub collateral_id: felt252,
+        /// Flag indicating whether to check the collateral's state fingerprint.
         pub check_collateral_state_fingerprint: bool,
+        /// The state fingerprint of the collateral.
         pub collateral_state_fingerprint: felt252,
+        /// The amount of credit involved in the proposal.
         pub credit_amount: u256,
+        /// The available credit limit for the proposal.
         pub available_credit_limit: u256,
+        /// The expiration timestamp of the proposal.
         pub expiration: u64,
+        /// The address of the allowed acceptor for the proposal.
         pub allowed_acceptor: ContractAddress,
+        /// The address of the proposer.
         pub proposer: ContractAddress,
+        /// Boolean flag indicating whether the proposal is an offer.
         pub is_offer: bool,
+        /// The ID of the refinancing loan, if applicable.
         pub refinancing_loan_id: felt252,
+        /// The nonce space associated with the proposal.
         pub nonce_space: felt252,
+        /// The nonce value for the proposal.
         pub nonce: felt252,
+        /// The address of the loan contract.
         pub loan_contract: ContractAddress,
     }
+
 
     #[storage]
     struct Storage {
@@ -124,6 +167,11 @@ pub mod SimpleLoanProposalComponent {
     impl SimpleLoanProposal<
         TContractState, +HasComponent<TContractState>,
     > of super::ISimpleLoanProposal<ComponentState<TContractState>> {
+        /// Revokes a nonce to prevent its reuse, ensuring the uniqueness of operations.
+        /// 
+        /// # Parameters
+        /// - `nonce_space`: The space in which the nonce is used.
+        /// - `nonce`: The nonce value to be revoked.
         fn revoke_nonce(
             ref self: ComponentState<TContractState>, nonce_space: felt252, nonce: felt252
         ) {
@@ -135,6 +183,13 @@ pub mod SimpleLoanProposalComponent {
                 );
         }
 
+        /// Computes the hash for a multiproposal using the Poseidon hash function.
+        /// 
+        /// # Parameters
+        /// - `multiproposal`: The multiproposal data for which the hash is to be computed.
+        /// 
+        /// # Returns
+        /// The computed hash value as `felt252`.
         fn get_multiproposal_hash(
             self: @ComponentState<TContractState>, multiproposal: Multiproposal
         ) -> felt252 {

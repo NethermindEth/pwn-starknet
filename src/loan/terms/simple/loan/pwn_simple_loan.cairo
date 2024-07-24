@@ -1,12 +1,46 @@
+//! The `PwnSimpleLoan` module provides a streamlined loan management system within the Starknet 
+//! ecosystem. This module integrates multiple components to offer a comprehensive solution for 
+//! creating, managing, and settling loans.
+//! 
+//! # Features
+//! 
+//! - **Loan Creation**: Allows creation of loans with specific terms and lender specifications.
+//! - **Loan Repayment**: Facilitates the repayment of loans, including handling of interest and 
+//!   collateral management.
+//! - **Loan Claiming**: Enables the claiming of loans, whether repaid or defaulted, and handles 
+//!   the transfer of collateral or repayment assets.
+//! - **Loan Extensions**: Supports the proposal and acceptance of loan extensions, with detailed 
+//!   validation and error handling.
+//! 
+//! # Components
+//! 
+//! - `OwnableComponent`: Ensures ownership control for sensitive operations.
+//! - `Err`: Contains error handling functions for invalid operations and input data.
+//! 
+//! # Constants
+//! 
+//! - `ACCRUING_INTEREST_APR_DECIMALS`: Sets the decimals for accruing interest APR calculation.
+//! - `MIN_LOAN_DURATION`: The minimum duration for a loan in seconds.
+//! - `MAX_ACCRUING_INTEREST_APR`: The maximum allowable APR for accruing interest.
+//! - `MINUTE`: A constant representing one minute in seconds.
+//! - `MIN_EXTENSION_DURATION`: The minimum duration for a loan extension in seconds.
+//! - `MAX_EXTENSION_DURATION`: The maximum duration for a loan extension in seconds.
+//! - `EXTENSION_PROPOSAL_TYPEHASH`: The type hash for extension proposals.
+//! - `BASE_DOMAIN_SEPARATOR`: The base domain separator for hashing purposes.
+//! 
+//! This module is designed to provide a secure and flexible framework for managing simple loans, 
+//! integrating seamlessly with other components.
 #[starknet::contract]
 pub mod PwnSimpleLoan {
     use core::poseidon::poseidon_hash_span;
     use openzeppelin::account::interface::{ISRC6Dispatcher, ISRC6DispatcherTrait};
 
     use openzeppelin::introspection::src5::SRC5Component;
-    use openzeppelin::token::erc1155::{interface, erc1155_receiver::ERC1155ReceiverComponent};
+    use openzeppelin::token::erc1155::{
+        interface::IERC1155_RECEIVER_ID, erc1155_receiver::ERC1155ReceiverComponent
+    };
     use openzeppelin::token::erc721::{
-        erc721_receiver::{ERC721ReceiverComponent}, interface::IERC721_ID
+        erc721_receiver::{ERC721ReceiverComponent}, interface::IERC721_RECEIVER_ID
     };
     use openzeppelin::token::erc721::{interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait}};
     use pwn::ContractAddressDefault;
@@ -157,30 +191,31 @@ pub mod PwnSimpleLoan {
         revoked_nonce: ContractAddress,
         category_registry: ContractAddress,
     ) {
-        let hub_dispatcher = IPwnHubDispatcher { contract_address: hub };
-        let loan_token_dispatcher = IPwnLoanDispatcher { contract_address: loan_token };
-        let config_dispatcher = IPwnConfigDispatcher { contract_address: config };
-        let revoked_nonce_dispatcher = IRevokedNonceDispatcher { contract_address: revoked_nonce };
-        let category_registry_dispatcher = IMultiTokenCategoryRegistryDispatcher {
-            contract_address: category_registry
-        };
-        self.hub.write(hub_dispatcher);
-        self.loan_token.write(loan_token_dispatcher);
-        self.config.write(config_dispatcher);
-        self.revoked_nonce.write(revoked_nonce_dispatcher);
-        self.category_registry.write(category_registry_dispatcher);
-        let hash_elements: Array<felt252> = array![
-            BASE_DOMAIN_SEPARATOR, starknet::get_contract_address().into()
-        ];
-        let domain_separator = poseidon_hash_span(hash_elements.span());
-        self.domain_separator.write(domain_separator);
-        self.src5.register_interface(interface::IERC1155_RECEIVER_ID);
+        self.initializer(hub, loan_token, config, revoked_nonce, category_registry);
     }
-
-    impl IPwnVault = PwnVaultComponent::InternalImpl<ContractState>;
 
     #[abi(embed_v0)]
     impl PwnSimpleLoanImpl of IPwnSimpleLoan<ContractState> {
+        /// Creates a new loan with specified terms and lender specifications.
+        ///
+        /// # Arguments
+        ///
+        /// - `proposal_spec`: Specifications of the loan proposal.
+        /// - `lender_spec`: Specifications provided by the lender.
+        /// - `caller_spec`: Specifications related to the caller, such as nonce and refinancing.
+        /// - `extra`: Additional data for the loan.
+        ///
+        /// # Returns
+        ///
+        /// - The unique identifier of the created loan as `felt252`.
+        ///
+        /// # Requirements
+        ///
+        /// - The proposal contract must have the `LOAN_PROPOSAL` tag.
+        /// - The nonce must be revoked if specified.
+        /// - If refinancing, the existing loan must be repayable.
+        /// - Loan terms must meet duration and interest rate constraints.
+        /// - Validity of assets must be checked.
         fn create_loan(
             ref self: ContractState,
             proposal_spec: ProposalSpec,
@@ -282,6 +317,25 @@ pub mod PwnSimpleLoan {
             loan_id
         }
 
+        /// Repays an existing loan.
+        ///
+        /// # Arguments
+        ///
+        /// - `loan_id`: The unique identifier of the loan to be repaid.
+        /// - `permit_data`: Data required for the repayment process.
+        ///
+        /// # Requirements
+        ///
+        /// - The loan must be in a state that allows repayment.
+        /// - The caller must provide valid permit data.
+        ///
+        /// # Actions
+        ///
+        /// - Checks if the loan can be repaid.
+        /// - Updates the loan status to repaid.
+        /// - Pulls the repayment amount from the caller.
+        /// - Pushes the collateral back to the borrower.
+        /// - Attempts to claim the repaid loan for the loan token owner.
         fn repay_loan(ref self: ContractState, loan_id: felt252, permit_data: felt252) {
             let caller = starknet::get_caller_address();
             let loan = self.loans.read(loan_id);
@@ -299,17 +353,33 @@ pub mod PwnSimpleLoan {
                     ERC721ABIDispatcher {
                         contract_address: self.loan_token.read().contract_address
                     }
-                        .owner_of(loan_id.try_into().unwrap())
+                        .owner_of(loan_id.try_into().expect('repay_loan'))
                 );
         }
 
+        /// Claims a loan, transferring collateral or repayment assets based on loan status.
+        ///
+        /// # Arguments
+        ///
+        /// - `loan_id`: The unique identifier of the loan to be claimed.
+        ///
+        /// # Requirements
+        ///
+        /// - The caller must be the loan token holder.
+        /// - The loan must exist.
+        /// - The loan must be either repaid, defaulted, or running and reached the default timestamp.
+        ///
+        /// # Actions
+        ///
+        /// - Validates the caller as the loan token holder.
+        /// - Settles the loan claim based on its status.
         fn claim_loan(ref self: ContractState, loan_id: felt252) {
             let loan = self.loans.read(loan_id);
             let caller = starknet::get_caller_address();
             let loan_token_owner = ERC721ABIDispatcher {
                 contract_address: self.loan_token.read().contract_address
             }
-                .owner_of(loan_id.try_into().unwrap());
+                .owner_of(loan_id.try_into().expect('claim_loan'));
             if (caller != loan_token_owner) {
                 Err::CALLER_NOT_LOAN_TOKEN_HOLDER();
             }
@@ -326,6 +396,25 @@ pub mod PwnSimpleLoan {
             }
         }
 
+        /// Attempts to claim a repaid loan for the loan owner.
+        ///
+        /// # Arguments
+        ///
+        /// - `loan_id`: The unique identifier of the loan to be claimed.
+        /// - `credit_amount`: The amount of credit to be transferred.
+        /// - `loan_owner`: The address of the loan owner.
+        ///
+        /// # Requirements
+        ///
+        /// - The loan must be in a repaid status (status = 3).
+        /// - The original lender must match the loan owner.
+        ///
+        /// # Actions
+        ///
+        /// - Deletes the loan from storage.
+        /// - Emits a `LoanClaimed` event.
+        /// - Transfers the repayment credit to the loan owner or supplies it to a pool based on the
+        ///   destination of funds.
         fn try_claim_repaid_loan(
             ref self: ContractState,
             loan_id: felt252,
@@ -366,6 +455,21 @@ pub mod PwnSimpleLoan {
             }
         }
 
+        /// Makes an extension proposal for a loan.
+        ///
+        /// # Arguments
+        ///
+        /// - `extension`: The extension proposal details.
+        ///
+        /// # Requirements
+        ///
+        /// - The caller must be the proposer of the extension.
+        ///
+        /// # Actions
+        ///
+        /// - Validates the caller as the proposer.
+        /// - Computes the extension hash and marks the proposal as made.
+        /// - Emits an `ExtensionProposalMade` event.
         fn make_extension_proposal(ref self: ContractState, extension: ExtensionProposal) {
             let caller = starknet::get_caller_address();
 
@@ -378,6 +482,27 @@ pub mod PwnSimpleLoan {
             self.emit(ExtensionProposalMade { extension_hash });
         }
 
+        /// Extends a loan based on an extension proposal and a valid signature.
+        ///
+        /// # Arguments
+        ///
+        /// - `extension`: The extension proposal details.
+        /// - `signature`: The signature for validating the extension.
+        ///
+        /// # Requirements
+        ///
+        /// - The loan must exist and not be repaid.
+        /// - The extension proposal must be valid and not expired.
+        /// - The nonce must be usable.
+        /// - The caller must be either the loan owner or borrower, and the proposer must be the other party.
+        /// - The extension duration must be within the allowed range.
+        ///
+        /// # Actions
+        ///
+        /// - Validates the extension proposal, signature, and nonce.
+        /// - Updates the loan's default timestamp with the extension duration.
+        /// - Emits a `LoanExtended` event.
+        /// - If compensation is provided, it transfers the compensation to the loan owner.
         fn extend_loan(
             ref self: ContractState,
             extension: ExtensionProposal,
@@ -427,7 +552,7 @@ pub mod PwnSimpleLoan {
             let loan_owner = ERC721ABIDispatcher {
                 contract_address: self.loan_token.read().contract_address
             }
-                .owner_of(extension.loan_id.try_into().unwrap());
+                .owner_of(extension.loan_id.try_into().expect('extend_loan'));
 
             if (caller == loan_owner) {
                 if (extension.proposer != loan.borrower) {
@@ -491,13 +616,35 @@ pub mod PwnSimpleLoan {
             self.loans.write(extension.loan_id, loan);
         }
 
+        /// Computes the hash of the lender's specifications.
+        ///
+        /// # Arguments
+        ///
+        /// - `calladata`: The lender's specifications.
+        ///
+        /// # Returns
+        ///
+        /// - The computed hash as `felt252`.
         fn get_lender_spec_hash(self: @ContractState, calladata: LenderSpec) -> felt252 {
             let hash_elements: Array<felt252> = array![
-                calladata.source_of_funds.try_into().unwrap()
+                calladata.source_of_funds.try_into().expect('get_lender_spec_hash')
             ];
             poseidon_hash_span(hash_elements.span())
         }
 
+        /// Calculates the repayment amount for a specific loan.
+        ///
+        /// # Arguments
+        ///
+        /// - `loan_id`: The unique identifier of the loan.
+        ///
+        /// # Returns
+        ///
+        /// - The total repayment amount as `u256`.
+        ///
+        /// # Requirements
+        ///
+        /// - The loan must exist.
         fn get_loan_repayment_amount(self: @ContractState, loan_id: felt252) -> u256 {
             let loan = self.loans.read(loan_id);
 
@@ -508,9 +655,19 @@ pub mod PwnSimpleLoan {
             loan.principal_amount + self._loan_accrued_interest(loan)
         }
 
+        /// Computes the hash of an extension proposal.
+        ///
+        /// # Arguments
+        ///
+        /// - `extension`: The extension proposal details.
+        ///
+        /// # Returns
+        ///
+        /// - The computed hash as `felt252`.
         fn get_extension_hash(self: @ContractState, extension: ExtensionProposal) -> felt252 {
             let hash_elements: Array<felt252> = array![
-                self.domain_separator.read(), starknet::get_contract_address().try_into().unwrap()
+                self.domain_separator.read(),
+                starknet::get_contract_address().try_into().expect('get_extension_hash')
             ];
             let domain_seperator_hash = poseidon_hash_span(hash_elements.span());
 
@@ -519,22 +676,35 @@ pub mod PwnSimpleLoan {
                 domain_seperator_hash,
                 EXTENSION_PROPOSAL_TYPEHASH,
                 extension.loan_id,
-                extension.compensation_address.try_into().unwrap(),
-                extension.compensation_amount.try_into().unwrap(),
+                extension.compensation_address.try_into().expect('get_extension_hash'),
+                extension.compensation_amount.try_into().expect('get_extension_hash'),
                 extension.duration.into(),
                 extension.expiration.into(),
-                extension.proposer.try_into().unwrap(),
+                extension.proposer.try_into().expect('get_extension_hash'),
                 extension.nonce_space,
                 extension.nonce
             ];
             poseidon_hash_span(hash_elements.span())
         }
 
+        /// Retrieves the details of a specific loan.
+        ///
+        /// # Arguments
+        ///
+        /// - `loan_id`: The unique identifier of the loan.
+        ///
+        /// # Returns
+        ///
+        /// - The loan details as `GetLoanReturnValue`.
+        ///
+        /// # Requirements
+        ///
+        /// - The loan must exist.
         fn get_loan(self: @ContractState, loan_id: felt252) -> GetLoanReturnValue {
             let loan = self.loans.read(loan_id);
             let loan_owner: ContractAddress = if (loan.status != 0) {
                 ERC721ABIDispatcher { contract_address: self.loan_token.read().contract_address }
-                    .owner_of(loan_id.try_into().unwrap())
+                    .owner_of(loan_id.try_into().expect('get_loan'))
             } else {
                 Default::default()
             };
@@ -555,15 +725,42 @@ pub mod PwnSimpleLoan {
             loan_return_value
         }
 
+        /// Checks if a given asset is valid.
+        ///
+        /// # Arguments
+        ///
+        /// - `asset`: The asset to check.
+        ///
+        /// # Returns
+        ///
+        /// - `true` if the asset is valid, `false` otherwise.
         fn get_is_valid_asset(self: @ContractState, asset: Asset) -> bool {
             asset.is_valid(Option::Some(self.category_registry.read().contract_address))
         }
 
+        /// Retrieves the metadata URI for the loan contract.
+        ///
+        /// # Returns
+        ///
+        /// - The metadata URI as a `ByteArray`.
         fn get_loan_metadata_uri(self: @ContractState) -> ByteArray {
             let this_contract = starknet::get_contract_address();
             self.config.read().loan_metadata_uri(this_contract)
         }
 
+        /// Computes the state fingerprint for a loan token.
+        ///
+        /// # Arguments
+        ///
+        /// - `token_id`: The unique identifier of the loan token.
+        ///
+        /// # Returns
+        ///
+        /// - The computed state fingerprint as `felt252`.
+        ///
+        /// # Requirements
+        ///
+        /// - The loan must exist.
         fn get_state_fingerprint(self: @ContractState, token_id: felt252) -> felt252 {
             let loan = self.loans.read(token_id);
             if (loan.status == 0) {
@@ -583,6 +780,37 @@ pub mod PwnSimpleLoan {
 
     #[generate_trait]
     impl Private of PrivateTrait {
+        fn initializer(
+            ref self: ContractState,
+            hub: ContractAddress,
+            loan_token: ContractAddress,
+            config: ContractAddress,
+            revoked_nonce: ContractAddress,
+            category_registry: ContractAddress
+        ) {
+            let hub_dispatcher = IPwnHubDispatcher { contract_address: hub };
+            let loan_token_dispatcher = IPwnLoanDispatcher { contract_address: loan_token };
+            let config_dispatcher = IPwnConfigDispatcher { contract_address: config };
+            let revoked_nonce_dispatcher = IRevokedNonceDispatcher {
+                contract_address: revoked_nonce
+            };
+            let category_registry_dispatcher = IMultiTokenCategoryRegistryDispatcher {
+                contract_address: category_registry
+            };
+            self.hub.write(hub_dispatcher);
+            self.loan_token.write(loan_token_dispatcher);
+            self.config.write(config_dispatcher);
+            self.revoked_nonce.write(revoked_nonce_dispatcher);
+            self.category_registry.write(category_registry_dispatcher);
+            let hash_elements: Array<felt252> = array![
+                BASE_DOMAIN_SEPARATOR, starknet::get_contract_address().into()
+            ];
+            let domain_separator = poseidon_hash_span(hash_elements.span());
+            self.domain_separator.write(domain_separator);
+            self.src5.register_interface(IERC1155_RECEIVER_ID);
+            self.src5.register_interface(IERC721_RECEIVER_ID);
+        }
+
         fn _check_permit(ref self: ContractState, credit_address: ContractAddress, permit: Permit) {
             let caller = starknet::get_caller_address();
             if (permit.asset != Default::default()) {
@@ -655,7 +883,7 @@ pub mod PwnSimpleLoan {
             let mut credit_helper = loan_terms.credit;
 
             if (fee_amount > 0) {
-                credit_helper.amount = fee_amount.try_into().unwrap();
+                credit_helper.amount = fee_amount.try_into().expect('_settle_new_loan');
                 self
                     .vault
                     ._push_from(
@@ -677,7 +905,8 @@ pub mod PwnSimpleLoan {
             let erc721_dispatcher = ERC721ABIDispatcher {
                 contract_address: self.loan_token.read().contract_address
             };
-            let loan_owner = erc721_dispatcher.owner_of(refinancing_loan_id.try_into().unwrap());
+            let loan_owner = erc721_dispatcher
+                .owner_of(refinancing_loan_id.try_into().expect('_settle_loan_refinance'));
             let repayment_amount = self.get_loan_repayment_amount(refinancing_loan_id);
             let (fee_amount, new_loan_amount) = fee_calculator::calculate_fee_amount(
                 self.config.read().get_fee(), loan_terms.credit.amount

@@ -208,12 +208,20 @@ pub fn setup() -> Setup {
 
     hub.set_tag(proposal_simple_address, pwn_hub_tags::LOAN_PROPOSAL, true);
     hub.set_tag(proposal_simple_address, pwn_hub_tags::ACTIVE_LOAN, true);
+    hub.set_tag(proposal_simple_address, pwn_hub_tags::NONCE_MANAGER, true);
+
     hub.set_tag(proposal_fungible_address, pwn_hub_tags::LOAN_PROPOSAL, true);
     hub.set_tag(proposal_fungible_address, pwn_hub_tags::ACTIVE_LOAN, true);
+    hub.set_tag(proposal_fungible_address, pwn_hub_tags::NONCE_MANAGER, true);
+
     hub.set_tag(proposal_dutch_address, pwn_hub_tags::LOAN_PROPOSAL, true);
     hub.set_tag(proposal_dutch_address, pwn_hub_tags::ACTIVE_LOAN, true);
+    hub.set_tag(proposal_dutch_address, pwn_hub_tags::NONCE_MANAGER, true);
+
     hub.set_tag(proposal_list_address, pwn_hub_tags::LOAN_PROPOSAL, true);
     hub.set_tag(proposal_list_address, pwn_hub_tags::ACTIVE_LOAN, true);
+    hub.set_tag(proposal_list_address, pwn_hub_tags::NONCE_MANAGER, true);
+
     hub.set_tag(loan_address, pwn_hub_tags::ACTIVE_LOAN, true);
 
     let simple_proposal = Proposal {
@@ -392,7 +400,7 @@ pub(crate) fn erc20_mint(erc20: ContractAddress, receiver: ContractAddress, amou
     );
 }
 
-fn erc721_mint(erc721: ContractAddress, receiver: ContractAddress, id: u256) {
+pub(crate) fn erc721_mint(erc721: ContractAddress, receiver: ContractAddress, id: u256) {
     let mut id_serialized: Array<felt252> = array![];
     id.serialize(ref id_serialized);
 

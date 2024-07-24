@@ -1,3 +1,20 @@
+/// Concatenates two `Span<felt252>` slices into a single `Array<felt252>`.
+///
+/// The output format includes the lengths of both slices at the beginning
+/// followed by the elements of each slice.
+///
+/// # Parameters
+///
+/// - `left`: The first `Span<felt252>` slice to concatenate.
+/// - `right`: The second `Span<felt252>` slice to concatenate.
+///
+/// # Returns
+///
+/// - An `Array<felt252>` containing the concatenated elements of `left` and `right` with their lengths.
+///
+/// # Panics
+///
+/// - Panics if the conversion of lengths to `felt252` fails.
 pub fn serde_concat(left: Span<felt252>, right: Span<felt252>) -> Array<felt252> {
     let left_len = left.len();
     let mut out: Array<felt252> = array![left_len.into()];
@@ -18,6 +35,22 @@ pub fn serde_concat(left: Span<felt252>, right: Span<felt252>) -> Array<felt252>
     out
 }
 
+/// Decomposes a single `Span<felt252>` into two separate spans.
+///
+/// The input format should start with the lengths of the two components
+/// followed by their respective elements.
+///
+/// # Parameters
+///
+/// - `input`: The `Span<felt252>` containing the concatenated elements and their lengths.
+///
+/// # Returns
+///
+/// - A tuple containing two `Span<felt252>` slices representing the original components.
+///
+/// # Panics
+///
+/// - Panics if the conversion of lengths from `felt252` fails.
 pub fn serde_decompose(input: Span<felt252>) -> (Span<felt252>, Span<felt252>) {
     let left_len: usize = (*input.at(0)).try_into().expect('serde failed to convert');
     let right_len: usize = (*input.at(left_len + 1)).try_into().expect('serde failed to convert');

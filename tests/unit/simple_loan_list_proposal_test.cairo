@@ -4,6 +4,7 @@ use core::starknet::SyscallResultTrait;
 use openzeppelin::account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
 use pwn::config::pwn_config::PwnConfig;
 use pwn::hub::{pwn_hub::{PwnHub, IPwnHubDispatcher, IPwnHubDispatcherTrait}, pwn_hub_tags};
+use pwn::loan::lib::merkle_proof::{proof, hash, hash_2};
 use pwn::loan::lib::serialization;
 use pwn::loan::lib::signature_checker::Signature;
 use pwn::loan::terms::simple::loan::types::Terms;
@@ -121,7 +122,7 @@ fn proposal(proposer: ContractAddress) -> Proposal {
 }
 
 fn proposal_values() -> ProposalValues {
-    let merkle_inclusion_proof: Span<felt252> = array![].span();
+    let merkle_inclusion_proof: Span<u256> = array![].span();
     ProposalValues { collateral_id: 32, merkle_inclusion_proof }
 }
 
@@ -377,29 +378,25 @@ fn test_should_accept_any_collateral_id_when_merkle_root_is_zero(coll_id: felt25
 
 #[test]
 fn test_should_pass_when_given_collateral_id_is_whitelisted(
-    mut coll_id_1: u128, mut coll_id_2: u128, mut coll_id_3: u128
+    mut coll_id_1: felt252, mut coll_id_2: felt252
 ) {
     let dsp = deploy();
 
     let mut _proposal = proposal(dsp.signer.contract_address);
     let mut _proposal_values = proposal_values();
 
-    let id_1_hash: u256 = poseidon_hash_span(array![coll_id_1.try_into().unwrap()].span()).into();
-    let id_2_hash: u256 = poseidon_hash_span(array![coll_id_2.try_into().unwrap()].span()).into();
+    let id_1_hash: u256 = hash(coll_id_1.into());
+    let id_2_hash: u256 = hash(coll_id_2.into());
 
-    let merkle_root: felt252 = if id_1_hash < id_2_hash {
-        poseidon_hash_span(
-            array![id_1_hash.try_into().unwrap(), id_2_hash.try_into().unwrap()].span()
-        )
+    let merkle_root: u256 = if id_1_hash < id_2_hash {
+        hash_2(id_1_hash, id_2_hash)
     } else {
-        poseidon_hash_span(
-            array![id_2_hash.try_into().unwrap(), id_1_hash.try_into().unwrap()].span()
-        )
+        hash_2(id_2_hash, id_1_hash)
     };
 
     _proposal.collateral_ids_whitelist_merkle_root = merkle_root;
-    _proposal_values.collateral_id = coll_id_3.try_into().unwrap();
-    _proposal_values.merkle_inclusion_proof = array![id_2_hash.try_into().unwrap()].span();
+    _proposal_values.collateral_id = coll_id_1;
+    _proposal_values.merkle_inclusion_proof = array![id_2_hash].span();
 
     store(
         dsp.hub.contract_address,
@@ -438,7 +435,7 @@ fn test_should_pass_when_given_collateral_id_is_whitelisted(
 }
 
 #[test]
-// #[should_panic()]
+#[should_panic()]
 // NOTE: this should panic, need to review once the merkle verify algo is implemented
 fn test_should_fail_when_given_collateral_id_is_not_whitelisted(
     mut coll_id_1: u128, mut coll_id_2: u128, mut coll_id_3: u128
@@ -461,17 +458,13 @@ fn test_should_fail_when_given_collateral_id_is_not_whitelisted(
         coll_id_3 = coll_id_2 + 1;
     }
 
-    let id_1_hash: u256 = poseidon_hash_span(array![coll_id_1.try_into().unwrap()].span()).into();
-    let id_2_hash: u256 = poseidon_hash_span(array![coll_id_2.try_into().unwrap()].span()).into();
+    let id_1_hash: u256 = hash(coll_id_1.into());
+    let id_2_hash: u256 = hash(coll_id_2.into());
 
-    let merkle_root: felt252 = if id_1_hash < id_2_hash {
-        poseidon_hash_span(
-            array![id_1_hash.try_into().unwrap(), id_2_hash.try_into().unwrap()].span()
-        )
+    let merkle_root: u256 = if id_1_hash < id_2_hash {
+        hash_2(id_1_hash, id_2_hash)
     } else {
-        poseidon_hash_span(
-            array![id_2_hash.try_into().unwrap(), id_1_hash.try_into().unwrap()].span()
-        )
+        hash_2(id_2_hash, id_1_hash)
     };
 
     _proposal.collateral_ids_whitelist_merkle_root = merkle_root;

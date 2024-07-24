@@ -1,3 +1,38 @@
+//! The `MultiToken` module provides a unified interface for handling different types
+//! of token assets (ERC20, ERC721, ERC1155) . This module
+//! abstracts the details of different token standards, allowing for unified operations
+//! like transferring tokens, checking balances, and verifying token formats.
+//!
+//! # Features
+//!
+//! - **Unified Token Handling**: Supports operations on ERC20, ERC721, and ERC1155 tokens,
+//!   including transferring assets, checking balances, and approvals.
+//! - **Category Management**: Provides functionality for registering and verifying token
+//!   categories using a category registry or standard interface checks.
+//! - **Safe Transfers**: Ensures safe transfers for ERC721 and ERC1155 tokens, complying
+//!   with respective token standards.
+//! - **Custom Errors**: Provides specific error messages for unsupported categories or
+//!   invalid operations.
+//!
+//! # Constants
+//!
+//! - `ERC20_INTERFACE_ID`: The interface ID for ERC20 tokens, based on the full OpenZeppelin ABI.
+//! - `ERC721_INTERFACE_ID`: The interface ID for ERC721 tokens, based on the full OpenZeppelin ABI.
+//! - `ERC1155_INTERFACE_ID`: The interface ID for ERC1155 tokens, based on the full OpenZeppelin ABI.
+//! - `CATEGORY_NOT_REGISTERED`: A sentinel value indicating that a token category is not registered.
+//!
+//! # Structures
+//!
+//! - `Category`: An enum representing the type of token (ERC20, ERC721, ERC1155).
+//! - `Asset`: A struct representing a token asset, including its category, address, ID, and amount.
+//!
+//! # Modules
+//!
+//! - `Err`: Contains error handling functions for various invalid operations or unsupported categories.
+//!
+//! This module is designed to provide a robust and flexible framework for interacting with
+//! multiple token standards on Starknet, simplifying the management of different asset types.
+
 pub mod MultiToken {
     use core::integer::BoundedInt;
     use core::option::OptionTrait;
@@ -23,6 +58,15 @@ pub mod MultiToken {
 
     const CATEGORY_NOT_REGISTERED: u8 = 255;
 
+    /// Represents the category of a token in the .
+    ///
+    /// This enum categorizes tokens into three main standards:
+    /// - `ERC20`: For fungible tokens adhering to the ERC20 standard.
+    /// - `ERC721`: For non-fungible tokens (NFTs) adhering to the ERC721 standard.
+    /// - `ERC1155`: For multi-token standard that supports both fungible and non-fungible tokens.
+    ///
+    /// The `default` attribute is set to `ERC20`, indicating that if no category is specified,
+    /// the token will be treated as an ERC20 token.
     #[derive(Copy, Debug, Default, Drop, Serde, starknet::Store)]
     pub enum Category {
         #[default]
@@ -33,11 +77,20 @@ pub mod MultiToken {
 
     #[derive(Copy, Debug, Default, Drop, Serde, starknet::Store)]
     pub struct Asset {
+        /// The category of the asset, indicating the type of token (ERC20, ERC721, ERC1155).
         pub category: Category,
+        /// The contract address where the asset is located.
         pub asset_address: ContractAddress,
+        /// The unique identifier for the asset. For ERC20 tokens, this is typically `0`.
+        /// For ERC721 tokens, this is the specific token ID. For ERC1155 tokens, this represents
+        /// the specific asset ID within the contract.
         pub id: felt252,
+        /// The amount of the asset. For ERC20 tokens, this represents the quantity of tokens.
+        /// For ERC721 tokens, this is usually `1` since ERC721 represents unique tokens.
+        /// For ERC1155 tokens, this indicates the quantity of the specific asset.
         pub amount: u256
     }
+
 
     pub mod Err {
         pub fn UNSUPPORTED_CATEGORY(category_value: super::Category) {
@@ -46,11 +99,11 @@ pub mod MultiToken {
     }
 
     pub fn ERC20(asset_address: ContractAddress, amount: u256) -> Asset {
-        Asset { category: Category::ERC20, asset_address, id: 0.try_into().unwrap(), amount }
+        Asset { category: Category::ERC20, asset_address, id: 0.try_into().expect('ERC20'), amount }
     }
 
     pub fn ERC721(asset_address: ContractAddress, id: felt252) -> Asset {
-        Asset { category: Category::ERC721, asset_address, id, amount: 0.try_into().unwrap() }
+        Asset { category: Category::ERC721, asset_address, id, amount: 0.try_into().expect('ERC721') }
     }
 
     pub fn ERC1155(asset_address: ContractAddress, id: felt252, amount: Option<u256>) -> Asset {
@@ -62,16 +115,34 @@ pub mod MultiToken {
         }
     }
 
+    /// Implementation of the `AssetTrait` for the `Asset` struct, providing
+    /// functionality to interact with and manage various types of token assets
+    /// (ERC20, ERC721, ERC1155) .
     #[generate_trait]
     pub impl AssetImpl of AssetTrait {
-        // NOTE: here we don't need interal func since we don't have safe transfer on starknet
-        // use pattern matching as above to handle different category
+        /// Transfers the asset from the `source` address to the `dest` address.
+        /// The `is_safe` parameter indicates whether to use a safe transfer method.
+        /// This function utilizes the `_transfer_asset_from` internal function to
+        /// handle the transfer operation based on the asset's category.
+        ///
+        /// # Parameters
+        /// - `self`: The asset being transferred.
+        /// - `source`: The address from which the asset is transferred.
+        /// - `dest`: The destination address for the transfer.
+        /// - `is_safe`: A boolean indicating if a safe transfer method should be used.
         fn transfer_asset_from(
             self: @Asset, source: ContractAddress, dest: ContractAddress, is_safe: bool
         ) {
             _transfer_asset_from(*self, source, dest, is_safe);
         }
 
+        /// Retrieves the amount of the asset being transferred. For ERC20 tokens, this
+        /// returns the `amount` field. For ERC721 tokens, this always returns `1` as
+        /// each token is unique. For ERC1155 tokens, this returns the `amount` if
+        /// specified, otherwise `1`.
+        ///
+        /// # Returns
+        /// The amount of the asset being transferred.
         fn get_transfer_amount(self: @Asset) -> u256 {
             if *self.category == Category::ERC20 {
                 return *self.amount;
@@ -82,10 +153,16 @@ pub mod MultiToken {
             }
         }
 
-        //  NOTE: tranferFromCallData not needed
-
-        // NOTE: permit standard not available on starknet
-
+        /// Retrieves the balance of the asset for a given `target` address. It checks
+        /// the category of the asset and calls the appropriate balance query function
+        /// for ERC20, ERC721, or ERC1155 tokens.
+        ///
+        /// # Parameters
+        /// - `self`: The asset being queried.
+        /// - `target`: The address for which the balance is being queried.
+        ///
+        /// # Returns
+        /// The balance of the asset for the specified target address.
         fn balance_of(self: @Asset, target: ContractAddress) -> u256 {
             if *self.category != Category::ERC20
                 && *self.category != Category::ERC721
@@ -109,6 +186,13 @@ pub mod MultiToken {
             }
         }
 
+        /// Approves the `target` address to transfer the asset. The approval mechanism
+        /// differs based on the asset category, utilizing the appropriate approval
+        /// function for ERC20, ERC721, and ERC1155 tokens.
+        ///
+        /// # Parameters
+        /// - `self`: The asset being approved.
+        /// - `target`: The address being approved for transfer.
         fn approve_asset(self: @Asset, target: ContractAddress) {
             match self.category {
                 Category::ERC20 => {
@@ -126,7 +210,16 @@ pub mod MultiToken {
             }
         }
 
-        // NOTE: we dont't check interface id since no token uses it on Starket
+        /// Checks if the asset is valid based on its category and format. It first tries
+        /// to verify the category using a provided registry, if available, or otherwise
+        /// falls back to category checks via SRC5 interfaces.
+        ///
+        /// # Parameters
+        /// - `self`: The asset being validated.
+        /// - `registry`: An optional registry contract address for category validation.
+        ///
+        /// # Returns
+        /// A boolean indicating whether the asset is valid.
         fn is_valid(self: @Asset, registry: Option<ContractAddress>) -> bool {
             match registry {
                 Option::Some(registry) => _check_category(*self, registry) && _check_format(*self),
@@ -134,6 +227,16 @@ pub mod MultiToken {
             }
         }
 
+        /// Compares the current asset with another asset to determine if they are the
+        /// same. This comparison includes checking the category, asset address, and
+        /// asset ID.
+        ///
+        /// # Parameters
+        /// - `self`: The current asset.
+        /// - `other`: The other asset to compare against.
+        ///
+        /// # Returns
+        /// A boolean indicating whether the two assets are the same.
         fn is_same_as(self: @Asset, other: Asset) -> bool {
             *self.category == other.category
                 && *self.asset_address == other.asset_address
