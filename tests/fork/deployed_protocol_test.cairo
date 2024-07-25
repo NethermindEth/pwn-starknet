@@ -22,7 +22,8 @@ use super::super::integration::base_integration_test::{
 };
 
 #[test]
-fn _test_deployed_protocol() {
+#[fork("mainnet")]
+fn test_deployed_protocol() {
     let deployment = super_setup();
 
     // CONFIG
