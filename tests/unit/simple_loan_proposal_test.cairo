@@ -1,3 +1,4 @@
+use core::integer::BoundedInt;
 use core::{
     starknet,
     starknet::{storage::StorageMapMemberAccessTrait, ContractAddress, get_contract_address},
@@ -31,13 +32,11 @@ use snforge_std::{
 };
 use super::super::utils::simple_loan_proposal_component_mock::MockSimpleLoanProposal;
 
+pub const E10: u256 = 10_000_000_000;
+pub const E40: u256 = 10_000_000_000_000_000_000_000_000_000_000_000_000_000;
 pub const E70: u256 =
     10_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000;
-pub const E40: u256 = 10_000_000_000_000_000_000_000_000_000_000_000_000;
-pub const E10: u256 = 10_000_000_000;
 pub const MINUTE: u64 = 60;
-pub const MAX_U256: u256 =
-    u256 { low: 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, high: 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF };
 
 #[derive(Drop)]
 pub struct Params {
@@ -60,9 +59,9 @@ pub fn TOKEN() -> ContractAddress {
     starknet::contract_address_const::<'token'>()
 }
 
-// pub fn PROPOSER() -> ContractAddress {
-//     starknet::contract_address_const::<73661723>()
-// }
+pub fn PROPOSER() -> ContractAddress {
+    starknet::contract_address_const::<73661723>()
+}
 
 pub fn ACCEPTOR() -> ContractAddress {
     starknet::contract_address_const::<32716637>()
@@ -215,12 +214,16 @@ fn test_should_make_proposal() {
 
 #[test]
 #[should_panic]
-fn test_fuzz_should_fail_when_caller_is_not_proposed_loan_contract(_caller: felt252) {
+fn test_fuzz_should_fail_when_caller_is_not_proposed_loan_contract(_caller: u128) {
     let mut dsp = deploy();
     let params = params(dsp.signer.contract_address, dsp.key_pair);
-    let mut caller: ContractAddress = _caller.try_into().unwrap();
+    let mut caller: ContractAddress = Into::<u128, felt252>::into(_caller)
+    .try_into()
+    .unwrap();
     if caller == params.base.loan_contract {
-        caller = (_caller + 1).try_into().unwrap();
+        caller = Into::<u128, felt252>::into(_caller + 1)
+            .try_into()
+            .unwrap();
     }
     cheat_caller_address_global(caller);
     call_accept_proposal_with(ref dsp.component, params);
@@ -228,12 +231,16 @@ fn test_fuzz_should_fail_when_caller_is_not_proposed_loan_contract(_caller: felt
 
 #[test]
 #[should_panic]
-fn test_fuzz_should_fail_when_caller_not_tagged_active_loan(_caller: felt252) {
+fn test_fuzz_should_fail_when_caller_not_tagged_active_loan(_caller: u128) {
     let mut dsp = deploy();
     let params = params(dsp.signer.contract_address, dsp.key_pair);
-    let mut caller: ContractAddress = _caller.try_into().unwrap();
+    let mut caller: ContractAddress = Into::<u128, felt252>::into(_caller)
+    .try_into()
+    .unwrap();
     if caller == params.base.loan_contract {
-        caller = (_caller + 1).try_into().unwrap();
+        caller = Into::<u128, felt252>::into(_caller + 1)
+            .try_into()
+            .unwrap();
     }
     dsp.hub.set_tag(caller, pwn_hub_tags::ACTIVE_LOAN, false);
 
@@ -445,20 +452,21 @@ fn test_fuzz_should_fail_when_offer_nonce_not_usable(nonce_space: felt252, nonce
 
 #[test]
 #[should_panic]
-fn test_fuzz_should_fail_when_caller_is_not_allowed_acceptor(_caller: felt252) {
+fn test_fuzz_should_fail_when_caller_is_not_allowed_acceptor(_caller: u128) {
     let mut dsp = deploy();
     mock_sf_computer();
     dsp.config.register_state_fingerprint_computer(TOKEN(), SF_COMPUTER());
     let mut params = params(dsp.signer.contract_address, dsp.key_pair);
     params.base.allowed_acceptor = starknet::contract_address_const::<'allowed_acceptor'>();
-    let mut caller: ContractAddress = _caller.try_into().unwrap();
-    if caller == params.base.allowed_acceptor {
-        caller = (_caller + 1).try_into().unwrap();
-    }
-    if caller == params.base.proposer {
-        caller = (_caller + 1).try_into().unwrap();
-    }
-
+    let mut caller: ContractAddress = Into::<u128, felt252>::into(_caller)
+    .try_into()
+    .unwrap();
+    while caller == params.base.allowed_acceptor || caller == params.base.proposer {
+        caller = Into::<u128, felt252>::into(_caller + 1)
+            .try_into()
+            .unwrap();
+    };
+    
     cheat_caller_address_global(caller);
     call_accept_proposal_with(ref dsp.component, params);
 }
@@ -484,40 +492,38 @@ fn test_should_revoke_offer_when_available_credit_limit_equal_to_zero() {
 #[test]
 #[should_panic]
 fn test_fuzz_should_fail_when_used_credit_exceeds_available_credit_limit(
-    used_low: u128, used_high: u128, limit_low: u128, limit_high: u128
+    mut used: u256, mut limit: u256
 ) {
     let mut dsp = deploy();
     mock_sf_computer();
     dsp.config.register_state_fingerprint_computer(TOKEN(), SF_COMPUTER());
 
-    let mut used_u256 = u256 { low: used_low, high: used_high };
-    let mut limit_u256 = u256 { low: limit_low, high: limit_high };
     let mut params = params(dsp.signer.contract_address, dsp.key_pair);
     let credit_amount = params.base.credit_amount;
-    used_u256 =
-        if used_u256 == 0 {
-            used_u256 += 1;
-            used_u256
-        } else if used_u256 > MAX_U256 - credit_amount {
-            used_u256 = MAX_U256 - credit_amount;
-            used_u256
+    used =
+        if used == 0 {
+            used += 1;
+            used
+        } else if used > BoundedInt::max() - credit_amount {
+            used = BoundedInt::max() - credit_amount;
+            used
         } else {
-            used_u256
+            used
         };
 
-    limit_u256 =
-        if limit_u256 < used_u256 {
-            limit_u256 += used_u256 - limit_u256 + 1;
-            limit_u256
-        } else if limit_u256 > used_u256 + credit_amount - 1 {
-            limit_u256 -= limit_u256 - used_u256 + credit_amount;
-            limit_u256
+        limit =
+        if limit < used {
+            limit += used - limit + 1;
+            limit
+        } else if limit > used + credit_amount - 1 {
+            limit -= limit - used + credit_amount;
+            limit
         } else {
-            limit_u256
+            limit
         };
 
-    params.base.available_credit_limit = limit_u256;
-    dsp.component.credit_used.write(params.message_hash, used_u256);
+    params.base.available_credit_limit = limit;
+    dsp.component.credit_used.write(params.message_hash, used);
 
     cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref dsp.component, params);
@@ -525,38 +531,36 @@ fn test_fuzz_should_fail_when_used_credit_exceeds_available_credit_limit(
 
 #[test]
 fn test_fuzz_should_increase_used_credit_when_used_credit_not_exceeds_available_credit_limit(
-    used_low: u128, used_high: u128, limit_low: u128, limit_high: u128
+   mut used: u256, mut limit: u256
 ) {
     let mut dsp = deploy();
     mock_sf_computer();
     dsp.config.register_state_fingerprint_computer(TOKEN(), SF_COMPUTER());
 
-    let mut used_u256 = u256 { low: used_low, high: used_high };
-    let mut limit_u256 = u256 { low: limit_low, high: limit_high };
     let mut params = params(dsp.signer.contract_address, dsp.key_pair);
     let credit_amount = params.base.credit_amount;
-    used_u256 =
-        if used_u256 == 0 {
-            used_u256 + 1
-        } else if used_u256 > MAX_U256 - credit_amount {
-            MAX_U256 - credit_amount
+    used =
+        if used == 0 {
+            used + 1
+        } else if used > BoundedInt::max() - credit_amount {
+            BoundedInt::max() - credit_amount
         } else {
-            used_u256
+            used
         };
 
-    limit_u256 =
-        if limit_u256 < used_u256 + credit_amount {
-            used_u256 + credit_amount
-        } else {
-            limit_u256
-        };
-    params.base.available_credit_limit = limit_u256;
-    dsp.component.credit_used.write(params.message_hash, used_u256);
+    limit =
+    if limit < used + credit_amount {
+        used + credit_amount
+    } else {
+        limit
+    };
+    params.base.available_credit_limit = limit;
+    dsp.component.credit_used.write(params.message_hash, used);
     let message_hash = params.message_hash;
     cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref dsp.component, params);
     let current_credit_used = dsp.component.credit_used.read(message_hash);
-    assert_eq!(used_u256 + credit_amount, current_credit_used, "Credit used imbalanced");
+    assert_eq!(used + credit_amount, current_credit_used, "Credit used imbalanced");
 }
 // dont have vm.expectCall equivalent in snforge, ensuring call not happening by not registering SF comp
 #[test]
