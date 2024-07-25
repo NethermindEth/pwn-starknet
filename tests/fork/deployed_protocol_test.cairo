@@ -55,12 +55,11 @@ fn _test_deployed_protocol() {
     // CONFIG
     // - Check owner
     let config_owner = load(deployment.config.contract_address, selector!("Ownable_owner"), 1);
-    assert!(
-        (*config_owner.at(0)) == protocol_timelock().into(), "PwnConfig: Owner mismatch"
-    );
+    assert!((*config_owner.at(0)) == protocol_timelock().into(), "PwnConfig: Owner mismatch");
     // - feeCollector is set
     assert!(
-        deployment.config.get_fee_collector() == fee_collector(), "PwnConfig: Fee collector mismatch"
+        deployment.config.get_fee_collector() == fee_collector(),
+        "PwnConfig: Fee collector mismatch"
     );
 
     // CATEGORY REGISTRY
