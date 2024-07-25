@@ -14,35 +14,8 @@ use pwn::loan::terms::simple::loan::{
     interface::{IPwnSimpleLoanDispatcher, IPwnSimpleLoanDispatcherTrait},
     types::{LenderSpec, ProposalSpec, CallerSpec}
 };
-use pwn::loan::terms::simple::proposal::simple_loan_dutch_auction_proposal::{
-    SimpleLoanDutchAuctionProposal, ISimpleLoanDutchAuctionProposalDispatcher,
-    ISimpleLoanDutchAuctionProposalDispatcherTrait
-};
-use pwn::loan::terms::simple::proposal::simple_loan_fungible_proposal::{
-    SimpleLoanFungibleProposal, ISimpleLoanFungibleProposalDispatcher,
-    ISimpleLoanFungibleProposalDispatcherTrait
-};
-use pwn::loan::terms::simple::proposal::simple_loan_list_proposal::{
-    SimpleLoanListProposal, ISimpleLoanListProposalDispatcher,
-    ISimpleLoanListProposalDispatcherTrait
-};
-use pwn::loan::terms::simple::proposal::simple_loan_simple_proposal::{
-    SimpleLoanSimpleProposal::Proposal, ISimpleLoanSimpleProposalDispatcher,
-    ISimpleLoanSimpleProposalDispatcherTrait
-};
-use pwn::loan::token::pwn_loan::IPwnLoanDispatcher;
-use pwn::mocks::{erc20::ERC20Mock, erc721::ERC721Mock, erc1155::ERC1155Mock};
-use pwn::multitoken::{
-    library::MultiToken,
-    category_registry::{
-        IMultitokenCategoryRegistryDispatcher, IMultitokenCategoryRegistryDispatcherTrait
-    }
-};
-use snforge_std::{
-    declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
-    cheat_caller_address_global, spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait,
-    cheat_block_timestamp_global, stop_cheat_caller_address
-};
+
+use snforge_std::load;
 use starknet::{ContractAddress, contract_address_const, ClassHash};
 use super::super::integration::base_integration_test::{
     protocol_timelock, fee_collector, setup as super_setup
