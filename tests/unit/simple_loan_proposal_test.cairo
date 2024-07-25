@@ -217,13 +217,9 @@ fn test_should_make_proposal() {
 fn test_fuzz_should_fail_when_caller_is_not_proposed_loan_contract(_caller: u128) {
     let mut dsp = deploy();
     let params = params(dsp.signer.contract_address, dsp.key_pair);
-    let mut caller: ContractAddress = Into::<u128, felt252>::into(_caller)
-    .try_into()
-    .unwrap();
+    let mut caller: ContractAddress = Into::<u128, felt252>::into(_caller).try_into().unwrap();
     if caller == params.base.loan_contract {
-        caller = Into::<u128, felt252>::into(_caller + 1)
-            .try_into()
-            .unwrap();
+        caller = Into::<u128, felt252>::into(_caller + 1).try_into().unwrap();
     }
     cheat_caller_address_global(caller);
     call_accept_proposal_with(ref dsp.component, params);
@@ -234,13 +230,9 @@ fn test_fuzz_should_fail_when_caller_is_not_proposed_loan_contract(_caller: u128
 fn test_fuzz_should_fail_when_caller_not_tagged_active_loan(_caller: u128) {
     let mut dsp = deploy();
     let params = params(dsp.signer.contract_address, dsp.key_pair);
-    let mut caller: ContractAddress = Into::<u128, felt252>::into(_caller)
-    .try_into()
-    .unwrap();
+    let mut caller: ContractAddress = Into::<u128, felt252>::into(_caller).try_into().unwrap();
     if caller == params.base.loan_contract {
-        caller = Into::<u128, felt252>::into(_caller + 1)
-            .try_into()
-            .unwrap();
+        caller = Into::<u128, felt252>::into(_caller + 1).try_into().unwrap();
     }
     dsp.hub.set_tag(caller, pwn_hub_tags::ACTIVE_LOAN, false);
 
@@ -458,15 +450,14 @@ fn test_fuzz_should_fail_when_caller_is_not_allowed_acceptor(_caller: u128) {
     dsp.config.register_state_fingerprint_computer(TOKEN(), SF_COMPUTER());
     let mut params = params(dsp.signer.contract_address, dsp.key_pair);
     params.base.allowed_acceptor = starknet::contract_address_const::<'allowed_acceptor'>();
-    let mut caller: ContractAddress = Into::<u128, felt252>::into(_caller)
-    .try_into()
-    .unwrap();
-    while caller == params.base.allowed_acceptor || caller == params.base.proposer {
-        caller = Into::<u128, felt252>::into(_caller + 1)
-            .try_into()
-            .unwrap();
-    };
-    
+    let mut caller: ContractAddress = Into::<u128, felt252>::into(_caller).try_into().unwrap();
+    while caller == params.base.allowed_acceptor
+        || caller == params
+            .base
+            .proposer {
+                caller = Into::<u128, felt252>::into(_caller + 1).try_into().unwrap();
+            };
+
     cheat_caller_address_global(caller);
     call_accept_proposal_with(ref dsp.component, params);
 }
@@ -511,7 +502,7 @@ fn test_fuzz_should_fail_when_used_credit_exceeds_available_credit_limit(
             used
         };
 
-        limit =
+    limit =
         if limit < used {
             limit += used - limit + 1;
             limit
@@ -531,7 +522,7 @@ fn test_fuzz_should_fail_when_used_credit_exceeds_available_credit_limit(
 
 #[test]
 fn test_fuzz_should_increase_used_credit_when_used_credit_not_exceeds_available_credit_limit(
-   mut used: u256, mut limit: u256
+    mut used: u256, mut limit: u256
 ) {
     let mut dsp = deploy();
     mock_sf_computer();
@@ -548,8 +539,7 @@ fn test_fuzz_should_increase_used_credit_when_used_credit_not_exceeds_available_
             used
         };
 
-    limit =
-    if limit < used + credit_amount {
+    limit = if limit < used + credit_amount {
         used + credit_amount
     } else {
         limit

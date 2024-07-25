@@ -953,8 +953,8 @@ mod create_loan {
 }
 
 mod refinance_loan {
+    use core::traits::Into;
     use core::traits::TryInto;
-use core::traits::Into;
     use pwn::loan::lib::fee_calculator;
     use pwn::loan::terms::simple::loan::pwn_simple_loan::PwnSimpleLoan;
     use super::{
@@ -965,8 +965,8 @@ use core::traits::Into;
         ERC721ABIDispatcherTrait, store_loan, cheat_block_timestamp_global, ERC1155ABIDispatcher,
         ERC1155ABIDispatcherTrait, IPwnSimpleLoanDispatcherTrait, IPwnLoanDispatcherTrait,
         ContractAddress, BoundedInt, SIMPLE_LOAN, SIMPLE_LOAN_TERMS, U8IntoCategory, spy_events,
-        EventSpy, EventSpyTrait, EventSpyAssertionsTrait, map_entry_address, store,
-        assert_loan_eq, SOURCE_OF_FUNDS, CONFIG, FEE_COLLECTOR, E20
+        EventSpy, EventSpyTrait, EventSpyAssertionsTrait, map_entry_address, store, assert_loan_eq,
+        SOURCE_OF_FUNDS, CONFIG, FEE_COLLECTOR, E20
     };
 
 
@@ -1581,7 +1581,9 @@ use core::traits::Into;
     }
 
     #[test]
-    fn test_fuzz_should_try_claim_repaid_loan_full_amount_when_should_transfer_common(mut _loan_owner: u128) {
+    fn test_fuzz_should_try_claim_repaid_loan_full_amount_when_should_transfer_common(
+        mut _loan_owner: u128
+    ) {
         assert(true, '');
     }
 
@@ -1717,8 +1719,8 @@ mod repay_loan {
 mod loan_repayment_amount {
     use core::option::OptionTrait;
     use core::traits::TryInto;
-    use pwn::loan::terms::simple::loan::pwn_simple_loan::PwnSimpleLoan;
     use pwn::loan::lib::math;
+    use pwn::loan::terms::simple::loan::pwn_simple_loan::PwnSimpleLoan;
     use super::super::simple_loan_proposal_test::E40;
     use super::{
         deploy, store_loan, cheat_block_timestamp_global, IPwnSimpleLoanDispatcher,
@@ -1780,7 +1782,11 @@ mod loan_repayment_amount {
         cheat_block_timestamp_global(simple_loan.start_timestamp + minutes * 60 + 1);
 
         let expected_interest = fixed_interest
-            +  math::mul_div(principal, (interest_APR * minutes.into()), PwnSimpleLoan::ACCRUING_INTEREST_APR_DENOMINATOR);
+            + math::mul_div(
+                principal,
+                (interest_APR * minutes.into()),
+                PwnSimpleLoan::ACCRUING_INTEREST_APR_DENOMINATOR
+            );
         let expected_loan_repayment = principal + expected_interest;
         assert_eq!(
             loan.get_loan_repayment_amount(LOAN_ID()),
@@ -1811,7 +1817,7 @@ mod loan_repayment_amount {
             simple_loan.principal_amount + simple_loan.fixed_interest_amount + E18,
             "Loan repayment mismatch!"
         );
-        
+
         simple_loan.accruing_interest_APR = 10_000;
         store_loan(loan.contract_address, LOAN_ID(), simple_loan);
         cheat_block_timestamp_global(simple_loan.start_timestamp + 365 * DAY);

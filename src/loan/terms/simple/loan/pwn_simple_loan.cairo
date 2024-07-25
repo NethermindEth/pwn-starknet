@@ -90,13 +90,15 @@ pub mod PwnSimpleLoan {
     impl SRC5InternalImpl = SRC5Component::InternalImpl<ContractState>;
 
     impl VaultImpl = PwnVaultComponent::InternalImpl<ContractState>;
-    
+
     pub const ACCRUING_INTEREST_APR_DECIMALS: u256 = 100;
     pub const MIN_LOAN_DURATION: u64 = 600;
     pub const MAX_ACCRUING_INTEREST_APR: u32 = 160000;
     pub const MINUTE: u64 = 60;
     pub const MINUTE_IN_YEAR: u256 = 525_600;
-    pub const ACCRUING_INTEREST_APR_DENOMINATOR: u256 = ACCRUING_INTEREST_APR_DECIMALS * MINUTE_IN_YEAR * 100;
+    pub const ACCRUING_INTEREST_APR_DENOMINATOR: u256 = ACCRUING_INTEREST_APR_DECIMALS
+        * MINUTE_IN_YEAR
+        * 100;
     // @note: duration in seconds
 
     // @note: 1 day
