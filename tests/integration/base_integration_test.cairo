@@ -1,5 +1,3 @@
-use core::result::ResultTrait;
-use core::traits::Into;
 use openzeppelin::account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
 use openzeppelin::token::{
     erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
@@ -34,7 +32,7 @@ use pwn::mocks::{erc20::ERC20Mock, erc721::ERC721Mock, erc1155::ERC1155Mock};
 use pwn::multitoken::{
     library::MultiToken,
     category_registry::{
-        IMultitokenCategoryRegistryDispatcher, IMultitokenCategoryRegistryDispatcherTrait
+        IMultiTokenCategoryRegistryDispatcher, IMultiTokenCategoryRegistryDispatcherTrait
     }
 };
 use pwn::nonce::revoked_nonce::IRevokedNonceDispatcher;
@@ -74,7 +72,7 @@ pub struct Setup {
     pub hub: IPwnHubDispatcher,
     pub config: IPwnConfigDispatcher,
     pub nonce: IRevokedNonceDispatcher,
-    pub registry: IMultitokenCategoryRegistryDispatcher,
+    pub registry: IMultiTokenCategoryRegistryDispatcher,
     pub proposal_simple: ISimpleLoanSimpleProposalDispatcher,
     pub proposal_fungible: ISimpleLoanFungibleProposalDispatcher,
     pub proposal_dutch: ISimpleLoanDutchAuctionProposalDispatcher,
@@ -162,7 +160,7 @@ pub fn setup() -> Setup {
 
     let contract = declare("MultiTokenCategoryRegistry").unwrap();
     let (registry_address, _) = contract.deploy(@array![]).unwrap();
-    let registry = IMultitokenCategoryRegistryDispatcher { contract_address: registry_address };
+    let registry = IMultiTokenCategoryRegistryDispatcher { contract_address: registry_address };
 
     let contract = declare("PwnSimpleLoan").unwrap();
     let (loan_address, _) = contract

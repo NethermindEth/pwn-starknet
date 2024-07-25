@@ -10,7 +10,7 @@ pub trait ISimpleLoanListProposal<TState> {
         acceptor: starknet::ContractAddress,
         refinancing_loan_id: felt252,
         proposal_data: Array<felt252>,
-        proposal_inclusion_proof: Array<felt252>,
+        proposal_inclusion_proof: Array<u256>,
         signature: Signature
     ) -> (felt252, Terms);
     fn get_proposal_hash(self: @TState, proposal: Proposal) -> felt252;
@@ -43,9 +43,6 @@ pub trait ISimpleLoanListProposal<TState> {
 //! 
 //! - `SimpleLoanProposalComponent`: A reusable component that provides the base functionality 
 //!   for loan proposals.
-//! - `Storage`: Defines the storage structure for the module, including the simple loan proposal 
-//!   substorage.
-//! - `Event`: Defines events emitted by the contract, such as proposal creation and acceptance.
 //! - `Err`: Contains error handling functions for various invalid operations and input data.
 //! 
 //! # Constants
@@ -222,7 +219,7 @@ pub mod SimpleLoanListProposal {
             acceptor: starknet::ContractAddress,
             refinancing_loan_id: felt252,
             proposal_data: Array<felt252>,
-            proposal_inclusion_proof: Array<felt252>,
+            proposal_inclusion_proof: Array<u256>,
             signature: Signature
         ) -> (felt252, super::Terms) {
             let (proposal, proposal_values) = self.decode_proposal_data(proposal_data);

@@ -15,10 +15,6 @@
 //! # Components
 //! 
 //! - `OwnableComponent`: Ensures ownership control for sensitive operations.
-//! - `Storage`: Defines the storage structure for loans, extension proposals, and various 
-//!   dispatchers for configuration and token management.
-//! - `Event`: Defines events emitted by the contract, including loan creation, repayment, 
-//!   extension, and claiming.
 //! - `Err`: Contains error handling functions for invalid operations and input data.
 //! 
 //! # Constants
@@ -68,7 +64,7 @@ pub mod PwnSimpleLoan {
     use pwn::loan::vault::permit;
     use pwn::loan::vault::pwn_vault::PwnVaultComponent;
     use pwn::multitoken::category_registry::{
-        IMultitokenCategoryRegistryDispatcher, IMultitokenCategoryRegistryDispatcherTrait
+        IMultiTokenCategoryRegistryDispatcher, IMultiTokenCategoryRegistryDispatcherTrait
     };
     use pwn::multitoken::library::MultiToken::Asset;
     use pwn::multitoken::library::MultiToken::AssetTrait;
@@ -122,7 +118,7 @@ pub mod PwnSimpleLoan {
         loan_token: IPwnLoanDispatcher,
         config: IPwnConfigDispatcher,
         revoked_nonce: IRevokedNonceDispatcher,
-        category_registry: IMultitokenCategoryRegistryDispatcher,
+        category_registry: IMultiTokenCategoryRegistryDispatcher,
         #[substorage(v0)]
         vault: PwnVaultComponent::Storage,
         #[substorage(v0)]
@@ -798,7 +794,7 @@ pub mod PwnSimpleLoan {
             let revoked_nonce_dispatcher = IRevokedNonceDispatcher {
                 contract_address: revoked_nonce
             };
-            let category_registry_dispatcher = IMultitokenCategoryRegistryDispatcher {
+            let category_registry_dispatcher = IMultiTokenCategoryRegistryDispatcher {
                 contract_address: category_registry
             };
             self.hub.write(hub_dispatcher);

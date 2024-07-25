@@ -15,10 +15,6 @@
 //!
 //! # Components
 //! 
-//! - `Storage`: Defines the storage structure for the module, including mappings and state 
-//!   variables necessary for vault operations.
-//! - `Event`: Enum defining the various events emitted by the module, such as `VaultPull`, 
-//!   `VaultPush`, `PoolWithdraw`, and `PoolSupply`.
 //! - `Err`: Module containing error handling functions for unsupported or incomplete 
 //!   transfer operations.
 //!
