@@ -208,8 +208,6 @@ pub fn setup() -> Setup {
     let (borrower_address, _) = contract.deploy(@array![borrower_key_pair.public_key]).unwrap();
     let borrower = IPublicKeyDispatcher { contract_address: borrower_address };
 
-    config.initialize(protocol_timelock(), 32, fee_collector());
-
     hub.set_tag(proposal_simple_address, pwn_hub_tags::LOAN_PROPOSAL, true);
     hub.set_tag(proposal_simple_address, pwn_hub_tags::ACTIVE_LOAN, true);
     hub.set_tag(proposal_simple_address, pwn_hub_tags::NONCE_MANAGER, true);

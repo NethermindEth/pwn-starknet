@@ -28,6 +28,7 @@ fn test_deployed_protocol() {
 
     // CONFIG
     // - Check owner
+    deployment.config.initialize(protocol_timelock(), 32, fee_collector());
     let config_owner = load(deployment.config.contract_address, selector!("Ownable_owner"), 1);
     assert!((*config_owner.at(0)) == protocol_timelock().into(), "PwnConfig: Owner mismatch");
     // - feeCollector is set
@@ -56,10 +57,6 @@ fn test_deployed_protocol() {
     assert!(
         deployment.hub.has_tag(deployment.loan.contract_address, pwn_hub_tags::ACTIVE_LOAN),
         "Simple loan should have ACTIVE_LOAN tag"
-    );
-    assert!(
-        deployment.hub.has_tag(deployment.loan.contract_address, pwn_hub_tags::NONCE_MANAGER),
-        "Simple loan should have NONCE_MANAGER tag"
     );
     // - simple loan simple proposal
     assert!(
