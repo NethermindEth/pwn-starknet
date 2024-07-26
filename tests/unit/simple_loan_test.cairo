@@ -1143,7 +1143,6 @@ mod refinance_loan {
     #[should_panic]
     fn test_should_fail_when_loan_is_defaulted() {
         let setup = setup();
-        //mock_call(setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, setup.simple_loan_terms), 1);
         cheat_block_timestamp_global(setup.simple_loan.default_timestamp);
         setup
             .loan
@@ -1310,7 +1309,7 @@ mod refinance_loan {
             );
     }
 
-    #[test] // check whats wrong with the setup needed to mint loan token. Ensure setup matches with the solidity one
+    #[test]
     fn test_should_emit_loan_paid_back() {
         let setup = setup();
 
@@ -1630,7 +1629,7 @@ mod refinance_loan {
         assert_eq!(prev_bal + common, curr_bal, "SimpleLoan balance mismatch!");
     }
 
-    #[test] // this has no fuzzing parameter in original test what to do with this
+    #[test] // this has no fuzzing parameter in original test?
     #[ignore]
     fn test_fuzz_should_transfer_common_to_vault_when_lender_original_lender_when_different_source_of_funds() {
         let setup = setup();
