@@ -178,8 +178,8 @@ pub mod PwnSimpleLoan {
     #[derive(Drop, starknet::Event)]
     struct ExtensionProposalMade {
         extension_hash: felt252,
-    // proposer: ContractAddress,
-    // extension_proposal: ExtensionProposal,
+        proposer: ContractAddress,
+        extension_proposal: ExtensionProposal,
     }
 
     #[constructor]
@@ -479,7 +479,12 @@ pub mod PwnSimpleLoan {
 
             let extension_hash = self.get_extension_hash(extension);
             self.extension_proposal_made.write(extension_hash, true);
-            self.emit(ExtensionProposalMade { extension_hash });
+            self
+                .emit(
+                    ExtensionProposalMade {
+                        extension_hash, proposer: extension.proposer, extension_proposal: extension
+                    }
+                );
         }
 
         /// Extends a loan based on an extension proposal and a valid signature.

@@ -116,8 +116,7 @@ fn _create_loan(dsp: Setup, proposal: Proposal) -> felt252 {
 
 #[test]
 #[should_panic]
-#[ignore]
-// #[fork("mainnet")]
+#[fork("mainnet")]
 fn test_use_case_should_fail_when_20_collateral_passed_with_721_category() {
     let (dsp, mut proposal) = setup();
 
@@ -131,8 +130,7 @@ fn test_use_case_should_fail_when_20_collateral_passed_with_721_category() {
 
 #[test]
 #[should_panic]
-#[ignore]
-// #[fork("mainnet")]
+#[fork("mainnet")]
 fn test_use_case_should_fail_when_20_collateral_passed_with_1155_category() {
     let (dsp, mut proposal) = setup();
 
@@ -146,8 +144,7 @@ fn test_use_case_should_fail_when_20_collateral_passed_with_1155_category() {
 
 #[test]
 #[should_panic]
-#[ignore]
-// #[fork("mainnet")]
+#[fork("mainnet")]
 fn test_use_case_should_fail_when_using_erc721_as_credit() {
     let (dsp, mut proposal) = setup();
 
@@ -164,7 +161,7 @@ fn test_use_case_should_fail_when_using_erc721_as_credit() {
 
 #[test]
 #[should_panic]
-// #[fork("mainnet")]
+#[fork("mainnet")]
 fn test_should_pass_when_invalid_erc165_support() {
     let (dsp, mut proposal) = setup();
 
@@ -197,8 +194,7 @@ fn test_should_pass_when_invalid_erc165_support() {
 }
 
 #[test]
-#[ignore]
-// #[fork("mainnet")]
+#[fork("mainnet")]
 fn test_use_case_should_refinance_running_loan() {
     let (dsp, mut proposal) = setup();
 
