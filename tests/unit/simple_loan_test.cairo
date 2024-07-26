@@ -992,10 +992,9 @@ mod create_loan {
 }
 
 mod refinance_loan {
+    use core::integer::BoundedInt;
     use core::traits::Into;
     use core::traits::TryInto;
-    use core::integer::BoundedInt;
-    use starknet::ContractAddress;
     use openzeppelin::token::{
         erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
         erc721::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait},
@@ -1003,11 +1002,6 @@ mod refinance_loan {
     };
     use pwn::loan::lib::fee_calculator;
     use pwn::loan::terms::simple::loan::pwn_simple_loan::PwnSimpleLoan;
-    use super::super::simple_loan_proposal_test::E40;
-    use super::{
-        types, MultiToken, erc20_mint, erc721_mint, poseidon_hash_span, store_loan, IPwnSimpleLoanDispatcherTrait, IPwnLoanDispatcherTrait,
-        U8IntoCategory, assert_loan_eq, E20, DAY
-    };
 
     use snforge_std::{
         declare, store, load, map_entry_address, cheat_caller_address, cheat_block_timestamp_global,
@@ -1017,6 +1011,13 @@ mod refinance_loan {
             stark_curve::{StarkCurveKeyPairImpl, StarkCurveSignerImpl, StarkCurveVerifierImpl},
         },
         ContractClassTrait, CheatSpan
+    };
+    use starknet::ContractAddress;
+    use super::super::simple_loan_proposal_test::E40;
+    use super::{
+        types, MultiToken, erc20_mint, erc721_mint, poseidon_hash_span, store_loan,
+        IPwnSimpleLoanDispatcherTrait, IPwnLoanDispatcherTrait, U8IntoCategory, assert_loan_eq, E20,
+        DAY
     };
 
     fn setup() -> super::Setup {

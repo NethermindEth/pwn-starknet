@@ -114,7 +114,9 @@ mod revoke_nonces {
         RevokedNonce, EventSpyTrait, EventSpyAssertionsTrait
     };
 
-    fn ensure_unique_nonces(mut a: felt252, mut b: felt252, mut c: felt252) -> (felt252, felt252, felt252) {
+    fn ensure_unique_nonces(
+        mut a: felt252, mut b: felt252, mut c: felt252
+    ) -> (felt252, felt252, felt252) {
         if a == b && b == c {
             c += 1
         } else if a == b {
