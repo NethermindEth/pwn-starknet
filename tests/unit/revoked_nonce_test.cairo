@@ -114,10 +114,9 @@ mod revoke_nonces {
         RevokedNonce, EventSpyTrait, EventSpyAssertionsTrait
     };
 
-    fn ensure_unique_nonces(a: felt252, b: felt252, c: felt252) -> (felt252, felt252, felt252) {
-        let mut a: u256 = a.into();
-        let mut b: u256 = b.into();
-        let mut c: u256 = c.into();
+    fn ensure_unique_nonces(
+        mut a: felt252, mut b: felt252, mut c: felt252
+    ) -> (felt252, felt252, felt252) {
         if a == b && b == c {
             c += 1
         } else if a == b {
@@ -137,7 +136,7 @@ mod revoke_nonces {
             a += 1
         }
 
-        (a.try_into().unwrap(), b.try_into().unwrap(), c.try_into().unwrap())
+        (a, b, c)
     }
 
     #[test]
@@ -517,10 +516,12 @@ mod is_nonce_usable {
 
     #[test]
     fn test_fuzz_should_return_false_when_nonce_space_is_not_equal_to_current_nonce_space(
-        current_nonce_space: felt252, nonce_space: felt252, _nonce: felt252
+        current_nonce_space: felt252, mut nonce_space: felt252, _nonce: felt252
     ) {
         let (nonce, _) = super::deploy();
-
+        if current_nonce_space == nonce_space {
+            nonce_space += 1;
+        }
         super::store(
             nonce.contract_address,
             map_entry_address(selector!("nonce_space"), array![ALICE().into()].span(),),

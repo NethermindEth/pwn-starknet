@@ -19,18 +19,11 @@ use pwn::loan::lib::math;
 /// - The function calculates the fee amount using the formula:
 ///   `fee_amount = (loan_amount * fee) / 10,000`.
 /// - It then subtracts the calculated fee amount from the original loan amount to determine the final loan amount.
-///
-/// # Errors
-///
-/// - If the resulting fee amount overflows when converted from u256 to u16, the function will panic with 'fee_amount overflow'.
-pub fn calculate_fee_amount(fee: u16, loan_amount: u256) -> (u16, u256) {
+pub fn calculate_fee_amount(fee: u16, loan_amount: u256) -> (u256, u256) {
     if fee == 0 {
         return (0, loan_amount);
     }
 
-    let fee_amount: u16 = math::mul_div(loan_amount, fee.into(), 10_000)
-        .try_into()
-        .expect('fee_amount overflow');
-
+    let fee_amount: u256 = math::mul_div(loan_amount, fee.into(), 10_000);
     (fee_amount, loan_amount - fee_amount.into())
 }
