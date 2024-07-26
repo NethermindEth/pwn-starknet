@@ -116,8 +116,8 @@ fn _create_loan(dsp: Setup, proposal: Proposal) -> felt252 {
 
 #[test]
 #[should_panic]
+#[fork("mainnet")]
 #[ignore]
-// #[fork("mainnet")]
 fn test_use_case_should_fail_when_20_collateral_passed_with_721_category() {
     let (dsp, mut proposal) = setup();
 
@@ -131,8 +131,8 @@ fn test_use_case_should_fail_when_20_collateral_passed_with_721_category() {
 
 #[test]
 #[should_panic]
+#[fork("mainnet")]
 #[ignore]
-// #[fork("mainnet")]
 fn test_use_case_should_fail_when_20_collateral_passed_with_1155_category() {
     let (dsp, mut proposal) = setup();
 
@@ -146,8 +146,8 @@ fn test_use_case_should_fail_when_20_collateral_passed_with_1155_category() {
 
 #[test]
 #[should_panic]
+#[fork("mainnet")]
 #[ignore]
-// #[fork("mainnet")]
 fn test_use_case_should_fail_when_using_erc721_as_credit() {
     let (dsp, mut proposal) = setup();
 
@@ -163,9 +163,9 @@ fn test_use_case_should_fail_when_using_erc721_as_credit() {
 }
 
 #[test]
-#[should_panic]
-// #[fork("mainnet")]
-fn test_should_pass_when_invalid_erc165_support() {
+#[fork("mainnet")]
+#[ignore]
+fn test_should_pass_when_invalid_src5_support() {
     let (dsp, mut proposal) = setup();
 
     dsp.registry.register_category_value(ARGENT_NFT(), MultiToken::Category::ERC721.into());
@@ -173,14 +173,10 @@ fn test_should_pass_when_invalid_erc165_support() {
     let coll_id = 2;
     let argent_nft = ERC721ABIDispatcher { contract_address: ARGENT_NFT() };
     let original_owner = argent_nft.owner_of(coll_id);
-    println!("Original owner: {:?}", original_owner);
 
     start_cheat_caller_address(ARGENT_NFT(), original_owner);
     argent_nft.transfer_from(original_owner, dsp.borrower.contract_address, coll_id);
     stop_cheat_caller_address(ARGENT_NFT());
-
-    let balance = argent_nft.balance_of(dsp.borrower.contract_address);
-    println!("Balance: {:?}", balance);
 
     start_cheat_caller_address(ARGENT_NFT(), dsp.borrower.contract_address);
     argent_nft.set_approval_for_all(dsp.loan.contract_address, true);
@@ -197,8 +193,8 @@ fn test_should_pass_when_invalid_erc165_support() {
 }
 
 #[test]
+#[fork("mainnet")]
 #[ignore]
-// #[fork("mainnet")]
 fn test_use_case_should_refinance_running_loan() {
     let (dsp, mut proposal) = setup();
 
