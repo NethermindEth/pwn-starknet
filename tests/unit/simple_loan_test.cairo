@@ -1,9 +1,9 @@
-use core::traits::TryInto;
 use core::integer::BoundedInt;
 use core::poseidon::poseidon_hash_span;
 use core::result::ResultTrait;
 use core::serde::Serde;
 use core::traits::Into;
+use core::traits::TryInto;
 use openzeppelin::account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
 use openzeppelin::token::{
     erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
@@ -57,7 +57,9 @@ impl U8IntoCategory of Into<u8, MultiToken::Category> {
     }
 }
 // upper bound is exclusive
-pub fn bound<T, +PartialOrd<T>, +RemEq<T>, +Drop<T>, +Copy<T>>(mut value: T, lower: T, upper: T) -> T {
+pub fn bound<T, +PartialOrd<T>, +RemEq<T>, +Drop<T>, +Copy<T>>(
+    mut value: T, lower: T, upper: T
+) -> T {
     value %= upper;
     if value < lower {
         value = lower;
@@ -350,7 +352,9 @@ pub(crate) fn erc721_mint(erc721: ContractAddress, receiver: ContractAddress, id
     );
 }
 
-pub(crate) fn loan_token_mint(loan_token: ContractAddress, receiver: ContractAddress, loan_contract: ContractAddress, id: u256) {
+pub(crate) fn loan_token_mint(
+    loan_token: ContractAddress, receiver: ContractAddress, loan_contract: ContractAddress, id: u256
+) {
     let mut id_serialized: Array<felt252> = array![];
     id.serialize(ref id_serialized);
 
@@ -371,7 +375,10 @@ pub(crate) fn loan_token_mint(loan_token: ContractAddress, receiver: ContractAdd
     );
     store(
         loan_token,
-        map_entry_address(selector!("loan_contract"), array![TryInto::<u256, felt252>::try_into(id).unwrap()].span()),
+        map_entry_address(
+            selector!("loan_contract"),
+            array![TryInto::<u256, felt252>::try_into(id).unwrap()].span()
+        ),
         array![loan_contract.into()].span()
     );
 }
@@ -681,7 +688,12 @@ mod create_loan {
     ) {
         let setup = setup();
 
-        accruing_interest_APR = bound(accruing_interest_APR, PwnSimpleLoan::MAX_ACCRUING_INTEREST_APR + 1, BoundedInt::max());
+        accruing_interest_APR =
+            bound(
+                accruing_interest_APR,
+                PwnSimpleLoan::MAX_ACCRUING_INTEREST_APR + 1,
+                BoundedInt::max()
+            );
 
         let mut terms = setup.simple_loan_terms;
         terms.accruing_interest_APR = accruing_interest_APR;
@@ -1088,7 +1100,12 @@ mod refinance_loan {
         erc20_mint(setup.t20.contract_address, setup.loan.contract_address, E20);
         store_loan(setup.t20.contract_address, REFINANCING_LOAN_ID, setup.simple_loan);
 
-        loan_token_mint(setup.loan_token.contract_address, setup.lender.contract_address, setup.loan.contract_address, REFINANCING_LOAN_ID.into());
+        loan_token_mint(
+            setup.loan_token.contract_address,
+            setup.lender.contract_address,
+            setup.loan.contract_address,
+            REFINANCING_LOAN_ID.into()
+        );
         store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, setup.simple_loan);
 
         setup
@@ -1611,7 +1628,9 @@ mod refinance_loan {
     }
 
     #[test]
-    fn test_fuzz_should_transfer_common_to_vault_when_lender_original_lender_when_different_source_of_funds(_source_of_funds: u128) {
+    fn test_fuzz_should_transfer_common_to_vault_when_lender_original_lender_when_different_source_of_funds(
+        _source_of_funds: u128
+    ) {
         let setup = setup();
         let mut simple_loan = setup.simple_loan;
         let mut _source_of_funds: felt252 = _source_of_funds.into();
@@ -1627,7 +1646,7 @@ mod refinance_loan {
         let mut terms = setup.refinanced_loan_terms;
         terms.lender = setup.lender2.contract_address;
         terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
-        
+
         simple_loan.original_lender = setup.lender2.contract_address;
         simple_loan.original_source_of_funds = source_of_funds;
         store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
@@ -1871,7 +1890,7 @@ mod refinance_loan {
         principal = bound(principal, 1, E40);
         fixed_interest = bound(fixed_interest, 0, E40);
         interest_APR = bound(interest_APR, 1, 16_000_000);
-        
+
         let mut simple_loan = setup.simple_loan;
         simple_loan.principal_amount = principal;
         simple_loan.fixed_interest_amount = fixed_interest;
@@ -1990,7 +2009,12 @@ mod refinance_loan {
     fn test_fuzz_should_transfer_surplus_to_borrower(mut refinance_amount: u256) {
         let setup = setup();
         let loan_repayment_amount = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
-        refinance_amount = bound(refinance_amount, loan_repayment_amount + 1, BoundedInt::max() - loan_repayment_amount - setup.t20.total_supply());
+        refinance_amount =
+            bound(
+                refinance_amount,
+                loan_repayment_amount + 1,
+                BoundedInt::max() - loan_repayment_amount - setup.t20.total_supply()
+            );
 
         let surplus = refinance_amount - loan_repayment_amount;
         let new_lender = setup.lender2.contract_address;
@@ -2080,7 +2104,12 @@ mod repay_loan {
             setup.t721.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
         );
         setup.t721.transfer_from(setup.borrower.contract_address, setup.loan.contract_address, 2);
-        loan_token_mint(setup.loan_token.contract_address, setup.lender.contract_address, setup.loan.contract_address, setup.loan_id.into());
+        loan_token_mint(
+            setup.loan_token.contract_address,
+            setup.lender.contract_address,
+            setup.loan.contract_address,
+            setup.loan_id.into()
+        );
         setup
     }
 
@@ -2421,7 +2450,12 @@ mod claim_loan {
             setup.t721.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
         );
         setup.t721.transfer_from(setup.borrower.contract_address, setup.loan.contract_address, 2);
-        loan_token_mint(setup.loan_token.contract_address, setup.lender.contract_address, setup.loan.contract_address, setup.loan_id.into());
+        loan_token_mint(
+            setup.loan_token.contract_address,
+            setup.lender.contract_address,
+            setup.loan.contract_address,
+            setup.loan_id.into()
+        );
         setup
     }
 
@@ -2665,7 +2699,12 @@ mod try_claim_repaid_loan {
             setup.t721.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
         );
         setup.t721.transfer_from(setup.borrower.contract_address, setup.loan.contract_address, 2);
-        loan_token_mint(setup.loan_token.contract_address, setup.lender.contract_address, starknet::get_contract_address(), setup.loan_id.into());
+        loan_token_mint(
+            setup.loan_token.contract_address,
+            setup.lender.contract_address,
+            starknet::get_contract_address(),
+            setup.loan_id.into()
+        );
         (setup, contract_test_state)
     }
 
@@ -2859,8 +2898,8 @@ mod try_claim_repaid_loan {
 mod make_extension_proposal {
     use core::option::OptionTrait;
     use core::poseidon::poseidon_hash_span;
-    use pwn::loan::terms::simple::loan::pwn_simple_loan::PwnSimpleLoan;
     use core::traits::TryInto;
+    use pwn::loan::terms::simple::loan::pwn_simple_loan::PwnSimpleLoan;
     use snforge_std::{
         cheat_caller_address, CheatSpan, load, spy_events, EventSpy, EventSpyTrait,
         EventSpyAssertionsTrait, map_entry_address
@@ -2891,9 +2930,7 @@ mod make_extension_proposal {
         let extension_hash = _get_extension_hash(setup.loan.contract_address, setup.extension);
         let is_made_value: bool = (*load(
             setup.loan.contract_address,
-            map_entry_address(
-                selector!("extension_proposal_made"), array![extension_hash].span()
-            ),
+            map_entry_address(selector!("extension_proposal_made"), array![extension_hash].span()),
             1
         )
             .at(0)) == 1;
@@ -2909,20 +2946,21 @@ mod make_extension_proposal {
             setup.loan.contract_address, setup.extension.proposer, CheatSpan::TargetCalls(1)
         );
         setup.loan.make_extension_proposal(setup.extension);
-        spy.assert_emitted(
-            @array![
-                (
-                    setup.loan.contract_address,
-                    PwnSimpleLoan::Event::ExtensionProposalMade(
-                        PwnSimpleLoan::ExtensionProposalMade { 
-                            extension_hash: extension_hash,
-                            proposer: setup.extension.proposer,
-                            extension_proposal: setup.extension,
-                         }
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.loan.contract_address,
+                        PwnSimpleLoan::Event::ExtensionProposalMade(
+                            PwnSimpleLoan::ExtensionProposalMade {
+                                extension_hash: extension_hash,
+                                proposer: setup.extension.proposer,
+                                extension_proposal: setup.extension,
+                            }
+                        )
                     )
-                )
-            ]
-        );
+                ]
+            );
     }
 }
 
@@ -3113,18 +3151,22 @@ mod get_loan {
 
 mod loan_metadata_uri {
     use core::clone::Clone;
-    use super::{setup, IPwnSimpleLoanDispatcherTrait};
     use snforge_std::mock_call;
+    use super::{setup, IPwnSimpleLoanDispatcherTrait};
 
     #[test]
     fn test_should_return_correct_value() {
         let setup = setup();
         let mut token_uri: ByteArray = "test.uri.xyz";
-        mock_call(setup.config.contract_address, selector!("loan_metadata_uri"), token_uri.clone(), 1);
+        mock_call(
+            setup.config.contract_address, selector!("loan_metadata_uri"), token_uri.clone(), 1
+        );
         let mut uri = setup.loan.get_loan_metadata_uri();
         assert_eq!(token_uri, uri, "Returned URI does not match");
         token_uri = "test2.uri.xyz";
-        mock_call(setup.config.contract_address, selector!("loan_metadata_uri"), token_uri.clone(), 1);
+        mock_call(
+            setup.config.contract_address, selector!("loan_metadata_uri"), token_uri.clone(), 1
+        );
         uri = setup.loan.get_loan_metadata_uri();
         assert_eq!(token_uri, uri, "Returned URI does not match");
     }
