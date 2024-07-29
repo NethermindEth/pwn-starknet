@@ -106,10 +106,10 @@ pub mod PwnSimpleLoan {
     // @note: 90 days 
     pub const MAX_EXTENSION_DURATION: u64 = 86400 * 90;
 
-    const EXTENSION_PROPOSAL_TYPEHASH: felt252 =
+    pub const EXTENSION_PROPOSAL_TYPEHASH: felt252 =
         0x7e09d567c8fe43c280650abe4557a43fa693063ebc6c47ff3c585866507c732;
 
-    const BASE_DOMAIN_SEPARATOR: felt252 =
+    pub const BASE_DOMAIN_SEPARATOR: felt252 =
         0x23b0e9af1d18f697d3e6d8bee3b1defcd47b5be37cf6d26fde2b5d5485065bc;
 
     #[storage]
@@ -348,9 +348,8 @@ pub mod PwnSimpleLoan {
             let repayment_amount = self.get_loan_repayment_amount(loan_id);
             self.vault._pull(ERC20(loan.credit_address, repayment_amount), caller);
             self.vault._push(loan.collateral, loan.borrower);
-
             self
-                .try_claim_repaid_loan(
+                ._try_claim_repaid_loan(
                     loan_id,
                     repayment_amount,
                     ERC721ABIDispatcher {
@@ -396,65 +395,6 @@ pub mod PwnSimpleLoan {
                 self._settle_loan_claim(loan_id: loan_id, loan_owner: caller, defaulted: true);
             } else {
                 Err::LOAN_RUNNING();
-            }
-        }
-
-        /// Attempts to claim a repaid loan for the loan owner.
-        ///
-        /// # Arguments
-        ///
-        /// - `loan_id`: The unique identifier of the loan to be claimed.
-        /// - `credit_amount`: The amount of credit to be transferred.
-        /// - `loan_owner`: The address of the loan owner.
-        ///
-        /// # Requirements
-        ///
-        /// - The loan must be in a repaid status (status = 3).
-        /// - The original lender must match the loan owner.
-        ///
-        /// # Actions
-        ///
-        /// - Deletes the loan from storage.
-        /// - Emits a `LoanClaimed` event.
-        /// - Transfers the repayment credit to the loan owner or supplies it to a pool based on the
-        ///   destination of funds.
-        fn try_claim_repaid_loan(
-            ref self: ContractState,
-            loan_id: felt252,
-            credit_amount: u256,
-            loan_owner: ContractAddress
-        ) {
-            let loan = self.loans.read(loan_id);
-
-            if (loan.status != 3 || loan.original_lender != loan_owner) {
-                return;
-            }
-
-            let destination_of_funds = loan.original_source_of_funds;
-
-            let repayment_credit = ERC20(loan.credit_address, credit_amount);
-
-            self._delete_loan(loan_id);
-
-            self.emit(LoanClaimed { loan_id, defaulted: false });
-
-            if (credit_amount == 0) {
-                return;
-            }
-
-            if (destination_of_funds == loan_owner) {
-                self.vault._push(repayment_credit, loan_owner);
-            } else {
-                let pool_adapter = self.config.read().get_pool_adapter(destination_of_funds);
-                if (pool_adapter.contract_address == Default::default()) {
-                    Err::INVALID_SOURCE_OF_FUNDS(source_of_funds: destination_of_funds);
-                }
-
-                self
-                    .vault
-                    ._supply_to_pool(
-                        repayment_credit, pool_adapter, destination_of_funds, loan_owner
-                    );
             }
         }
 
@@ -787,7 +727,7 @@ pub mod PwnSimpleLoan {
     }
 
     #[generate_trait]
-    impl Private of PrivateTrait {
+    pub impl Private of PrivateTrait {
         fn initializer(
             ref self: ContractState,
             hub: ContractAddress,
@@ -979,7 +919,7 @@ pub mod PwnSimpleLoan {
                 0
             };
             self
-                .try_claim_repaid_loan(
+                ._try_claim_repaid_loan(
                     loan_id: refinancing_loan_id,
                     credit_amount: credit_amount,
                     loan_owner: loan_owner
@@ -1086,6 +1026,45 @@ pub mod PwnSimpleLoan {
                     id: asset.id,
                     amount: asset.amount
                 );
+            }
+        }
+
+        fn _try_claim_repaid_loan(
+            ref self: ContractState,
+            loan_id: felt252,
+            credit_amount: u256,
+            loan_owner: ContractAddress
+        ) {
+            let loan = self.loans.read(loan_id);
+
+            if (loan.status != 3 || loan.original_lender != loan_owner) {
+                return;
+            }
+
+            let destination_of_funds = loan.original_source_of_funds;
+
+            let repayment_credit = ERC20(loan.credit_address, credit_amount);
+
+            self._delete_loan(loan_id);
+
+            self.emit(LoanClaimed { loan_id, defaulted: false });
+
+            if (credit_amount == 0) {
+                return;
+            }
+
+            if (destination_of_funds == loan_owner) {
+                self.vault._push(repayment_credit, loan_owner);
+            } else {
+                let pool_adapter = self.config.read().get_pool_adapter(destination_of_funds);
+                if (pool_adapter.contract_address == Default::default()) {
+                    Err::INVALID_SOURCE_OF_FUNDS(source_of_funds: destination_of_funds);
+                }
+                self
+                    .vault
+                    ._supply_to_pool(
+                        repayment_credit, pool_adapter, destination_of_funds, loan_owner
+                    );
             }
         }
 

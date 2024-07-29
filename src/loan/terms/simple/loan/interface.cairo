@@ -15,9 +15,6 @@ pub trait IPwnSimpleLoan<TState> {
     ) -> felt252;
     fn repay_loan(ref self: TState, loan_id: felt252, permit_data: felt252);
     fn claim_loan(ref self: TState, loan_id: felt252);
-    fn try_claim_repaid_loan(
-        ref self: TState, loan_id: felt252, credit_amount: u256, loan_owner: ContractAddress
-    );
     fn make_extension_proposal(ref self: TState, extension: types::ExtensionProposal);
     fn extend_loan(
         ref self: TState,
