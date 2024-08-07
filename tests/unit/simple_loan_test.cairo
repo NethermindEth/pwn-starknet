@@ -415,10 +415,10 @@ pub(crate) fn _get_extension_hash(
     let hash_elements: Array<felt252> = array![
         PwnSimpleLoan::BASE_DOMAIN_SEPARATOR, address.into()
     ];
-    let domain_seperator_hash = poseidon_hash_span(hash_elements.span());
+    let domain_separator_hash = poseidon_hash_span(hash_elements.span());
     let hash_elements: Array<felt252> = array![
         1901,
-        domain_seperator_hash,
+        domain_separator_hash,
         PwnSimpleLoan::EXTENSION_PROPOSAL_TYPEHASH,
         extension.loan_id,
         extension.compensation_address.into(),
