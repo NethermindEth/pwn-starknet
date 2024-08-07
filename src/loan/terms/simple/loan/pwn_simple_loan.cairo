@@ -613,7 +613,7 @@ pub mod PwnSimpleLoan {
         ///
         /// - The computed hash as `felt252`.
         fn get_extension_hash(self: @ContractState, extension: ExtensionProposal) -> felt252 {
-            let domain_seperator= self.domain_separator.read();
+            let domain_seperator = self.domain_separator.read();
 
             let hash_elements: Array<felt252> = array![
                 1901,
