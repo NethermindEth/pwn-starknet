@@ -613,15 +613,11 @@ pub mod PwnSimpleLoan {
         ///
         /// - The computed hash as `felt252`.
         fn get_extension_hash(self: @ContractState, extension: ExtensionProposal) -> felt252 {
-            let hash_elements: Array<felt252> = array![
-                self.domain_separator.read(),
-                starknet::get_contract_address().try_into().expect('get_extension_hash')
-            ];
-            let domain_seperator_hash = poseidon_hash_span(hash_elements.span());
+            let domain_seperator= self.domain_separator.read();
 
             let hash_elements: Array<felt252> = array![
                 1901,
-                domain_seperator_hash,
+                domain_seperator,
                 EXTENSION_PROPOSAL_TYPEHASH,
                 extension.loan_id,
                 extension.compensation_address.try_into().expect('get_extension_hash'),

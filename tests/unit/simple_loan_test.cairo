@@ -415,11 +415,7 @@ pub(crate) fn _get_extension_hash(
     let hash_elements: Array<felt252> = array![
         PwnSimpleLoan::BASE_DOMAIN_SEPARATOR, address.into()
     ];
-    let mut domain_seperator_hash = poseidon_hash_span(hash_elements.span());
-    domain_seperator_hash =
-        poseidon_hash_span(
-            array![domain_seperator_hash, address.into()].span()
-        ); // check is this correct 
+    let domain_seperator_hash = poseidon_hash_span(hash_elements.span());
     let hash_elements: Array<felt252> = array![
         1901,
         domain_seperator_hash,
