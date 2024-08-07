@@ -470,7 +470,7 @@ pub mod PwnSimpleLoan {
             let extension_hash = self.get_extension_hash(extension.clone());
 
             if (!self.extension_proposal_made.read(extension_hash)) {
-                if (!self._is_valid_signature_now(caller, extension_hash, signature)) {
+                if (!self._is_valid_signature_now(extension.proposer, extension_hash, signature)) {
                     signature_checker::Err::INVALID_SIGNATURE(
                         signer: extension.proposer, digest: extension_hash
                     );
