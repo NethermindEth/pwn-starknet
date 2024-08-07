@@ -13,7 +13,6 @@ mod unit {
     mod simple_loan_proposal_test;
     mod simple_loan_simple_proposal_test;
     mod simple_loan_test;
-    mod simple_loan_test_sameer;
     mod vault_test;
 }
 
