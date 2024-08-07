@@ -471,7 +471,6 @@ pub mod PwnSimpleLoan {
 
             if (!self.extension_proposal_made.read(extension_hash)) {
                 if (!self._is_valid_signature_now(extension.proposer, extension_hash, signature)) {
-                if (!self._is_valid_signature_now(extension.proposer, extension_hash, signature)) {
                     signature_checker::Err::INVALID_SIGNATURE(
                         signer: extension.proposer, digest: extension_hash
                     );
@@ -542,6 +541,7 @@ pub mod PwnSimpleLoan {
 
             let original_default_timestamp = loan.default_timestamp;
             loan.default_timestamp = original_default_timestamp + extension.duration;
+
             self
                 .emit(
                     LoanExtended {
@@ -599,6 +599,7 @@ pub mod PwnSimpleLoan {
             if (loan.status == 0) {
                 return 0;
             }
+
             loan.principal_amount + self._loan_accrued_interest(loan)
         }
 
@@ -627,7 +628,6 @@ pub mod PwnSimpleLoan {
                 extension.nonce_space,
                 extension.nonce
             ];
-
             poseidon_hash_span(hash_elements.span())
         }
 
@@ -652,7 +652,6 @@ pub mod PwnSimpleLoan {
             } else {
                 Default::default()
             };
-
             let loan_return_value = GetLoanReturnValue {
                 status: self._get_loan_status(loan_id),
                 start_timestamp: loan.start_timestamp,
