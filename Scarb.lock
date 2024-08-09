@@ -54,9 +54,62 @@ dependencies = [
 ]
 
 [[package]]
-name = "openzeppelin"
-version = "0.14.0"
-source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.14.0#f091c4f51ddeb10297db984acae965328c5a4e5b"
+name = "openzeppelin_access"
+version = "0.15.0"
+source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.15.0#f57642960f1c8cffafefb88bfff418eca8510634"
+dependencies = [
+ "openzeppelin_introspection",
+ "openzeppelin_utils",
+]
+
+[[package]]
+name = "openzeppelin_account"
+version = "0.15.0"
+source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.15.0#f57642960f1c8cffafefb88bfff418eca8510634"
+dependencies = [
+ "openzeppelin_introspection",
+ "openzeppelin_token",
+ "openzeppelin_utils",
+]
+
+[[package]]
+name = "openzeppelin_governance"
+version = "0.15.0"
+source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.15.0#f57642960f1c8cffafefb88bfff418eca8510634"
+dependencies = [
+ "openzeppelin_access",
+ "openzeppelin_introspection",
+]
+
+[[package]]
+name = "openzeppelin_introspection"
+version = "0.15.0"
+source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.15.0#f57642960f1c8cffafefb88bfff418eca8510634"
+
+[[package]]
+name = "openzeppelin_security"
+version = "0.15.0"
+source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.15.0#f57642960f1c8cffafefb88bfff418eca8510634"
+
+[[package]]
+name = "openzeppelin_token"
+version = "0.15.0"
+source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.15.0#f57642960f1c8cffafefb88bfff418eca8510634"
+dependencies = [
+ "openzeppelin_account",
+ "openzeppelin_governance",
+ "openzeppelin_introspection",
+]
+
+[[package]]
+name = "openzeppelin_upgrades"
+version = "0.15.0"
+source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.15.0#f57642960f1c8cffafefb88bfff418eca8510634"
+
+[[package]]
+name = "openzeppelin_utils"
+version = "0.15.0"
+source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.15.0#f57642960f1c8cffafefb88bfff418eca8510634"
 
 [[package]]
 name = "pwn"
@@ -64,11 +117,16 @@ version = "0.1.0"
 dependencies = [
  "alexandria_data_structures",
  "alexandria_math",
- "openzeppelin",
+ "openzeppelin_access",
+ "openzeppelin_account",
+ "openzeppelin_introspection",
+ "openzeppelin_security",
+ "openzeppelin_token",
+ "openzeppelin_upgrades",
  "snforge_std",
 ]
 
 [[package]]
 name = "snforge_std"
-version = "0.26.0"
-source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.26.0#50eb589db65e113efe4f09241feb59b574228c7e"
+version = "0.27.0"
+source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.27.0#2d99b7c00678ef0363881ee0273550c44a9263de"
