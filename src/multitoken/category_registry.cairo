@@ -54,7 +54,7 @@ pub mod MultiTokenCategoryRegistry {
 
     #[storage]
     struct Storage {
-        registered_category: LegacyMap::<ContractAddress, u8>,
+        registered_category: Map::<ContractAddress, u8>,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]

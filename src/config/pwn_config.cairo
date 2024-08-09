@@ -67,9 +67,9 @@ pub mod PwnConfig {
     struct Storage {
         fee: u16,
         fee_collector: ContractAddress,
-        loan_metadata_uri: LegacyMap::<ContractAddress, ByteArray>,
-        sf_computer_registry: LegacyMap::<ContractAddress, ContractAddress>,
-        pool_adapter_registry: LegacyMap::<ContractAddress, ContractAddress>,
+        loan_metadata_uri: Map::<ContractAddress, ByteArray>,
+        sf_computer_registry: Map::<ContractAddress, ContractAddress>,
+        pool_adapter_registry: Map::<ContractAddress, ContractAddress>,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]

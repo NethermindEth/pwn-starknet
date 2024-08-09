@@ -69,7 +69,7 @@ pub mod PwnLoan {
     struct Storage {
         hub: IPwnHubDispatcher,
         last_loan_id: felt252,
-        loan_contract: LegacyMap::<felt252, ContractAddress>,
+        loan_contract: Map::<felt252, ContractAddress>,
         #[substorage(v0)]
         erc721: ERC721Component::Storage,
         #[substorage(v0)]

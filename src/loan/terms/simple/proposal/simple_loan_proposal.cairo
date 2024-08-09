@@ -118,8 +118,8 @@ pub mod SimpleLoanProposalComponent {
         hub: IPwnHubDispatcher,
         revoked_nonce: IRevokedNonceDispatcher,
         config: IPwnConfigDispatcher,
-        proposal_made: LegacyMap::<felt252, bool>,
-        credit_used: LegacyMap::<felt252, u256>,
+        proposal_made: Map::<felt252, bool>,
+        credit_used: Map::<felt252, u256>,
         DOMAIN_SEPARATOR: felt252,
     }
 

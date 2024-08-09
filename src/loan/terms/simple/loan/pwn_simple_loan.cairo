@@ -114,8 +114,8 @@ pub mod PwnSimpleLoan {
 
     #[storage]
     struct Storage {
-        loans: LegacyMap::<felt252, Loan>,
-        extension_proposal_made: LegacyMap::<felt252, bool>,
+        loans: Map::<felt252, Loan>,
+        extension_proposal_made: Map::<felt252, bool>,
         domain_separator: felt252,
         hub: IPwnHubDispatcher,
         loan_token: IPwnLoanDispatcher,

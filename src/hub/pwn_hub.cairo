@@ -60,7 +60,7 @@ pub mod PwnHub {
 
     #[storage]
     struct Storage {
-        tags: LegacyMap::<(ContractAddress, felt252), bool>,
+        tags: Map::<(ContractAddress, felt252), bool>,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
     }

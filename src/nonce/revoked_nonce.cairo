@@ -65,8 +65,8 @@ pub mod RevokedNonce {
     struct Storage {
         access_tag: felt252,
         hub: IPwnHubDispatcher,
-        revoked_nonce: LegacyMap::<(ContractAddress, felt252, felt252), bool>,
-        nonce_space: LegacyMap::<ContractAddress, felt252>,
+        revoked_nonce: Map::<(ContractAddress, felt252, felt252), bool>,
+        nonce_space: Map::<ContractAddress, felt252>,
     }
 
     #[event]
