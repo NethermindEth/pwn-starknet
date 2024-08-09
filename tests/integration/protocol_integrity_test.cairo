@@ -1,4 +1,4 @@
-use openzeppelin::token::{
+use openzeppelin_token::{
     erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
     erc721::interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait},
     erc1155::interface::{ERC1155ABIDispatcher, ERC1155ABIDispatcherTrait}
@@ -10,8 +10,8 @@ use pwn::loan::terms::simple::proposal::simple_loan_simple_proposal::{
 };
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
-    cheat_caller_address_global, spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait,
-    cheat_block_timestamp_global, stop_cheat_caller_address, stop_cheat_caller_address_global
+    start_cheat_caller_address_global, spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait,
+    start_cheat_block_timestamp_global, stop_cheat_caller_address, stop_cheat_caller_address_global
 };
 use super::base_integration_test::{
     E18, setup, protocol_timelock, _repay_loan, _create_erc1155_loan_failing, _create_erc1155_loan
@@ -22,7 +22,7 @@ use super::base_integration_test::{
 fn test_should_fail_to_create_loan_when_loan_contract_not_active() {
     let dsp = setup();
 
-    cheat_caller_address_global(protocol_timelock());
+    start_cheat_caller_address_global(protocol_timelock());
     dsp.hub.set_tag(dsp.loan.contract_address, pwn_hub_tags::ACTIVE_LOAN, false);
 
     _create_erc1155_loan_failing(dsp, 'fail');
@@ -53,7 +53,7 @@ fn test_should_repay_loan_when_loan_contract_not_active_when_original_lender_is_
 
     let loan_id = _create_erc1155_loan(dsp);
 
-    cheat_caller_address_global(dsp.lender.contract_address);
+    start_cheat_caller_address_global(dsp.lender.contract_address);
     let loan_token_erc721 = ERC721ABIDispatcher {
         contract_address: dsp.loan_token.contract_address
     };
@@ -85,7 +85,7 @@ fn test_should_claim_repaid_loan_when_loan_contract_not_active() {
 
     let loan_id = _create_erc1155_loan(dsp);
 
-    cheat_caller_address_global(dsp.lender.contract_address);
+    start_cheat_caller_address_global(dsp.lender.contract_address);
     let loan_token_erc721 = ERC721ABIDispatcher {
         contract_address: dsp.loan_token.contract_address
     };
@@ -121,7 +121,7 @@ fn test_should_fail_to_create_loan_terms_when_caller_is_not_active_loan() {
 
     let proposal_data = dsp.proposal_simple.encode_proposal_data(dsp.simple_proposal);
 
-    cheat_caller_address_global(dsp.loan.contract_address);
+    start_cheat_caller_address_global(dsp.loan.contract_address);
     dsp
         .proposal_simple
         .accept_proposal(

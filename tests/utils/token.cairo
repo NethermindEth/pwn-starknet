@@ -1,4 +1,4 @@
-use openzeppelin::token::{
+use openzeppelin_token::{
     erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
     erc721::interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait},
     erc1155::interface::{ERC1155ABIDispatcher, ERC1155ABIDispatcherTrait}

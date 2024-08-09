@@ -1,10 +1,10 @@
-use core::integer::BoundedInt;
+use core::num::traits::Bounded;
 use core::{
     starknet,
-    starknet::{storage::StorageMapMemberAccessTrait, ContractAddress, get_contract_address},
+    starknet::{ContractAddress, get_contract_address},
     poseidon::poseidon_hash_span, traits::Into
 };
-use openzeppelin::account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
+use openzeppelin_account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
 use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
 use pwn::hub::{pwn_hub_tags, pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait}};
 use pwn::interfaces::fingerprint_computer::{
@@ -22,8 +22,8 @@ use pwn::nonce::revoked_nonce::{
 };
 
 use snforge_std::{
-    declare, store, map_entry_address, cheat_caller_address_global,
-    stop_cheat_caller_address_global, cheat_block_timestamp_global, mock_call,
+    declare, store, map_entry_address, start_cheat_caller_address_global,
+    stop_cheat_caller_address_global, start_cheat_block_timestamp_global, mock_call,
     signature::{
         KeyPair, KeyPairTrait, SignerTrait,
         stark_curve::{StarkCurveKeyPairImpl, StarkCurveSignerImpl, StarkCurveVerifierImpl},
@@ -185,7 +185,7 @@ fn test_should_call_revoke_nonce() {
         .is_nonce_usable(params.base.proposer, params.base.nonce_space, params.base.nonce);
 
     assert!(is_usable, "Nonce already revoked");
-    cheat_caller_address_global(params.base.proposer);
+    start_cheat_caller_address_global(params.base.proposer);
     dsp.component.revoke_nonce(params.base.nonce_space, params.base.nonce);
     is_usable = dsp
         .nonce
@@ -198,7 +198,7 @@ fn test_should_call_revoke_nonce() {
 fn test_should_fail_when_caller_is_not_proposer() {
     let mut dsp = deploy();
     let dummy_hash = poseidon_hash_span(array!['dummy'].span());
-    cheat_caller_address_global(dsp.signer.contract_address);
+    start_cheat_caller_address_global(dsp.signer.contract_address);
     dsp.component._make_proposal(dummy_hash, starknet::contract_address_const::<'not_proposer'>());
 }
 
@@ -207,7 +207,7 @@ fn test_should_make_proposal() {
     let mut dsp = deploy();
     let dummy_hash = poseidon_hash_span(array!['dummy'].span());
     let proposer = dsp.signer.contract_address;
-    cheat_caller_address_global(proposer);
+    start_cheat_caller_address_global(proposer);
     dsp.component._make_proposal(dummy_hash, proposer);
     assert!(dsp.component.proposal_made.read(dummy_hash), "Proposal not exists");
 }
@@ -221,7 +221,7 @@ fn test_fuzz_should_fail_when_caller_is_not_proposed_loan_contract(_caller: u128
     if caller == params.base.loan_contract {
         caller = Into::<u128, felt252>::into(_caller + 1).try_into().unwrap();
     }
-    cheat_caller_address_global(caller);
+    start_cheat_caller_address_global(caller);
     call_accept_proposal_with(ref dsp.component, params);
 }
 
@@ -236,7 +236,7 @@ fn test_fuzz_should_fail_when_caller_not_tagged_active_loan(_caller: u128) {
     }
     dsp.hub.set_tag(caller, pwn_hub_tags::ACTIVE_LOAN, false);
 
-    cheat_caller_address_global(caller);
+    start_cheat_caller_address_global(caller);
     call_accept_proposal_with(ref dsp.component, params);
 }
 
@@ -249,7 +249,7 @@ fn test_should_fail_when_proposer_is_same_as_acceptor() {
 
     let mut params = params(dsp.signer.contract_address, dsp.key_pair);
     params.acceptor = params.base.proposer;
-    cheat_caller_address_global(params.base.loan_contract);
+    start_cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref dsp.component, params);
 }
 
@@ -265,7 +265,7 @@ fn test_fuzz_should_fail_when_invalid_signature_when_eoa(random_private_key: fel
     let (r, s): (felt252, felt252) = key_pair.sign(params.message_hash).unwrap();
     params.signature = Signature { r, s };
 
-    cheat_caller_address_global(params.base.loan_contract);
+    start_cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref dsp.component, params);
 }
 
@@ -284,7 +284,7 @@ fn test_fuzz_should_fail_with_invalid_signature_when_eoa_when_multiproposal(
     let (r, s): (felt252, felt252) = key_pair.sign(params.message_hash).unwrap();
     params.signature = Signature { r, s };
     params.proposal_inclusion_proof = array!['first proof', 'second proof'];
-    cheat_caller_address_global(params.base.loan_contract);
+    start_cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref dsp.component, params);
 }
 
@@ -304,11 +304,11 @@ fn test_should_pass_when_proposal_made_onchain() {
     // invalidate the signature
     params.signature.r = 'invalid signature';
 
-    cheat_caller_address_global(params.base.proposer);
+    start_cheat_caller_address_global(params.base.proposer);
     dsp.component._make_proposal(params.message_hash, params.base.proposer);
     stop_cheat_caller_address_global();
 
-    cheat_caller_address_global(params.base.loan_contract);
+    start_cheat_caller_address_global(params.base.loan_contract);
     // should pass the signature check
     call_accept_proposal_with(ref dsp.component, params);
 }
@@ -320,7 +320,7 @@ fn test_should_pass_with_valid_signature_when_eoa_when_standard_signature() {
     dsp.config.register_state_fingerprint_computer(TOKEN(), SF_COMPUTER());
 
     let params = params(dsp.signer.contract_address, dsp.key_pair);
-    cheat_caller_address_global(params.base.loan_contract);
+    start_cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref dsp.component, params);
 }
 
@@ -339,7 +339,7 @@ fn test_fuzz_should_fail_when_proposed_refinancing_loan_id_not_zero_when_refinan
     }
     params.base.refinancing_loan_id = proposed_refinancing_loan_id;
 
-    cheat_caller_address_global(params.base.loan_contract);
+    start_cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref dsp.component, params);
 }
 
@@ -366,7 +366,7 @@ fn test_should_fail_when_refinancing_loan_ids_is_not_equal_when_proposed_refinan
     let mut params = params(dsp.signer.contract_address, dsp.key_pair);
     params.base.refinancing_loan_id = proposed_refinancing_loan_id;
     params.refinancing_loan_id = refinancing_loan_id;
-    cheat_caller_address_global(params.base.loan_contract);
+    start_cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref dsp.component, params);
 }
 
@@ -382,7 +382,7 @@ fn test_fuzz_should_pass_when_refinancing_loan_ids_not_equal_when_proposed_refin
         refinancing_loan_id += 1;
     }
     params.refinancing_loan_id = refinancing_loan_id;
-    cheat_caller_address_global(params.base.loan_contract);
+    start_cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref dsp.component, params);
 }
 
@@ -405,7 +405,7 @@ fn test_fuzz_should_fail_when_refinancing_loan_ids_not_equal_when_refinancing_lo
     params.base.is_offer = false;
     params.base.refinancing_loan_id = proposed_refinancing_loan_id;
     params.refinancing_loan_id = refinancing_loan_id;
-    cheat_caller_address_global(params.base.loan_contract);
+    start_cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref dsp.component, params);
 }
 
@@ -420,8 +420,8 @@ fn test_fuzz_should_fail_when_proposal_expired(mut timestamp: u64) {
         timestamp += params.base.expiration + 1;
     }
 
-    cheat_caller_address_global(params.base.loan_contract);
-    cheat_block_timestamp_global(timestamp);
+    start_cheat_caller_address_global(params.base.loan_contract);
+    start_cheat_block_timestamp_global(timestamp);
     call_accept_proposal_with(ref dsp.component, params);
 }
 
@@ -438,7 +438,7 @@ fn test_fuzz_should_fail_when_offer_nonce_not_usable(nonce_space: felt252, nonce
 
     mock_call(dsp.nonce.contract_address, selector!("is_nonce_usable"), false, 1);
 
-    cheat_caller_address_global(params.base.loan_contract);
+    start_cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref dsp.component, params);
 }
 
@@ -458,7 +458,7 @@ fn test_fuzz_should_fail_when_caller_is_not_allowed_acceptor(_caller: u128) {
                 caller = Into::<u128, felt252>::into(_caller + 1).try_into().unwrap();
             };
 
-    cheat_caller_address_global(caller);
+    start_cheat_caller_address_global(caller);
     call_accept_proposal_with(ref dsp.component, params);
 }
 
@@ -475,7 +475,7 @@ fn test_should_revoke_offer_when_available_credit_limit_equal_to_zero() {
     );
     assert!(dsp.nonce.is_nonce_usable(proposer, nonce_space, nonce), "Nonce is not usable");
 
-    cheat_caller_address_global(params.base.loan_contract);
+    start_cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref dsp.component, params);
     assert!(!dsp.nonce.is_nonce_usable(proposer, nonce_space, nonce), "Nonce is not revoken");
 }
@@ -495,8 +495,8 @@ fn test_fuzz_should_fail_when_used_credit_exceeds_available_credit_limit(
         if used == 0 {
             used += 1;
             used
-        } else if used > BoundedInt::max() - credit_amount {
-            used = BoundedInt::max() - credit_amount;
+        } else if used > Bounded::MAX - credit_amount {
+            used = Bounded::MAX - credit_amount;
             used
         } else {
             used
@@ -516,7 +516,7 @@ fn test_fuzz_should_fail_when_used_credit_exceeds_available_credit_limit(
     params.base.available_credit_limit = limit;
     dsp.component.credit_used.write(params.message_hash, used);
 
-    cheat_caller_address_global(params.base.loan_contract);
+    start_cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref dsp.component, params);
 }
 
@@ -533,8 +533,8 @@ fn test_fuzz_should_increase_used_credit_when_used_credit_not_exceeds_available_
     used =
         if used == 0 {
             used + 1
-        } else if used > BoundedInt::max() - credit_amount {
-            BoundedInt::max() - credit_amount
+        } else if used > Bounded::MAX - credit_amount {
+            Bounded::MAX - credit_amount
         } else {
             used
         };
@@ -547,7 +547,7 @@ fn test_fuzz_should_increase_used_credit_when_used_credit_not_exceeds_available_
     params.base.available_credit_limit = limit;
     dsp.component.credit_used.write(params.message_hash, used);
     let message_hash = params.message_hash;
-    cheat_caller_address_global(params.base.loan_contract);
+    start_cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref dsp.component, params);
     let current_credit_used = dsp.component.credit_used.read(message_hash);
     assert_eq!(used + credit_amount, current_credit_used, "Credit used imbalanced");
@@ -559,7 +559,7 @@ fn test_should_not_call_computer_registry_when_should_not_check_state_fingerprin
     let mut params = params(dsp.signer.contract_address, dsp.key_pair);
     params.base.check_collateral_state_fingerprint = false;
 
-    cheat_caller_address_global(params.base.loan_contract);
+    start_cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref dsp.component, params);
 }
 // same with any successfull path dont have vm.expectCall equivalent in snforge
@@ -570,7 +570,7 @@ fn test_should_call_computer_registry_when_should_check_state_fingerprint() {
     dsp.config.register_state_fingerprint_computer(TOKEN(), SF_COMPUTER());
 
     let params = params(dsp.signer.contract_address, dsp.key_pair);
-    cheat_caller_address_global(params.base.loan_contract);
+    start_cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref dsp.component, params);
 }
 
@@ -580,7 +580,7 @@ fn test_should_fail_when_computer_registry_returns_computer_when_computer_fails(
     let mut dsp = deploy();
 
     let params = params(dsp.signer.contract_address, dsp.key_pair);
-    cheat_caller_address_global(params.base.loan_contract);
+    start_cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref dsp.component, params);
 }
 
@@ -600,7 +600,7 @@ fn test_fuzz_should_fail_when_computer_registry_returns_computer_when_computer_r
 
     dsp.config.register_state_fingerprint_computer(TOKEN(), SF_COMPUTER());
 
-    cheat_caller_address_global(params.base.loan_contract);
+    start_cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref dsp.component, params);
 }
 // duplicate test with any succesfull path
@@ -611,6 +611,6 @@ fn test_should_pass_when_computer_returns_matching_fingerprint() {
     dsp.config.register_state_fingerprint_computer(TOKEN(), SF_COMPUTER());
 
     let params = params(dsp.signer.contract_address, dsp.key_pair);
-    cheat_caller_address_global(params.base.loan_contract);
+    start_cheat_caller_address_global(params.base.loan_contract);
     call_accept_proposal_with(ref dsp.component, params);
 }

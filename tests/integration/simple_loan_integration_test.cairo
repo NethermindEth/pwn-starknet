@@ -1,5 +1,5 @@
 use core::poseidon::poseidon_hash_span;
-use openzeppelin::token::{
+use openzeppelin_token::{
     erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
     erc721::interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait},
     erc1155::interface::{ERC1155ABIDispatcher, ERC1155ABIDispatcherTrait}
@@ -25,8 +25,8 @@ use pwn::multitoken::library::MultiToken;
 use pwn::nonce::revoked_nonce::{IRevokedNonceDispatcher, IRevokedNonceDispatcherTrait};
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
-    cheat_caller_address_global, spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait,
-    cheat_block_timestamp_global, stop_cheat_caller_address, stop_cheat_caller_address_global,
+    start_cheat_caller_address_global, spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait,
+    start_cheat_block_timestamp_global, stop_cheat_caller_address, stop_cheat_caller_address_global,
 };
 use starknet::ContractAddress;
 use super::base_integration_test::{
@@ -261,7 +261,7 @@ fn test_should_create_loan_from_dutch_auction_proposal() {
 
     let proposal_data = dsp.proposal_dutch.encode_proposal_data(proposal, proposal_values);
 
-    cheat_block_timestamp_global(starknet::get_block_timestamp() + _4_HOURS);
+    start_cheat_block_timestamp_global(starknet::get_block_timestamp() + _4_HOURS);
 
     let credit_amount = dsp
         .proposal_dutch
@@ -455,7 +455,7 @@ fn test_should_fail_to_repay_loan_when_loan_expired() {
     let loan_id = _create_erc1155_loan(dsp);
 
     let expiration = starknet::get_block_timestamp() + dsp.simple_proposal.duration;
-    cheat_block_timestamp_global(expiration);
+    start_cheat_block_timestamp_global(expiration);
 
     _repay_loan_failing(dsp, loan_id, 'LOAN_EXPIRED');
 }
@@ -494,7 +494,7 @@ fn test_should_claim_defaulted_loan() {
 
     let loan_id = _create_erc1155_loan(dsp);
 
-    cheat_block_timestamp_global(starknet::get_block_timestamp() + dsp.simple_proposal.duration);
+    start_cheat_block_timestamp_global(starknet::get_block_timestamp() + dsp.simple_proposal.duration);
 
     start_cheat_caller_address(dsp.loan.contract_address, dsp.lender.contract_address);
     dsp.loan.claim_loan(loan_id);

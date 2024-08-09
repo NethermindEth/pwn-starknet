@@ -1,8 +1,8 @@
-use openzeppelin::token::erc1155::interface::{
+use openzeppelin_token::erc1155::interface::{
     ERC1155ABI, ERC1155ABIDispatcher, ERC1155ABIDispatcherTrait
 };
-use openzeppelin::token::erc20::interface::{ERC20ABI, ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
-use openzeppelin::token::erc721::interface::{
+use openzeppelin_token::erc20::interface::{ERC20ABI, ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
+use openzeppelin_token::erc721::interface::{
     ERC721ABI, ERC721ABIDispatcher, ERC721ABIDispatcherTrait
 };
 use pwn::mocks::{
@@ -14,7 +14,7 @@ use pwn::multitoken::{
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
     cheat_caller_address, CheatSpan, mock_call, start_mock_call, stop_mock_call,
-    cheat_caller_address_global, stop_cheat_caller_address_global,
+    start_cheat_caller_address_global, stop_cheat_caller_address_global,
 };
 use starknet::ContractAddress;
 use super::super::utils::token::{
@@ -315,7 +315,7 @@ fn test_erc20_transfer_asset_from_should_succeed_when_approved() {
 
     let asset = MultiToken::ERC20(tokens.erc20.contract_address, 1000);
 
-    cheat_caller_address_global(ALICE());
+    start_cheat_caller_address_global(ALICE());
     asset.approve_asset(this_address);
     stop_cheat_caller_address_global();
 
@@ -345,7 +345,7 @@ fn test_erc721_transfer_asset_from_should_succeed_when_approved() {
 
     let asset = MultiToken::ERC721(tokens.erc721.contract_address, 1);
 
-    cheat_caller_address_global(alice);
+    start_cheat_caller_address_global(alice);
     asset.approve_asset(this_address);
     stop_cheat_caller_address_global();
 
@@ -376,7 +376,7 @@ fn test_erc1155_transfer_asset_from_should_succeed_when_approved() {
 
     let asset = MultiToken::ERC1155(tokens.erc1155.contract_address, 1, Option::Some(5));
 
-    cheat_caller_address_global(alice);
+    start_cheat_caller_address_global(alice);
     asset.approve_asset(this_address);
     stop_cheat_caller_address_global();
 

@@ -1,8 +1,8 @@
 use core::result::ResultTrait;
 use core::traits::Into;
-use openzeppelin::access::ownable::interface::{IOwnableDispatcher, IOwnableDispatcherTrait};
-use openzeppelin::account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
-use openzeppelin::token::{
+use openzeppelin_access::ownable::interface::{IOwnableDispatcher, IOwnableDispatcherTrait};
+use openzeppelin_account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
+use openzeppelin_token::{
     erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
     erc721::interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait},
     erc1155::interface::{ERC1155ABIDispatcher, ERC1155ABIDispatcherTrait}

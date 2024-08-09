@@ -1,7 +1,7 @@
 use pwn::hub::pwn_hub::PwnHub;
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
-    cheat_caller_address_global,
+    start_cheat_caller_address_global,
 };
 use starknet::ContractAddress;
 
@@ -34,7 +34,7 @@ mod constructor {
 
     #[test]
     fn test_should_set_hub_owner() {
-        super::cheat_caller_address_global(ACCOUNT_1());
+        super::start_cheat_caller_address_global(ACCOUNT_1());
         let hub = deploy();
         assert_eq!(hub.owner(), ACCOUNT_1());
     }
@@ -49,7 +49,7 @@ mod set_tag {
     fn test_should_fail_when_caller_is_not_owner() {
         let hub = deploy();
 
-        super::cheat_caller_address_global(ACCOUNT_1());
+        super::start_cheat_caller_address_global(ACCOUNT_1());
         hub.set_tag(OWNER(), 'tag', true);
     }
 
@@ -104,7 +104,7 @@ mod set_tags {
         let addresses = array![OWNER(), ACCOUNT_1()];
         let tags = array!['tag', 'tag'];
 
-        super::cheat_caller_address_global(ACCOUNT_1());
+        super::start_cheat_caller_address_global(ACCOUNT_1());
         hub.set_tags(addresses, tags, true);
     }
 

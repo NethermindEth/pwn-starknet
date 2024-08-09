@@ -1,5 +1,5 @@
 use core::clone::Clone;
-use core::integer::BoundedInt;
+use core::num::traits::Bounded;
 use core::poseidon::poseidon_hash_span;
 use core::starknet::SyscallResultTrait;
 use core::traits::Into;
@@ -15,7 +15,7 @@ use pwn::nonce::revoked_nonce::{RevokedNonce, IRevokedNonceDispatcher};
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
     stop_cheat_caller_address, spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait,
-    cheat_block_timestamp_global, start_mock_call
+    start_cheat_block_timestamp_global, start_mock_call
 };
 use starknet::{ContractAddress, testing};
 

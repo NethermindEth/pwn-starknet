@@ -1,14 +1,14 @@
 use core::debug;
-use openzeppelin::token::erc20::ERC20Component::{ERC20CamelOnlyImpl, ERC20Impl};
-use openzeppelin::token::erc20::ERC20Component::{ERC20MetadataImpl, InternalImpl as erc20_internal};
-use openzeppelin::token::erc20::ERC20Component;
-use openzeppelin::token::erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
-use openzeppelin::token::erc721::ERC721Component::{
+use openzeppelin_token::erc20::ERC20Component::{ERC20CamelOnlyImpl, ERC20Impl};
+use openzeppelin_token::erc20::ERC20Component::{ERC20MetadataImpl, InternalImpl as erc20_internal};
+use openzeppelin_token::erc20::ERC20Component;
+use openzeppelin_token::erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
+use openzeppelin_token::erc721::ERC721Component::{
     ERC721MetadataImpl, InternalImpl as erc721_internal
 };
-use openzeppelin::token::erc721::ERC721Component::{ERC721CamelOnlyImpl, ERC721Impl};
-use openzeppelin::token::erc721::ERC721Component;
-use openzeppelin::token::erc721::interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait};
+use openzeppelin_token::erc721::ERC721Component::{ERC721CamelOnlyImpl, ERC721Impl};
+use openzeppelin_token::erc721::ERC721Component;
+use openzeppelin_token::erc721::interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait};
 use pwn::interfaces::pool_adapter::{IPoolAdapterDispatcher, IPoolAdapterDispatcherTrait};
 use pwn::loan::vault::pwn_vault::{
     PwnVaultComponent, PwnVaultComponent::InternalImpl as pwn_internal

@@ -2,7 +2,7 @@ use pwn::multitoken::category_registry::MultiTokenCategoryRegistry;
 
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
-    cheat_caller_address_global,
+    start_cheat_caller_address_global,
 };
 use starknet::ContractAddress;
 
@@ -33,7 +33,7 @@ mod constructor {
 
     #[test]
     fn test_should_set_contract_owner() {
-        super::cheat_caller_address_global(ACCOUNT_1());
+        super::start_cheat_caller_address_global(ACCOUNT_1());
         let registry = deploy();
         assert_eq!(registry.owner(), ACCOUNT_1());
     }
@@ -52,7 +52,7 @@ mod register_category_value {
     fn test_should_fail_when_caller_is_not_owner() {
         let registry = deploy();
 
-        super::cheat_caller_address_global(ACCOUNT_1());
+        super::start_cheat_caller_address_global(ACCOUNT_1());
         registry.register_category_value(ACCOUNT_1(), 5);
     }
 
@@ -121,7 +121,7 @@ mod unregister_category_value {
     fn test_should_fail_when_caller_is_not_owner() {
         let registry = deploy();
 
-        super::cheat_caller_address_global(ACCOUNT_1());
+        super::start_cheat_caller_address_global(ACCOUNT_1());
         registry.unregister_category_value(ACCOUNT_1());
     }
 

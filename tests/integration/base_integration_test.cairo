@@ -1,5 +1,5 @@
-use openzeppelin::account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
-use openzeppelin::token::{
+use openzeppelin_account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
+use openzeppelin_token::{
     erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
     erc721::interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait},
     erc1155::interface::{ERC1155ABIDispatcher, ERC1155ABIDispatcherTrait}
@@ -42,8 +42,8 @@ use snforge_std::signature::stark_curve::{
 use snforge_std::signature::{KeyPairTrait, KeyPair};
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
-    cheat_caller_address_global, spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait,
-    cheat_block_timestamp_global, stop_cheat_caller_address
+    start_cheat_caller_address_global, spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait,
+    start_cheat_block_timestamp_global, stop_cheat_caller_address
 };
 use starknet::ContractAddress;
 

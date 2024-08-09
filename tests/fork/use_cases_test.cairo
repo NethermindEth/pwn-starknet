@@ -1,5 +1,5 @@
-use openzeppelin::token::erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
-use openzeppelin::token::erc721::interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait};
+use openzeppelin_token::erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
+use openzeppelin_token::erc721::interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait};
 use pwn::loan::terms::simple::loan::{
     interface::{IPwnSimpleLoanDispatcher, IPwnSimpleLoanDispatcherTrait},
     types::{LenderSpec, ProposalSpec, CallerSpec}
@@ -10,7 +10,7 @@ use pwn::loan::terms::simple::proposal::simple_loan_simple_proposal::{
 use pwn::multitoken::category_registry::IMultiTokenCategoryRegistryDispatcherTrait;
 use pwn::multitoken::library::MultiToken;
 use snforge_std::{
-    start_cheat_caller_address, stop_cheat_caller_address, cheat_block_timestamp_global
+    start_cheat_caller_address, stop_cheat_caller_address, start_cheat_block_timestamp_global
 };
 use starknet::ContractAddress;
 use super::super::integration::base_integration_test::{
@@ -228,7 +228,7 @@ fn test_use_case_should_refinance_running_loan() {
     assert_eq!(dsp.credit.balance_of(dsp.borrower.contract_address), 100 * E18);
     assert_eq!(dsp.credit.balance_of(dsp.loan.contract_address), 10 * E18);
 
-    cheat_block_timestamp_global(starknet::get_block_timestamp() + _1_DAY * 4);
+    start_cheat_block_timestamp_global(starknet::get_block_timestamp() + _1_DAY * 4);
 
     let caller_spec = CallerSpec {
         refinancing_loan_id: loan_id, revoke_nonce: false, nonce: 0, permit_data: 0

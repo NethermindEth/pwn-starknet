@@ -1,7 +1,7 @@
-use core::integer::BoundedInt;
+use core::num::traits::Bounded;
 use core::poseidon::poseidon_hash_span;
 use core::starknet::SyscallResultTrait;
-use openzeppelin::account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
+use openzeppelin_account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
 use pwn::config::pwn_config::PwnConfig;
 use pwn::hub::{pwn_hub::{PwnHub, IPwnHubDispatcher, IPwnHubDispatcherTrait}, pwn_hub_tags};
 use pwn::loan::lib::serialization;
@@ -24,7 +24,7 @@ use snforge_std::signature::stark_curve::{
 use snforge_std::signature::{KeyPairTrait, KeyPair};
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
-    spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait, cheat_block_timestamp_global
+    spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait, start_cheat_block_timestamp_global
 };
 use starknet::secp256k1::{Secp256k1Point};
 use starknet::{ContractAddress, testing};
@@ -425,11 +425,11 @@ fn test_should_return_credit_amount(
     if collateral_amount == 0 {
         if credit_per_collateral_unit < 1 {
             credit_per_collateral_unit = 1;
-        } else if credit_per_collateral_unit > BoundedInt::max() {
-            credit_per_collateral_unit = BoundedInt::max();
+        } else if credit_per_collateral_unit > Bounded::MAX {
+            credit_per_collateral_unit = Bounded::MAX;
         }
     } else {
-        let max_credit_per_unit = BoundedInt::max() / collateral_amount;
+        let max_credit_per_unit = Bounded::MAX / collateral_amount;
         if credit_per_collateral_unit < 1 {
             credit_per_collateral_unit = 1;
         } else if (credit_per_collateral_unit > max_credit_per_unit) {
@@ -532,7 +532,7 @@ fn test_should_call_loan_contract_with_loan_terms( // collateral_amount: u256, c
         _proposal_values.collateral_amount = collateral_amount;
     }
 
-    let max_credit_per_unit = BoundedInt::max() / _proposal_values.collateral_amount;
+    let max_credit_per_unit = Bounded::MAX / _proposal_values.collateral_amount;
     if (credit_per_collateral_unit < 1) {
         _proposal.credit_per_collateral_unit = 1;
     } else if (credit_per_collateral_unit > max_credit_per_unit) {

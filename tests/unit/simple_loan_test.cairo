@@ -1,11 +1,11 @@
-use core::integer::BoundedInt;
+use core::num::traits::Bounded;
 use core::poseidon::poseidon_hash_span;
 use core::result::ResultTrait;
 use core::serde::Serde;
 use core::traits::Into;
 use core::traits::TryInto;
-use openzeppelin::account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
-use openzeppelin::token::{
+use openzeppelin_account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
+use openzeppelin_token::{
     erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
     erc721::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait},
     erc1155::interface::{ERC1155ABIDispatcher, ERC1155ABIDispatcherTrait},
@@ -36,7 +36,7 @@ use pwn::{
     },
 };
 use snforge_std::{
-    declare, store, load, map_entry_address, cheat_caller_address, cheat_block_timestamp_global,
+    declare, store, load, map_entry_address, cheat_caller_address, start_cheat_block_timestamp_global,
     mock_call, spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait,
     signature::{
         KeyPairTrait, SignerTrait, KeyPair,
@@ -228,15 +228,15 @@ pub fn setup() -> Setup {
     erc721_mint(t721_address, borrower_address, 2);
 
     cheat_caller_address(t20_address, lender_address, CheatSpan::TargetCalls(1));
-    t20.approve(loan_address, BoundedInt::max());
+    t20.approve(loan_address, Bounded::MAX);
 
     cheat_caller_address(t20_address, borrower_address, CheatSpan::TargetCalls(1));
-    t20.approve(loan_address, BoundedInt::max());
+    t20.approve(loan_address, Bounded::MAX);
 
     cheat_caller_address(t20_address, source_of_funds, CheatSpan::TargetCalls(1));
-    t20.approve(pool_adapter_address, BoundedInt::max());
+    t20.approve(pool_adapter_address, Bounded::MAX);
 
-    t20.approve(loan_address, BoundedInt::max());
+    t20.approve(loan_address, Bounded::MAX);
 
     cheat_caller_address(t721_address, borrower_address, CheatSpan::TargetCalls(1));
     t721.approve(loan_address, 2);
@@ -244,21 +244,21 @@ pub fn setup() -> Setup {
     let proposal_hash = 'proposalHash';
     let fee_collector = starknet::contract_address_const::<'feeCollector'>();
 
-    mock_call(t20_address, selector!("permit"), (), BoundedInt::<u32>::max());
+    mock_call(t20_address, selector!("permit"), (), Bounded::<u32>::MAX);
 
-    mock_call(config_address, selector!("get_fee"), 0, BoundedInt::<u32>::max());
+    mock_call(config_address, selector!("get_fee"), 0, Bounded::<u32>::MAX);
     mock_call(
-        config_address, selector!("get_fee_collector"), fee_collector, BoundedInt::<u32>::max()
+        config_address, selector!("get_fee_collector"), fee_collector, Bounded::<u32>::MAX
     );
     mock_call(
-        config_address, selector!("get_pool_adapter"), pool_adapter, BoundedInt::<u32>::max()
+        config_address, selector!("get_pool_adapter"), pool_adapter, Bounded::<u32>::MAX
     );
 
     mock_call(
         proposal_contract_address,
         selector!("accept_proposal"),
         (proposal_hash, simple_loan_terms),
-        BoundedInt::<u32>::max()
+        Bounded::<u32>::MAX
     );
 
     mock_call(loan_token_address, selector!("owner_of"), lender_address, 1);
@@ -525,12 +525,12 @@ mod get_lender_spec_hash {
 
 mod create_loan {
     use core::array::ArrayTrait;
-    use core::integer::BoundedInt;
+    use core::num::traits::Bounded;
     use core::option::OptionTrait;
     use core::serde::Serde;
     use core::traits::Into;
     use core::traits::TryInto;
-    use openzeppelin::token::{
+    use openzeppelin_token::{
         erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
         erc721::interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait}
     };
@@ -688,7 +688,7 @@ mod create_loan {
             bound(
                 accruing_interest_APR,
                 PwnSimpleLoan::MAX_ACCRUING_INTEREST_APR + 1,
-                BoundedInt::max()
+                Bounded::MAX
             );
 
         let mut terms = setup.simple_loan_terms;
@@ -987,10 +987,10 @@ mod create_loan {
 }
 
 mod refinance_loan {
-    use core::integer::BoundedInt;
+    use core::num::traits::Bounded;
     use core::traits::Into;
     use core::traits::TryInto;
-    use openzeppelin::token::{
+    use openzeppelin_token::{
         erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait},
         erc721::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait},
         erc1155::interface::{ERC1155ABIDispatcher, ERC1155ABIDispatcherTrait},
@@ -999,7 +999,7 @@ mod refinance_loan {
     use pwn::loan::vault::pwn_vault::PwnVaultComponent;
 
     use snforge_std::{
-        declare, store, load, map_entry_address, cheat_caller_address, cheat_block_timestamp_global,
+        declare, store, load, map_entry_address, cheat_caller_address, start_cheat_block_timestamp_global,
         mock_call, spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait, stop_mock_call,
         CheatSpan,
         signature::{
@@ -1026,7 +1026,7 @@ mod refinance_loan {
 
         let new_lender = setup.lender2.contract_address;
         cheat_caller_address(setup.t20.contract_address, new_lender, CheatSpan::TargetCalls(1));
-        setup.t20.approve(setup.loan.contract_address, BoundedInt::max());
+        setup.t20.approve(setup.loan.contract_address, Bounded::MAX);
 
         setup
             .refinanced_loan =
@@ -1088,7 +1088,7 @@ mod refinance_loan {
             setup.loan_token.contract_address,
             selector!("owner_of"),
             setup.lender.contract_address,
-            BoundedInt::max()
+            Bounded::MAX
         );
 
         erc20_mint(setup.t20.contract_address, new_lender, E20);
@@ -1141,7 +1141,7 @@ mod refinance_loan {
     #[should_panic]
     fn test_should_fail_when_loan_is_defaulted() {
         let setup = setup();
-        cheat_block_timestamp_global(setup.simple_loan.default_timestamp);
+        start_cheat_block_timestamp_global(setup.simple_loan.default_timestamp);
         setup
             .loan
             .create_loan(
@@ -1448,7 +1448,7 @@ mod refinance_loan {
     //        setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
     //    );
     //
-    //    erc20_mint(setup.t20.contract_address, setup.lender.contract_address, BoundedInt::max());
+    //    erc20_mint(setup.t20.contract_address, setup.lender.contract_address, Bounded::MAX);
     //
     //    setup
     //        .loan
@@ -1893,9 +1893,9 @@ mod refinance_loan {
         simple_loan.accruing_interest_APR = interest_APR;
         store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
 
-        cheat_block_timestamp_global(simple_loan.start_timestamp + days * DAY);
+        start_cheat_block_timestamp_global(simple_loan.start_timestamp + days * DAY);
         let loan_repayment_amount = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
-        refinance_amount %= BoundedInt::max() - loan_repayment_amount - setup.t20.total_supply();
+        refinance_amount %= Bounded::MAX - loan_repayment_amount - setup.t20.total_supply();
         if refinance_amount == 0 {
             refinance_amount = 1;
         }
@@ -1956,10 +1956,10 @@ mod refinance_loan {
         simple_loan.accruing_interest_APR = interest_APR;
         store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
 
-        cheat_block_timestamp_global(simple_loan.start_timestamp + days * DAY);
+        start_cheat_block_timestamp_global(simple_loan.start_timestamp + days * DAY);
         let loan_repayment_amount = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
         fee = bound(fee, 1, 9999);
-        refinance_amount %= BoundedInt::max() - loan_repayment_amount - setup.t20.total_supply();
+        refinance_amount %= Bounded::MAX - loan_repayment_amount - setup.t20.total_supply();
         if refinance_amount == 0 {
             refinance_amount += 1;
         }
@@ -2009,7 +2009,7 @@ mod refinance_loan {
             bound(
                 refinance_amount,
                 loan_repayment_amount + 1,
-                BoundedInt::max() - loan_repayment_amount - setup.t20.total_supply()
+                Bounded::MAX - loan_repayment_amount - setup.t20.total_supply()
             );
 
         let surplus = refinance_amount - loan_repayment_amount;
@@ -2080,11 +2080,11 @@ mod refinance_loan {
 }
 
 mod repay_loan {
-    use openzeppelin::token::erc20::interface::ERC20ABIDispatcherTrait;
-    use openzeppelin::token::erc721::interface::ERC721ABIDispatcherTrait;
+    use openzeppelin_token::erc20::interface::ERC20ABIDispatcherTrait;
+    use openzeppelin_token::erc721::interface::ERC721ABIDispatcherTrait;
     use pwn::loan::terms::simple::loan::pwn_simple_loan::PwnSimpleLoan;
     use snforge_std::{
-        cheat_caller_address, CheatSpan, cheat_block_timestamp_global, mock_call, store,
+        cheat_caller_address, CheatSpan, start_cheat_block_timestamp_global, mock_call, store,
         map_entry_address, spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait
     };
     use super::super::simple_loan_proposal_test::E40;
@@ -2136,7 +2136,7 @@ mod repay_loan {
     #[should_panic]
     fn test_should_fail_when_loan_is_defaulted() {
         let setup = setup();
-        cheat_block_timestamp_global(setup.simple_loan.default_timestamp);
+        start_cheat_block_timestamp_global(setup.simple_loan.default_timestamp);
         setup.loan.repay_loan(setup.loan_id, 0);
     }
 
@@ -2181,7 +2181,7 @@ mod repay_loan {
         simple_loan.accruing_interest_APR = interest_APR;
         store_loan(setup.loan.contract_address, setup.loan_id, simple_loan);
 
-        cheat_block_timestamp_global(simple_loan.start_timestamp + days * DAY);
+        start_cheat_block_timestamp_global(simple_loan.start_timestamp + days * DAY);
         let loan_repayment_amount = setup.loan.get_loan_repayment_amount(setup.loan_id);
         erc20_mint(
             setup.t20.contract_address, setup.borrower.contract_address, loan_repayment_amount
@@ -2239,7 +2239,7 @@ mod repay_loan {
         simple_loan.accruing_interest_APR = interest_APR;
         store_loan(setup.loan.contract_address, setup.loan_id, simple_loan);
 
-        cheat_block_timestamp_global(simple_loan.start_timestamp + days * DAY);
+        start_cheat_block_timestamp_global(simple_loan.start_timestamp + days * DAY);
         let loan_repayment_amount = setup.loan.get_loan_repayment_amount(setup.loan_id);
         erc20_mint(
             setup.t20.contract_address, setup.borrower.contract_address, loan_repayment_amount
@@ -2321,7 +2321,7 @@ mod loan_repayment_amount {
     use pwn::loan::terms::simple::loan::pwn_simple_loan::PwnSimpleLoan;
     use super::super::simple_loan_proposal_test::E40;
     use super::{
-        setup, store_loan, cheat_block_timestamp_global, IPwnSimpleLoanDispatcher,
+        setup, store_loan, start_cheat_block_timestamp_global, IPwnSimpleLoanDispatcher,
         IPwnSimpleLoanDispatcherTrait, DAY, E18, bound
     };
 
@@ -2346,7 +2346,7 @@ mod loan_repayment_amount {
         simple_loan.fixed_interest_amount = fixed_interest;
         simple_loan.accruing_interest_APR = 0;
         store_loan(setup.loan.contract_address, setup.loan_id, simple_loan);
-        cheat_block_timestamp_global(simple_loan.start_timestamp + days + DAY);
+        start_cheat_block_timestamp_global(simple_loan.start_timestamp + days + DAY);
         assert_eq!(
             setup.loan.get_loan_repayment_amount(setup.loan_id),
             principal + fixed_interest,
@@ -2370,7 +2370,7 @@ mod loan_repayment_amount {
         simple_loan.fixed_interest_amount = fixed_interest;
         simple_loan.accruing_interest_APR = interest_APR.try_into().unwrap();
         store_loan(setup.loan.contract_address, setup.loan_id, simple_loan);
-        cheat_block_timestamp_global(simple_loan.start_timestamp + minutes * 60 + 1);
+        start_cheat_block_timestamp_global(simple_loan.start_timestamp + minutes * 60 + 1);
 
         let expected_interest = fixed_interest
             + math::mul_div(
@@ -2395,14 +2395,14 @@ mod loan_repayment_amount {
         simple_loan.fixed_interest_amount = 10 * E18;
         simple_loan.accruing_interest_APR = 36500;
         store_loan(setup.loan.contract_address, setup.loan_id, simple_loan);
-        cheat_block_timestamp_global(simple_loan.start_timestamp);
+        start_cheat_block_timestamp_global(simple_loan.start_timestamp);
         assert_eq!(
             setup.loan.get_loan_repayment_amount(setup.loan_id),
             simple_loan.principal_amount + simple_loan.fixed_interest_amount,
             "Loan repayment mismatch!"
         );
 
-        cheat_block_timestamp_global(simple_loan.start_timestamp + DAY);
+        start_cheat_block_timestamp_global(simple_loan.start_timestamp + DAY);
         assert_eq!(
             setup.loan.get_loan_repayment_amount(setup.loan_id),
             simple_loan.principal_amount + simple_loan.fixed_interest_amount + E18,
@@ -2411,7 +2411,7 @@ mod loan_repayment_amount {
 
         simple_loan.accruing_interest_APR = 10_000;
         store_loan(setup.loan.contract_address, setup.loan_id, simple_loan);
-        cheat_block_timestamp_global(simple_loan.start_timestamp + 365 * DAY);
+        start_cheat_block_timestamp_global(simple_loan.start_timestamp + 365 * DAY);
         assert_eq!(
             setup.loan.get_loan_repayment_amount(setup.loan_id),
             2 * simple_loan.principal_amount + simple_loan.fixed_interest_amount,
@@ -2426,7 +2426,7 @@ mod claim_loan {
     use core::serde::Serde;
     use pwn::loan::terms::simple::loan::pwn_simple_loan::PwnSimpleLoan;
     use snforge_std::{
-        store, load, map_entry_address, cheat_block_timestamp_global, cheat_caller_address,
+        store, load, map_entry_address, start_cheat_block_timestamp_global, cheat_caller_address,
         CheatSpan, spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait
     };
     use starknet::ContractAddress;
@@ -2509,7 +2509,7 @@ mod claim_loan {
         let mut simple_loan = setup.simple_loan;
         simple_loan.status = 2;
         store_loan(setup.loan.contract_address, setup.loan_id, simple_loan);
-        cheat_block_timestamp_global(setup.simple_loan.default_timestamp);
+        start_cheat_block_timestamp_global(setup.simple_loan.default_timestamp);
         cheat_caller_address(
             setup.loan.contract_address, setup.lender.contract_address, CheatSpan::TargetCalls(1)
         );
@@ -2570,7 +2570,7 @@ mod claim_loan {
         let mut simple_loan = setup.simple_loan;
         simple_loan.status = 2;
         store_loan(setup.loan.contract_address, setup.loan_id, simple_loan);
-        cheat_block_timestamp_global(setup.simple_loan.default_timestamp);
+        start_cheat_block_timestamp_global(setup.simple_loan.default_timestamp);
         let previous_owner = setup.t721.owner_of(setup.simple_loan_terms.collateral.id.into());
         assert_eq!(
             previous_owner,
@@ -2614,7 +2614,7 @@ mod claim_loan {
         let mut simple_loan = setup.simple_loan;
         simple_loan.status = 2;
         store_loan(setup.loan.contract_address, setup.loan_id, simple_loan);
-        cheat_block_timestamp_global(setup.simple_loan.default_timestamp);
+        start_cheat_block_timestamp_global(setup.simple_loan.default_timestamp);
         let mut spy = spy_events();
         cheat_caller_address(
             setup.loan.contract_address, setup.lender.contract_address, CheatSpan::TargetCalls(1)
@@ -2636,18 +2636,18 @@ mod claim_loan {
 
 mod try_claim_repaid_loan {
     use core::array::ArrayTrait;
-    use core::integer::BoundedInt;
+    use core::num::traits::Bounded;
     use core::option::OptionTrait;
     use core::serde::Serde;
     use core::traits::TryInto;
-    use openzeppelin::token::{
+    use openzeppelin_token::{
         erc721::interface::ERC721ABIDispatcherTrait, erc20::ERC20ABIDispatcherTrait
     };
-    use pwn::loan::terms::simple::loan::pwn_simple_loan::PwnSimpleLoan::{
-        hubContractMemberStateTrait, loan_tokenContractMemberStateTrait,
-        configContractMemberStateTrait, revoked_nonceContractMemberStateTrait,
-        category_registryContractMemberStateTrait
-    };
+    // use pwn::loan::terms::simple::loan::pwn_simple_loan::PwnSimpleLoan::{
+    //     hubContractMemberStateTrait, loan_tokenContractMemberStateTrait,
+    //     configContractMemberStateTrait, revoked_nonceContractMemberStateTrait,
+    //     category_registryContractMemberStateTrait
+    // };
     use pwn::loan::terms::simple::loan::pwn_simple_loan::{
         PwnSimpleLoan, PwnSimpleLoan::{PrivateTrait}
     };
@@ -2680,12 +2680,12 @@ mod try_claim_repaid_loan {
         cheat_caller_address(
             setup.t20.contract_address, setup.lender.contract_address, CheatSpan::TargetCalls(1)
         );
-        setup.t20.approve(starknet::get_contract_address(), BoundedInt::max());
+        setup.t20.approve(starknet::get_contract_address(), Bounded::MAX);
 
         cheat_caller_address(
             setup.t20.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
         );
-        setup.t20.approve(starknet::get_contract_address(), BoundedInt::max());
+        setup.t20.approve(starknet::get_contract_address(), Bounded::MAX);
 
         cheat_caller_address(
             setup.t721.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
@@ -2968,7 +2968,7 @@ mod extend_loan {
     use pwn::loan::lib::signature_checker;
     use pwn::loan::terms::simple::loan::pwn_simple_loan::PwnSimpleLoan;
     use snforge_std::{
-        declare, ContractClassTrait, cheat_block_timestamp_global, cheat_caller_address_global,
+        declare, ContractClassTrait, start_cheat_block_timestamp_global, start_cheat_caller_address_global,
         CheatSpan,
         signature::{
             KeyPair, KeyPairTrait, SignerTrait,
@@ -3019,9 +3019,9 @@ mod extend_loan {
         }
         mock_call(setup.nonce.contract_address, selector!("is_nonce_usable"), true, 1);
         let (r, s): (felt252, felt252) = key_pair.sign(hash).unwrap();
-        cheat_caller_address_global(setup.lender.contract_address);
+        start_cheat_caller_address_global(setup.lender.contract_address);
         store_loan(setup.loan.contract_address, setup.extension.loan_id, setup.simple_loan);
-        cheat_caller_address_global(setup.lender.contract_address);
+        start_cheat_caller_address_global(setup.lender.contract_address);
         setup.loan.extend_loan(setup.extension, signature_checker::Signature { r: r, s: s });
     }
 
@@ -3032,7 +3032,7 @@ mod extend_loan {
         let timestamp: u64 = 300;
 
         // Set block timestamp
-        cheat_block_timestamp_global(timestamp);
+        start_cheat_block_timestamp_global(timestamp);
 
         // Bound expiration between 0 and timestamp
         if expiration > timestamp {
@@ -3098,7 +3098,7 @@ mod extend_loan {
         mock_call(setup.nonce.contract_address, selector!("is_nonce_usable"), true, 1);
         mock_call(extension.proposer, selector!("is_valid_signature"), starknet::VALIDATED, 1);
         // Set the caller address for the next call
-        cheat_caller_address_global(caller);
+        start_cheat_caller_address_global(caller);
         setup.loan.extend_loan(extension, signature_checker::Signature { r: 0, s: 0 });
     }
 
@@ -3126,7 +3126,7 @@ mod extend_loan {
         mock_call(setup.nonce.contract_address, selector!("is_nonce_usable"), true, 1);
         mock_call(caller, selector!("is_valid_signature"), starknet::VALIDATED, 1);
         // Set the caller address for the next call
-        cheat_caller_address_global(setup.borrower.contract_address);
+        start_cheat_caller_address_global(setup.borrower.contract_address);
         setup.loan.extend_loan(extension, signature_checker::Signature { r: 0, s: 0 });
     }
 
@@ -3158,7 +3158,7 @@ mod extend_loan {
         mock_call(setup.nonce.contract_address, selector!("is_nonce_usable"), true, 1);
         mock_call(proposer, selector!("is_valid_signature"), starknet::VALIDATED, 1);
         // Set the caller address for the next call
-        cheat_caller_address_global(setup.lender.contract_address);
+        start_cheat_caller_address_global(setup.lender.contract_address);
         setup.loan.extend_loan(extension, signature_checker::Signature { r: 0, s: 0 });
     }
 
@@ -3247,7 +3247,7 @@ mod extend_loan {
         setup.hub.set_tag(setup.lender.contract_address, pwn_hub_tags::ACTIVE_LOAN, true);
         mock_call(setup.nonce.contract_address, selector!("is_nonce_usable"), true, 1);
 
-        cheat_caller_address_global(setup.lender.contract_address);
+        start_cheat_caller_address_global(setup.lender.contract_address);
         setup.loan.extend_loan(extension, signature_checker::Signature { r, s });
         // assert to check if the nonce was revoked
         assert!(
@@ -3506,7 +3506,7 @@ mod get_loan {
         MultiToken, MultiToken::Asset, MultiToken::Category, MultiToken::AssetTrait
     };
     use snforge_std::{
-        declare, ContractClassTrait, cheat_block_timestamp_global, cheat_caller_address_global,
+        declare, ContractClassTrait, start_cheat_block_timestamp_global, start_cheat_caller_address_global,
         CheatSpan,
         signature::{
             KeyPair, KeyPairTrait, SignerTrait,
@@ -3562,7 +3562,7 @@ mod get_loan {
         store_loan(setup.loan.contract_address, 1, simple_loan);
 
         // Set the block timestamp
-        super::cheat_block_timestamp_global(_start_timestamp);
+        super::start_cheat_block_timestamp_global(_start_timestamp);
 
         // Get the loan data
         let loan_data = setup.loan.get_loan(1);
@@ -3592,7 +3592,7 @@ mod get_loan {
         assert!(loan_data_1.status == 2, "Loan status is 2");
 
         // Set the block timestamp to the default timestamp
-        cheat_block_timestamp_global(simple_loan.default_timestamp);
+        start_cheat_block_timestamp_global(simple_loan.default_timestamp);
         // Get the loan data
         let loan_data_2 = setup.loan.get_loan(1);
         assert!(loan_data_2.status == 4, "Loan status is 1");
@@ -3648,7 +3648,7 @@ mod get_loan {
         );
         store_loan(setup.loan.contract_address, 1, loan);
 
-        super::cheat_block_timestamp_global(
+        super::start_cheat_block_timestamp_global(
             loan.start_timestamp + days * MIN_EXTENSION_DURATION
         ); // 86400 seconds in a day
 
@@ -3719,7 +3719,7 @@ mod get_state_fingerprint {
     use core::poseidon::poseidon_hash_span;
     use core::serde::Serde;
     use pwn::loan::terms::simple::loan::interface::IPwnSimpleLoanDispatcherTrait;
-    use snforge_std::cheat_block_timestamp_global;
+    use snforge_std::start_cheat_block_timestamp_global;
     use super::store_loan;
 
     #[test]
@@ -3733,7 +3733,7 @@ mod get_state_fingerprint {
     fn test_should_update_state_fingerprint_when_loan_defaulted() {
         let setup = super::setup();
         store_loan(setup.loan.contract_address, setup.loan_id, setup.simple_loan);
-        cheat_block_timestamp_global(setup.simple_loan.default_timestamp - 1);
+        start_cheat_block_timestamp_global(setup.simple_loan.default_timestamp - 1);
         let mut serialized_u256: Array<felt252> = array![];
         setup.simple_loan.fixed_interest_amount.serialize(ref serialized_u256);
         setup.simple_loan.accruing_interest_APR.serialize(ref serialized_u256);
@@ -3744,7 +3744,7 @@ mod get_state_fingerprint {
         );
         let mut expected: Array<felt252> = array![4, setup.simple_loan.default_timestamp.into()];
         expected.append_span(serialized_u256.span());
-        cheat_block_timestamp_global(setup.simple_loan.default_timestamp);
+        start_cheat_block_timestamp_global(setup.simple_loan.default_timestamp);
         assert_eq!(
             setup.loan.get_state_fingerprint(setup.loan_id), poseidon_hash_span(expected.span())
         );
