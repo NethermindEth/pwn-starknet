@@ -3,8 +3,8 @@
 
 #[starknet::contract]
 pub mod ERC20Mock {
-    use openzeppelin::token::erc20::ERC20Component;
-    use openzeppelin::token::erc20::ERC20HooksEmptyImpl;
+    use openzeppelin_token::erc20::ERC20Component;
+    use openzeppelin_token::erc20::ERC20HooksEmptyImpl;
 
     component!(path: ERC20Component, storage: erc20, event: ERC20Event);
 

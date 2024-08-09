@@ -3,9 +3,9 @@
 
 #[starknet::contract]
 pub mod ERC1155Mock {
-    use openzeppelin::introspection::src5::SRC5Component;
-    use openzeppelin::token::erc1155::ERC1155Component;
-    use openzeppelin::token::erc1155::ERC1155HooksEmptyImpl;
+    use openzeppelin_introspection::src5::SRC5Component;
+    use openzeppelin_token::erc1155::ERC1155Component;
+    use openzeppelin_token::erc1155::ERC1155HooksEmptyImpl;
 
     component!(path: ERC1155Component, storage: erc1155, event: ERC1155Event);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);

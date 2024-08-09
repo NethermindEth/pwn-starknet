@@ -37,8 +37,8 @@
 #[starknet::contract]
 pub mod PwnConfig {
     use core::clone::Clone;
-    use openzeppelin::access::ownable::ownable::OwnableComponent;
-    use openzeppelin::security::initializable::InitializableComponent;
+    use openzeppelin_access::ownable::OwnableComponent;
+    use openzeppelin_security::initializable::InitializableComponent;
     use pwn::config::interface::IPwnConfig;
     use pwn::interfaces::{
         pool_adapter::IPoolAdapterDispatcher,
@@ -47,6 +47,7 @@ pub mod PwnConfig {
         }
     };
     use starknet::ContractAddress;
+    use starknet::storage::Map;
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: InitializableComponent, storage: initializable, event: InitializableEvent);
@@ -67,9 +68,9 @@ pub mod PwnConfig {
     struct Storage {
         fee: u16,
         fee_collector: ContractAddress,
-        loan_metadata_uri: Map::<ContractAddress, ByteArray>,
-        sf_computer_registry: Map::<ContractAddress, ContractAddress>,
-        pool_adapter_registry: Map::<ContractAddress, ContractAddress>,
+        loan_metadata_uri: Map<ContractAddress, ByteArray>,
+        sf_computer_registry: Map<ContractAddress, ContractAddress>,
+        pool_adapter_registry: Map<ContractAddress, ContractAddress>,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]

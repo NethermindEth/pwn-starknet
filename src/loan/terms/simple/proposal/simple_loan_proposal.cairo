@@ -53,7 +53,7 @@ pub trait ISimpleLoanAcceptProposal<TState> {
 pub mod SimpleLoanProposalComponent {
     use alexandria_math::keccak256::keccak256;
     use core::poseidon::poseidon_hash_span;
-    use openzeppelin::account::interface::{ISRC6Dispatcher, ISRC6DispatcherTrait};
+    use openzeppelin_account::interface::{ISRC6Dispatcher, ISRC6DispatcherTrait};
     use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
     use pwn::hub::{pwn_hub_tags, pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait}};
     use pwn::interfaces::fingerprint_computer::{
@@ -64,6 +64,7 @@ pub mod SimpleLoanProposalComponent {
     use pwn::nonce::revoked_nonce::{
         IRevokedNonceDispatcher, IRevokedNonceDispatcherTrait, RevokedNonce
     };
+    use starknet::storage::Map;
     use super::{ContractAddress, ClassHash};
 
     pub const BASE_DOMAIN_SEPARATOR: felt252 =
@@ -118,8 +119,8 @@ pub mod SimpleLoanProposalComponent {
         hub: IPwnHubDispatcher,
         revoked_nonce: IRevokedNonceDispatcher,
         config: IPwnConfigDispatcher,
-        proposal_made: Map::<felt252, bool>,
-        credit_used: Map::<felt252, u256>,
+        proposal_made: Map<felt252, bool>,
+        credit_used: Map<felt252, u256>,
         DOMAIN_SEPARATOR: felt252,
     }
 

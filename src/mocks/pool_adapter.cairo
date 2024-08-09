@@ -20,7 +20,7 @@ pub trait IPoolAdapter<TContractState> {
 
 #[starknet::contract]
 pub mod MockPoolAdapter {
-    use openzeppelin::token::erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
+    use openzeppelin_token::erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
     use super::{ContractAddress, IPoolAdapter};
 
     #[storage]

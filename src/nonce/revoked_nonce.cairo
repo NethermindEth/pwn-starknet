@@ -59,14 +59,15 @@ pub trait IRevokedNonce<TState> {
 #[starknet::contract]
 pub mod RevokedNonce {
     use pwn::hub::pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait};
+    use starknet::storage::Map;
     use super::{ContractAddress, IRevokedNonce};
 
     #[storage]
     struct Storage {
         access_tag: felt252,
         hub: IPwnHubDispatcher,
-        revoked_nonce: Map::<(ContractAddress, felt252, felt252), bool>,
-        nonce_space: Map::<ContractAddress, felt252>,
+        revoked_nonce: Map<(ContractAddress, felt252, felt252), bool>,
+        nonce_space: Map<ContractAddress, felt252>,
     }
 
     #[event]

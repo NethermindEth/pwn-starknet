@@ -1,4 +1,5 @@
-use core::integer::{u256_wide_mul, u512_safe_div_rem_by_u256};
+use core::integer::u512_safe_div_rem_by_u256;
+use core::num::traits::WideMul;
 use core::option::OptionTrait;
 use core::traits::TryInto;
 use core::zeroable::NonZero;
@@ -21,6 +22,6 @@ pub fn mul_div(a: u256, b: u256, c: u256) -> u256 {
     if c == 0 {
         panic!("mul_div division by zero");
     }
-    let (q, _) = u512_safe_div_rem_by_u256(u256_wide_mul(a, b), c.try_into().unwrap());
+    let (q, _) = u512_safe_div_rem_by_u256(WideMul::wide_mul(a, b), c.try_into().unwrap());
     q.try_into().unwrap()
 }

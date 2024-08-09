@@ -40,10 +40,11 @@ pub trait IMultiTokenCategoryRegistry<TState> {
 
 #[starknet::contract]
 pub mod MultiTokenCategoryRegistry {
-    use openzeppelin::access::ownable::OwnableComponent;
-    use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
-    use openzeppelin::introspection::src5::SRC5Component;
+    use openzeppelin_access::ownable::OwnableComponent;
+    use openzeppelin_access::ownable::ownable::OwnableComponent::InternalTrait;
+    use openzeppelin_introspection::src5::SRC5Component;
     use starknet::{ContractAddress, get_caller_address};
+    use starknet::storage::Map;
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
@@ -54,7 +55,7 @@ pub mod MultiTokenCategoryRegistry {
 
     #[storage]
     struct Storage {
-        registered_category: Map::<ContractAddress, u8>,
+        registered_category: Map<ContractAddress, u8>,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]

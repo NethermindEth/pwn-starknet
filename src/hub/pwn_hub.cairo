@@ -47,8 +47,9 @@ pub trait IPwnHub<TState> {
 
 #[starknet::contract]
 pub mod PwnHub {
-    use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
-    use openzeppelin::access::ownable::ownable::OwnableComponent;
+    use openzeppelin_access::ownable::ownable::OwnableComponent::InternalTrait;
+    use openzeppelin_access::ownable::ownable::OwnableComponent;
+    use starknet::storage::Map;
     use super::ContractAddress;
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -60,7 +61,7 @@ pub mod PwnHub {
 
     #[storage]
     struct Storage {
-        tags: Map::<(ContractAddress, felt252), bool>,
+        tags: Map<(ContractAddress, felt252), bool>,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
     }

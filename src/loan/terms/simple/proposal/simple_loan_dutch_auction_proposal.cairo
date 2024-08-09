@@ -59,7 +59,7 @@ pub trait ISimpleLoanDutchAuctionProposal<TState> {
 
 #[starknet::contract]
 pub mod SimpleLoanDutchAuctionProposal {
-    use core::integer::BoundedInt;
+    use core::num::traits::Bounded;
     use pwn::ContractAddressDefault;
     use pwn::loan::lib::{serialization, math};
     use pwn::loan::terms::simple::proposal::simple_loan_proposal::{
@@ -67,6 +67,7 @@ pub mod SimpleLoanDutchAuctionProposal {
     };
     use pwn::multitoken::library::MultiToken;
     use starknet::ContractAddress;
+    use starknet::storage::Map;
     use super::{Signature, Terms};
 
     component!(
@@ -469,7 +470,7 @@ pub mod SimpleLoanDutchAuctionProposal {
         /// - `AUCTION_NOT_IN_PROGRESS`: If the auction is not currently in progress.
         /// - `EXPIRED`: If the auction has expired.
         fn get_credit_amount(self: @ContractState, proposal: Proposal, timestamp: u64) -> u256 {
-            if proposal.auction_duration < MINUTE || proposal.auction_duration > BoundedInt::max()
+            if proposal.auction_duration < MINUTE || proposal.auction_duration > Bounded::MAX
                 - MINUTE {
                 Err::INVALID_AUCTION_DURATION(proposal.auction_duration, MINUTE);
             }

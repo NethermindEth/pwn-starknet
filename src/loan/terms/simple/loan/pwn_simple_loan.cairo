@@ -33,16 +33,16 @@
 #[starknet::contract]
 pub mod PwnSimpleLoan {
     use core::poseidon::poseidon_hash_span;
-    use openzeppelin::account::interface::{ISRC6Dispatcher, ISRC6DispatcherTrait};
+    use openzeppelin_account::interface::{ISRC6Dispatcher, ISRC6DispatcherTrait};
 
-    use openzeppelin::introspection::src5::SRC5Component;
-    use openzeppelin::token::erc1155::{
+    use openzeppelin_introspection::src5::SRC5Component;
+    use openzeppelin_token::erc1155::{
         interface::IERC1155_RECEIVER_ID, erc1155_receiver::ERC1155ReceiverComponent
     };
-    use openzeppelin::token::erc721::{
+    use openzeppelin_token::erc721::{
         erc721_receiver::{ERC721ReceiverComponent}, interface::IERC721_RECEIVER_ID
     };
-    use openzeppelin::token::erc721::{interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait}};
+    use openzeppelin_token::erc721::{interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait}};
     use pwn::ContractAddressDefault;
     use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
     use pwn::hub::pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait};
@@ -72,7 +72,8 @@ pub mod PwnSimpleLoan {
     use pwn::nonce::revoked_nonce::RevokedNonce;
     use pwn::nonce::revoked_nonce::{IRevokedNonceDispatcher, IRevokedNonceDispatcherTrait};
     use starknet::ContractAddress;
-
+    use starknet::storage::Map;
+    
     component!(path: PwnVaultComponent, storage: vault, event: VaultEvent);
     component!(path: ERC721ReceiverComponent, storage: erc721, event: ERC721Event);
     component!(path: ERC1155ReceiverComponent, storage: erc1155, event: ERC1155Event);
@@ -114,8 +115,8 @@ pub mod PwnSimpleLoan {
 
     #[storage]
     struct Storage {
-        loans: Map::<felt252, Loan>,
-        extension_proposal_made: Map::<felt252, bool>,
+        loans: Map<felt252, Loan>,
+        extension_proposal_made: Map<felt252, bool>,
         domain_separator: felt252,
         hub: IPwnHubDispatcher,
         loan_token: IPwnLoanDispatcher,

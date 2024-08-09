@@ -44,13 +44,14 @@ pub trait IPwnLoadMetadataProvider<TState> {
 
 #[starknet::contract]
 pub mod PwnLoan {
-    use openzeppelin::introspection::src5::SRC5Component;
-    use openzeppelin::token::erc721::{
+    use openzeppelin_introspection::src5::SRC5Component;
+    use openzeppelin_token::erc721::{
         erc721::{ERC721Component, ERC721HooksEmptyImpl}, interface::IERC721_ID
     };
 
     use pwn::hub::{pwn_hub_tags, pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait}};
     use starknet::{ContractAddress, get_caller_address, contract_address_const};
+    use starknet::storage::Map;
     use super::{IPwnLoadMetadataProviderDispatcher, IPwnLoadMetadataProviderDispatcherTrait};
 
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);
@@ -69,7 +70,7 @@ pub mod PwnLoan {
     struct Storage {
         hub: IPwnHubDispatcher,
         last_loan_id: felt252,
-        loan_contract: Map::<felt252, ContractAddress>,
+        loan_contract: Map<felt252, ContractAddress>,
         #[substorage(v0)]
         erc721: ERC721Component::Storage,
         #[substorage(v0)]

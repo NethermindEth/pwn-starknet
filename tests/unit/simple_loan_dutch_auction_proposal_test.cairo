@@ -1,7 +1,7 @@
-use core::integer::BoundedInt;
+use core::num::traits::Bounded;
 use core::poseidon::poseidon_hash_span;
 use core::starknet::SyscallResultTrait;
-use openzeppelin::account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
+use openzeppelin_account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
 use pwn::config::pwn_config::PwnConfig;
 use pwn::hub::{pwn_hub::{PwnHub, IPwnHubDispatcher, IPwnHubDispatcherTrait}, pwn_hub_tags};
 use pwn::loan::lib::serialization;
@@ -26,7 +26,7 @@ use snforge_std::signature::stark_curve::{
 use snforge_std::signature::{KeyPairTrait, KeyPair};
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
-    spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait, cheat_block_timestamp_global
+    spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait, start_cheat_block_timestamp_global
 };
 use starknet::secp256k1::{Secp256k1Point};
 use starknet::{ContractAddress, testing};
@@ -398,8 +398,8 @@ fn test_fuzz_should_fail_when_proposal_expired(auction_duration: u64, time: u64)
 
     let auction_duration = if auction_duration < MINUTE {
         MINUTE
-    } else if auction_duration > BoundedInt::max() - MINUTE * 2 {
-        BoundedInt::max() - MINUTE * 2
+    } else if auction_duration > Bounded::MAX - MINUTE * 2 {
+        Bounded::MAX - MINUTE * 2
     } else {
         (auction_duration / MINUTE) * MINUTE
     };
@@ -425,9 +425,9 @@ fn test_fuzz_should_return_correct_edge_values(auction_duration: u64) {
 
     if auction_duration < MINUTE {
         _proposal.auction_duration = MINUTE;
-    } else if auction_duration > BoundedInt::max()
+    } else if auction_duration > Bounded::MAX
         - 59 { // Subtracting 59 to ensure result * MINUTE doesn't overflow
-        _proposal.auction_duration = (BoundedInt::max() / MINUTE) * MINUTE - MINUTE;
+        _proposal.auction_duration = (Bounded::MAX / MINUTE) * MINUTE - MINUTE;
     } else {
         _proposal.auction_duration = (auction_duration / MINUTE) * MINUTE;
     }
@@ -575,15 +575,15 @@ fn test_should_fail_when_current_auction_credit_amount_not_in_intended_credit_am
     _proposal.auction_start = 1;
     _proposal.auction_duration = MINUTE;
 
-    cheat_block_timestamp_global(_proposal.auction_start + _proposal.auction_duration / 2);
+    start_cheat_block_timestamp_global(_proposal.auction_start + _proposal.auction_duration / 2);
 
     let mut _proposal_values = proposal_values();
     _proposal_values.slippage = 500;
 
     if intended_credit_amount < 0 {
         intended_credit_amount = 0;
-    } else if intended_credit_amount > BoundedInt::max() - _proposal_values.slippage {
-        intended_credit_amount = BoundedInt::max() - _proposal_values.slippage;
+    } else if intended_credit_amount > Bounded::MAX - _proposal_values.slippage {
+        intended_credit_amount = Bounded::MAX - _proposal_values.slippage;
     }
     _proposal_values.intended_credit_amount = intended_credit_amount;
 
@@ -619,15 +619,15 @@ fn test_should_fail_when_current_auction_credit_amount_not_in_intended_credit_am
     _proposal.auction_start = 1;
     _proposal.auction_duration = MINUTE * 100;
 
-    cheat_block_timestamp_global(_proposal.auction_start + _proposal.auction_duration / 2);
+    start_cheat_block_timestamp_global(_proposal.auction_start + _proposal.auction_duration / 2);
 
     let mut _proposal_values = proposal_values();
     _proposal_values.slippage = 500;
 
     if intended_credit_amount < _proposal_values.slippage {
         intended_credit_amount = _proposal_values.slippage;
-    } else if intended_credit_amount > BoundedInt::max() {
-        intended_credit_amount = BoundedInt::max();
+    } else if intended_credit_amount > Bounded::MAX {
+        intended_credit_amount = Bounded::MAX;
     }
     _proposal_values.intended_credit_amount = intended_credit_amount;
 
@@ -667,8 +667,8 @@ fn test_should_call_loan_contract_with_loan_terms(
 
     if auction_duration < MINUTE {
         auction_duration = MINUTE;
-    } else if auction_duration > (BoundedInt::max() / MINUTE - 1) * MINUTE {
-        auction_duration = (BoundedInt::max() / MINUTE - 1) * MINUTE;
+    } else if auction_duration > (Bounded::MAX / MINUTE - 1) * MINUTE {
+        auction_duration = (Bounded::MAX / MINUTE - 1) * MINUTE;
     } else {
         auction_duration = (auction_duration / MINUTE) * MINUTE;
     }
@@ -692,7 +692,7 @@ fn test_should_call_loan_contract_with_loan_terms(
     _proposal.auction_start = 1;
     _proposal.auction_duration = auction_duration;
 
-    cheat_block_timestamp_global(_proposal.auction_start + time_in_auction);
+    start_cheat_block_timestamp_global(_proposal.auction_start + time_in_auction);
 
     let credit_amount = dsp.proposal.get_credit_amount(_proposal, starknet::get_block_timestamp());
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts for Cairo v0.15.0-rc.0 (presets/account.cairo)
+// OpenZeppelin Contracts for Cairo v0.15.0 (presets/account.cairo)
 
 /// # Account Preset
 ///
@@ -7,10 +7,10 @@
 /// contracts.
 #[starknet::contract(account)]
 pub mod AccountUpgradeable {
-    use openzeppelin::account::AccountComponent;
-    use openzeppelin::introspection::src5::SRC5Component;
-    use openzeppelin::upgrades::UpgradeableComponent;
-    use openzeppelin::upgrades::interface::IUpgradeable;
+    use openzeppelin_account::AccountComponent;
+    use openzeppelin_introspection::src5::SRC5Component;
+    use openzeppelin_upgrades::UpgradeableComponent;
+    use openzeppelin_upgrades::interface::IUpgradeable;
     use starknet::ClassHash;
 
     component!(path: AccountComponent, storage: account, event: AccountEvent);
@@ -48,7 +48,7 @@ pub mod AccountUpgradeable {
     }
 
     #[constructor]
-    pub(crate) fn constructor(ref self: ContractState, public_key: felt252) {
+    pub fn constructor(ref self: ContractState, public_key: felt252) {
         self.account.initializer(public_key);
     }
 

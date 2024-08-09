@@ -34,12 +34,12 @@
 //! multiple token standards on Starknet, simplifying the management of different asset types.
 
 pub mod MultiToken {
-    use core::integer::BoundedInt;
+    use core::num::traits::Bounded;
     use core::option::OptionTrait;
     use core::traits::Into;
-    use openzeppelin::token::erc1155::interface::{ERC1155ABIDispatcher, ERC1155ABIDispatcherTrait};
-    use openzeppelin::token::erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
-    use openzeppelin::token::erc721::interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait};
+    use openzeppelin_token::erc1155::interface::{ERC1155ABIDispatcher, ERC1155ABIDispatcherTrait};
+    use openzeppelin_token::erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
+    use openzeppelin_token::erc721::interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait};
     use pwn::ContractAddressDefault;
     use pwn::multitoken::category_registry::{
         IMultiTokenCategoryRegistryDispatcher, IMultiTokenCategoryRegistryDispatcherTrait
