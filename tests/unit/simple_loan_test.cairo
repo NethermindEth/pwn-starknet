@@ -46,6 +46,7 @@ use snforge_std::{
 };
 use starknet::ContractAddress;
 
+
 impl U8IntoCategory of Into<u8, MultiToken::Category> {
     fn into(self: u8) -> MultiToken::Category {
         match self {
@@ -56,7 +57,9 @@ impl U8IntoCategory of Into<u8, MultiToken::Category> {
         }
     }
 }
+
 // upper bound is exclusive
+#[feature("deprecated-op-assign-traits")]
 pub fn bound<T, +PartialOrd<T>, +RemEq<T>, +Drop<T>, +Copy<T>>(
     mut value: T, lower: T, upper: T
 ) -> T {
