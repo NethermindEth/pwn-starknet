@@ -30,9 +30,9 @@ use snforge_std::{
 };
 use starknet::ContractAddress;
 use super::base_integration_test::{
-    _1_DAY, _7_DAYS, _30_HOURS, _4_HOURS, E18, setup, protocol_timelock, _repay_loan,
-    _repay_loan_failing, _create_erc1155_loan_failing, _create_erc1155_loan, erc1155_mint, _sign,
-    erc20_mint, _create_erc20_loan, _create_erc721_loan
+    _1_DAY, _7_DAYS, _30_HOURS, _4_HOURS, E18, setup, _repay_loan, _repay_loan_failing,
+    _create_erc1155_loan_failing, _create_erc1155_loan, erc1155_mint, _sign, erc20_mint,
+    _create_erc20_loan, _create_erc721_loan
 };
 
 #[test]

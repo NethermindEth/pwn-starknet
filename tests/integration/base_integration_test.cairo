@@ -4,7 +4,7 @@ use openzeppelin::token::{
     erc721::interface::{ERC721ABIDispatcher, ERC721ABIDispatcherTrait},
     erc1155::interface::{ERC1155ABIDispatcher, ERC1155ABIDispatcherTrait}
 };
-use pwn::config::interface::IPwnConfigDispatcher;
+use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
 use pwn::hub::{pwn_hub::{PwnHub, IPwnHubDispatcher, IPwnHubDispatcherTrait}, pwn_hub_tags};
 use pwn::loan::lib::signature_checker::Signature;
 use pwn::loan::terms::simple::loan::{
@@ -61,6 +61,10 @@ pub const _4_HOURS: u64 = 60 * 60 * 4;
 // }
 pub fn protocol_timelock() -> ContractAddress {
     starknet::contract_address_const::<'protocolTimeLock'>()
+}
+
+pub fn fee_collector() -> ContractAddress {
+    starknet::contract_address_const::<'feeCollector'>()
 }
 
 #[derive(Copy, Drop)]
@@ -221,6 +225,7 @@ pub fn setup() -> Setup {
     hub.set_tag(proposal_list_address, pwn_hub_tags::NONCE_MANAGER, true);
 
     hub.set_tag(loan_address, pwn_hub_tags::ACTIVE_LOAN, true);
+    hub.set_tag(loan_address, pwn_hub_tags::NONCE_MANAGER, true);
 
     let simple_proposal = Proposal {
         collateral_category: MultiToken::Category::ERC1155,

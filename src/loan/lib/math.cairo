@@ -1,3 +1,7 @@
+use core::integer::{u256_wide_mul, u512_safe_div_rem_by_u256};
+use core::option::OptionTrait;
+use core::traits::TryInto;
+use core::zeroable::NonZero;
 /// Multiplies two `u256` values and then divides by a third `u256` value.
 ///
 /// # Parameters
@@ -17,5 +21,6 @@ pub fn mul_div(a: u256, b: u256, c: u256) -> u256 {
     if c == 0 {
         panic!("mul_div division by zero");
     }
-    a * b / c
+    let (q, _) = u512_safe_div_rem_by_u256(u256_wide_mul(a, b), c.try_into().unwrap());
+    q.try_into().unwrap()
 }

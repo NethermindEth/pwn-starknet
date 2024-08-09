@@ -44,7 +44,7 @@ pub mod Err {
         panic!("Interest APR is out of bounds. Current: {}, Limit: {}", current, limit);
     }
     pub fn INVALID_SOURCE_OF_FUNDS(source_of_funds: ContractAddress) {
-        panic!("Invalid source of funds. Source of fungs: {:?}", source_of_funds);
+        panic!("Invalid source of funds. Source of funds: {:?}", source_of_funds);
     }
     pub fn INVALID_EXTENSION_CALLER() {
         panic!("Invalid extension caller");

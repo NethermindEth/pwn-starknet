@@ -91,22 +91,25 @@ pub mod PwnSimpleLoan {
 
     impl VaultImpl = PwnVaultComponent::InternalImpl<ContractState>;
 
-    const ACCRUING_INTEREST_APR_DECIMALS: u256 = 100;
-    const MIN_LOAN_DURATION: u64 = 600;
-    const MAX_ACCRUING_INTEREST_APR: u32 = 160000;
-    const MINUTE: u64 = 60;
-
+    pub const ACCRUING_INTEREST_APR_DECIMALS: u256 = 100;
+    pub const MIN_LOAN_DURATION: u64 = 600;
+    pub const MAX_ACCRUING_INTEREST_APR: u32 = 160000;
+    pub const MINUTE: u64 = 60;
+    pub const MINUTE_IN_YEAR: u256 = 525_600;
+    pub const ACCRUING_INTEREST_APR_DENOMINATOR: u256 = ACCRUING_INTEREST_APR_DECIMALS
+        * MINUTE_IN_YEAR
+        * 100;
     // @note: duration in seconds
 
     // @note: 1 day
-    const MIN_EXTENSION_DURATION: u64 = 86400;
+    pub const MIN_EXTENSION_DURATION: u64 = 86400;
     // @note: 90 days 
-    const MAX_EXTENSION_DURATION: u64 = 86400 * 90;
+    pub const MAX_EXTENSION_DURATION: u64 = 86400 * 90;
 
-    const EXTENSION_PROPOSAL_TYPEHASH: felt252 =
+    pub const EXTENSION_PROPOSAL_TYPEHASH: felt252 =
         0x7e09d567c8fe43c280650abe4557a43fa693063ebc6c47ff3c585866507c732;
 
-    const BASE_DOMAIN_SEPARATOR: felt252 =
+    pub const BASE_DOMAIN_SEPARATOR: felt252 =
         0x23b0e9af1d18f697d3e6d8bee3b1defcd47b5be37cf6d26fde2b5d5485065bc;
 
     #[storage]
@@ -131,7 +134,7 @@ pub mod PwnSimpleLoan {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         LoanCreated: LoanCreated,
         LoanPaidBack: LoanPaidBack,
         LoanClaimed: LoanClaimed,
@@ -147,39 +150,39 @@ pub mod PwnSimpleLoan {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct LoanCreated {
-        loan_id: felt252,
-        proposal_hash: felt252,
-        proposal_contract: ContractAddress,
-        refinancing_loan_id: felt252,
-        terms: Terms,
-        lender_spec: LenderSpec,
-        extra: Option<Array<felt252>>
+    pub struct LoanCreated {
+        pub loan_id: felt252,
+        pub proposal_hash: felt252,
+        pub proposal_contract: ContractAddress,
+        pub refinancing_loan_id: felt252,
+        pub terms: Terms,
+        pub lender_spec: LenderSpec,
+        pub extra: Option<Array<felt252>>
     }
 
     #[derive(Drop, starknet::Event)]
-    struct LoanPaidBack {
-        loan_id: felt252,
+    pub struct LoanPaidBack {
+        pub loan_id: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct LoanClaimed {
-        loan_id: felt252,
-        defaulted: bool
+    pub struct LoanClaimed {
+        pub loan_id: felt252,
+        pub defaulted: bool
     }
 
     #[derive(Drop, starknet::Event)]
-    struct LoanExtended {
-        loan_id: felt252,
-        original_default_timestamp: u64,
-        extended_default_timestamp: u64,
+    pub struct LoanExtended {
+        pub loan_id: felt252,
+        pub original_default_timestamp: u64,
+        pub extended_default_timestamp: u64,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct ExtensionProposalMade {
-        extension_hash: felt252,
-    // proposer: ContractAddress,
-    // extension_proposal: ExtensionProposal,
+    pub struct ExtensionProposalMade {
+        pub extension_hash: felt252,
+        pub proposer: ContractAddress,
+        pub extension_proposal: ExtensionProposal,
     }
 
     #[constructor]
@@ -345,9 +348,8 @@ pub mod PwnSimpleLoan {
             let repayment_amount = self.get_loan_repayment_amount(loan_id);
             self.vault._pull(ERC20(loan.credit_address, repayment_amount), caller);
             self.vault._push(loan.collateral, loan.borrower);
-
             self
-                .try_claim_repaid_loan(
+                ._try_claim_repaid_loan(
                     loan_id,
                     repayment_amount,
                     ERC721ABIDispatcher {
@@ -396,65 +398,6 @@ pub mod PwnSimpleLoan {
             }
         }
 
-        /// Attempts to claim a repaid loan for the loan owner.
-        ///
-        /// # Arguments
-        ///
-        /// - `loan_id`: The unique identifier of the loan to be claimed.
-        /// - `credit_amount`: The amount of credit to be transferred.
-        /// - `loan_owner`: The address of the loan owner.
-        ///
-        /// # Requirements
-        ///
-        /// - The loan must be in a repaid status (status = 3).
-        /// - The original lender must match the loan owner.
-        ///
-        /// # Actions
-        ///
-        /// - Deletes the loan from storage.
-        /// - Emits a `LoanClaimed` event.
-        /// - Transfers the repayment credit to the loan owner or supplies it to a pool based on the
-        ///   destination of funds.
-        fn try_claim_repaid_loan(
-            ref self: ContractState,
-            loan_id: felt252,
-            credit_amount: u256,
-            loan_owner: ContractAddress
-        ) {
-            let loan = self.loans.read(loan_id);
-
-            if (loan.status != 3 || loan.original_lender != loan_owner) {
-                return;
-            }
-
-            let destination_of_funds = loan.original_source_of_funds;
-
-            let repayment_credit = ERC20(loan.credit_address, credit_amount);
-
-            self._delete_loan(loan_id);
-
-            self.emit(LoanClaimed { loan_id, defaulted: false });
-
-            if (credit_amount == 0) {
-                return;
-            }
-
-            if (destination_of_funds == loan_owner) {
-                self.vault._push(repayment_credit, loan_owner);
-            } else {
-                let pool_adapter = self.config.read().get_pool_adapter(destination_of_funds);
-                if (pool_adapter.contract_address == Default::default()) {
-                    Err::INVALID_SOURCE_OF_FUNDS(source_of_funds: destination_of_funds);
-                }
-
-                self
-                    .vault
-                    ._supply_to_pool(
-                        repayment_credit, pool_adapter, destination_of_funds, loan_owner
-                    );
-            }
-        }
-
         /// Makes an extension proposal for a loan.
         ///
         /// # Arguments
@@ -479,7 +422,12 @@ pub mod PwnSimpleLoan {
 
             let extension_hash = self.get_extension_hash(extension);
             self.extension_proposal_made.write(extension_hash, true);
-            self.emit(ExtensionProposalMade { extension_hash });
+            self
+                .emit(
+                    ExtensionProposalMade {
+                        extension_hash, proposer: extension.proposer, extension_proposal: extension
+                    }
+                );
         }
 
         /// Extends a loan based on an extension proposal and a valid signature.
@@ -522,7 +470,7 @@ pub mod PwnSimpleLoan {
             let extension_hash = self.get_extension_hash(extension.clone());
 
             if (!self.extension_proposal_made.read(extension_hash)) {
-                if (!self._is_valid_signature_now(caller, extension_hash, signature)) {
+                if (!self._is_valid_signature_now(extension.proposer, extension_hash, signature)) {
                     signature_checker::Err::INVALID_SIGNATURE(
                         signer: extension.proposer, digest: extension_hash
                     );
@@ -665,15 +613,11 @@ pub mod PwnSimpleLoan {
         ///
         /// - The computed hash as `felt252`.
         fn get_extension_hash(self: @ContractState, extension: ExtensionProposal) -> felt252 {
-            let hash_elements: Array<felt252> = array![
-                self.domain_separator.read(),
-                starknet::get_contract_address().try_into().expect('get_extension_hash')
-            ];
-            let domain_seperator_hash = poseidon_hash_span(hash_elements.span());
+            let domain_separator = self.domain_separator.read();
 
             let hash_elements: Array<felt252> = array![
                 1901,
-                domain_seperator_hash,
+                domain_separator,
                 EXTENSION_PROPOSAL_TYPEHASH,
                 extension.loan_id,
                 extension.compensation_address.try_into().expect('get_extension_hash'),
@@ -779,7 +723,7 @@ pub mod PwnSimpleLoan {
     }
 
     #[generate_trait]
-    impl Private of PrivateTrait {
+    pub impl Private of PrivateTrait {
         fn initializer(
             ref self: ContractState,
             hub: ContractAddress,
@@ -911,7 +855,7 @@ pub mod PwnSimpleLoan {
             let (fee_amount, new_loan_amount) = fee_calculator::calculate_fee_amount(
                 self.config.read().get_fee(), loan_terms.credit.amount
             );
-            let fee_amount: u256 = fee_amount.into();
+
             let common = if (repayment_amount > new_loan_amount) {
                 new_loan_amount
             } else {
@@ -971,7 +915,7 @@ pub mod PwnSimpleLoan {
                 0
             };
             self
-                .try_claim_repaid_loan(
+                ._try_claim_repaid_loan(
                     loan_id: refinancing_loan_id,
                     credit_amount: credit_amount,
                     loan_owner: loan_owner
@@ -1025,7 +969,7 @@ pub mod PwnSimpleLoan {
             let interest_amount: u256 = (accuring_minutes * loan.accruing_interest_APR.into())
                 .into();
             let accured_interest = math::mul_div(
-                loan.principal_amount, interest_amount, ACCRUING_INTEREST_APR_DECIMALS
+                loan.principal_amount, interest_amount, ACCRUING_INTEREST_APR_DENOMINATOR
             );
             loan.fixed_interest_amount + accured_interest
         }
@@ -1078,6 +1022,45 @@ pub mod PwnSimpleLoan {
                     id: asset.id,
                     amount: asset.amount
                 );
+            }
+        }
+
+        fn _try_claim_repaid_loan(
+            ref self: ContractState,
+            loan_id: felt252,
+            credit_amount: u256,
+            loan_owner: ContractAddress
+        ) {
+            let loan = self.loans.read(loan_id);
+
+            if (loan.status != 3 || loan.original_lender != loan_owner) {
+                return;
+            }
+
+            let destination_of_funds = loan.original_source_of_funds;
+
+            let repayment_credit = ERC20(loan.credit_address, credit_amount);
+
+            self._delete_loan(loan_id);
+
+            self.emit(LoanClaimed { loan_id, defaulted: false });
+
+            if (credit_amount == 0) {
+                return;
+            }
+
+            if (destination_of_funds == loan_owner) {
+                self.vault._push(repayment_credit, loan_owner);
+            } else {
+                let pool_adapter = self.config.read().get_pool_adapter(destination_of_funds);
+                if (pool_adapter.contract_address == Default::default()) {
+                    Err::INVALID_SOURCE_OF_FUNDS(source_of_funds: destination_of_funds);
+                }
+                self
+                    .vault
+                    ._supply_to_pool(
+                        repayment_credit, pool_adapter, destination_of_funds, loan_owner
+                    );
             }
         }
 
