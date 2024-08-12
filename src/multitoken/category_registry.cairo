@@ -52,6 +52,10 @@ pub mod MultiTokenCategoryRegistry {
     impl OwnableMixinImpl = OwnableComponent::OwnableMixinImpl<ContractState>;
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
 
+    #[abi(embed_v0)]
+    impl SRC5MixinImpl = SRC5Component::SRC5Impl<ContractState>;
+    impl SRC5InternalImpl = SRC5Component::InternalImpl<ContractState>;
+
     #[storage]
     struct Storage {
         registered_category: LegacyMap::<ContractAddress, u8>,

@@ -17,6 +17,8 @@ pub trait IRevokedNonce<TState> {
         self: @TState, owner: ContractAddress, nonce_space: felt252, nonce: felt252
     ) -> bool;
     fn current_nonce_space(self: @TState, owner: ContractAddress) -> felt252;
+    fn hub(self: @TState) -> ContractAddress;
+    fn access_tag(self: @TState) -> felt252;
 }
 
 //! The `RevokedNonce` module provides functionality for managing and verifying revoked nonces 
@@ -296,6 +298,14 @@ pub mod RevokedNonce {
         /// - The current nonce space of the owner.
         fn current_nonce_space(self: @ContractState, owner: ContractAddress) -> felt252 {
             self.nonce_space.read(owner)
+        }
+
+        fn hub(self: @ContractState) -> ContractAddress {
+            self.hub.read().contract_address
+        }
+
+        fn access_tag(self: @ContractState) -> felt252 {
+            self.access_tag.read()
         }
     }
 

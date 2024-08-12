@@ -6,7 +6,7 @@ pub trait IPwnHub<TState> {
     fn set_tags(
         ref self: TState, addresses: Array<ContractAddress>, tags: Array<felt252>, has_tag: bool
     );
-    fn has_tag(ref self: TState, address: ContractAddress, tag: felt252) -> bool;
+    fn has_tag(self: @TState, address: ContractAddress, tag: felt252) -> bool;
 }
 
 //! The `PwnHub` module provides a robust tagging system for contracts within the Starknet 
@@ -163,7 +163,7 @@ pub mod PwnHub {
         ///
         /// - A boolean indicating whether the contract has the tag.
         fn has_tag(
-            ref self: ContractState, address: ContractAddress, tag: felt252
+            self: @ContractState, address: ContractAddress, tag: felt252
         ) -> bool { // Implementation
             self.tags.read((address, tag))
         }

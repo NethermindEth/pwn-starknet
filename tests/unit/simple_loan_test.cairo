@@ -2376,7 +2376,7 @@ mod loan_repayment_amount {
             + math::mul_div(
                 principal,
                 (interest_APR * minutes.into()),
-                PwnSimpleLoan::ACCRUING_INTEREST_APR_DENOMINATOR
+                PwnSimpleLoan::ACCRUING_INTEREST_APR_DENOMINATOR.into()
             );
         let expected_loan_repayment = principal + expected_interest;
         assert_eq!(
@@ -3468,7 +3468,7 @@ mod extend_loan {
         );
         setup.t20.approve(setup.loan.contract_address, extension.compensation_amount);
 
-        let prev_loan_details = setup.loan.get_loan(loan_id);
+        let _ = setup.loan.get_loan(loan_id);
         cheat_caller_address(
             setup.loan.contract_address, setup.lender.contract_address, CheatSpan::TargetCalls(1)
         );
