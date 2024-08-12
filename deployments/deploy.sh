@@ -41,70 +41,70 @@ rm -f "$output_file"
 # Deploy each contract and save the address
 # PwnHub
 echo "Deploying PwnHub..."
-hub_address=$(starkli deploy "$hub_class_hash" --salt 0x1 -w)
+hub_address=$(starkli deploy "$hub_class_hash" -w)
 echo "PwnHub: $hub_address" >> "$output_file"
 echo "PwnHub address: $hub_address"
 echo " "
 
 # PwnConfig 
 echo "Deploying PwnConfig..."
-config_address=$(starkli deploy "$config_class_hash" --salt 0x1 -w)
+config_address=$(starkli deploy "$config_class_hash"  -w)
 echo "PwnConfig: $config_address" >> "$output_file"
 echo "PwnConfig address: $config_address"
 echo " "
 
 # RevokedNonce
 echo "Deploying RevokedNonce..."
-nonce_address=$(starkli deploy "$nonce_class_hash" "$hub_address" "$ACTIVE_LOAN" --salt 0x1 -w)
+nonce_address=$(starkli deploy "$nonce_class_hash" "$hub_address" "$ACTIVE_LOAN"  -w)
 echo "RevokedNonce: $nonce_address" >> "$output_file"
 echo "RevokedNonce address: $nonce_address"
 echo " "
 
 # SimpleLoanSimpleProposal
 echo "Deploying SimpleLoanSimpleProposal..."
-proposal_simple_address=$(starkli deploy "$simple_loan_simple_proposal_class_hash" "$hub_address" "$nonce_address" "$config_address" 0x73696d706c652d73696d706c65 0x312c30 --salt 0x1 -w)
+proposal_simple_address=$(starkli deploy "$simple_loan_simple_proposal_class_hash" "$hub_address" "$nonce_address" "$config_address" 0x73696d706c652d73696d706c65 0x312c30 -w)
 echo "SimpleLoanSimpleProposal: $proposal_simple_address" >> "$output_file"
 echo "SimpleLoanSimpleProposal address: $proposal_simple_address"
 echo " "
 
 # SimpleLoanFungibleProposal
 echo "Deploying SimpleLoanFungibleProposal..."
-proposal_fungible_address=$(starkli deploy "$simple_loan_fungible_proposal_class_hash" "$hub_address" "$nonce_address" "$config_address" 0x73696d706c652d66756e6769626c65 0x312c30 --salt 0x1 -w)
+proposal_fungible_address=$(starkli deploy "$simple_loan_fungible_proposal_class_hash" "$hub_address" "$nonce_address" "$config_address" 0x73696d706c652d66756e6769626c65 0x312c30  -w)
 echo "SimpleLoanFungibleProposal: $proposal_fungible_address" >> "$output_file"
 echo "SimpleLoanFungibleProposal address: $proposal_fungible_address"
 echo " "
 
 # SimpleLoanDutchAuctionProposal
 echo "Deploying SimpleLoanDutchAuctionProposal..."
-proposal_dutch_address=$(starkli deploy "$simple_loan_dutch_auction_proposal_class_hash" "$hub_address" "$nonce_address" "$config_address" 0x73696d706c652d6475746368 0x312c30 --salt 0x1 -w)
+proposal_dutch_address=$(starkli deploy "$simple_loan_dutch_auction_proposal_class_hash" "$hub_address" "$nonce_address" "$config_address" 0x73696d706c652d6475746368 0x312c30  -w)
 echo "SimpleLoanDutchAuctionProposal: $proposal_dutch_address" >> "$output_file"
 echo "SimpleLoanDutchAuctionProposal address: $proposal_dutch_address"
 echo " "
 
 # SimpleLoanListProposal
 echo "Deploying SimpleLoanListProposal..."
-proposal_list_address=$(starkli deploy "$simple_loan_list_proposal_class_hash" "$hub_address" "$nonce_address" "$config_address" 0x73696d706c652d6c697374 0x312c30 --salt 0x1 -w)
+proposal_list_address=$(starkli deploy "$simple_loan_list_proposal_class_hash" "$hub_address" "$nonce_address" "$config_address" 0x73696d706c652d6c697374 0x312c30  -w)
 echo "SimpleLoanListProposal: $proposal_list_address" >> "$output_file"
 echo "SimpleLoanListProposal address: $proposal_list_address"
 echo " "
 
 # PwnLoan
 echo "Deploying PwnLoan..."
-loan_token_address=$(starkli deploy "$pwn_loan_class_hash" "$hub_address" --salt 0x1 -w)
+loan_token_address=$(starkli deploy "$pwn_loan_class_hash" "$hub_address"  -w)
 echo "PwnLoan: $loan_token_address" >> "$output_file"
 echo "PwnLoan address: $loan_token_address"
 echo " "
 
 # MultiTokenCategoryRegistry
 echo "Deploying MultiTokenCategoryRegistry..."
-registry_address=$(starkli deploy "$multi_token_category_registry_class_hash" --salt 0x1 -w)
+registry_address=$(starkli deploy "$multi_token_category_registry_class_hash"  -w)
 echo "MultiTokenCategoryRegistry: $registry_address" >> "$output_file"
 echo "MultiTokenCategoryRegistry address: $registry_address"
 echo " "
 
 # PwnSimpleLoan
 echo "Deploying PwnSimpleLoan..."
-loan_address=$(starkli deploy "$pwn_simple_loan_class_hash" "$hub_address" "$loan_token_address" "$config_address" "$nonce_address" "$registry_address" --salt 0x1 -w)
+loan_address=$(starkli deploy "$pwn_simple_loan_class_hash" "$hub_address" "$loan_token_address" "$config_address" "$nonce_address" "$registry_address"  -w)
 echo "PwnSimpleLoan: $loan_address" >> "$output_file"
 echo "PwnSimpleLoan address: $loan_address"
 echo " "
