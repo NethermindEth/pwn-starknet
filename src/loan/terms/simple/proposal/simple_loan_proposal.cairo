@@ -218,7 +218,7 @@ pub mod SimpleLoanProposalComponent {
 
         fn MULTIPROPOSAL_TYPEHASH(self: @ComponentState<TContractState>) -> u256 {
             MULTIPROPOSAL_TYPEHASH
-        }   
+        }
 
         fn VERSION(self: @ComponentState<TContractState>) -> felt252 {
             VERSION
