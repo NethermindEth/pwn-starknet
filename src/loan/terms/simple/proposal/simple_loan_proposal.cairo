@@ -8,6 +8,10 @@ pub trait ISimpleLoanProposal<TState> {
     fn get_multiproposal_hash(
         self: @TState, multiproposal: SimpleLoanProposalComponent::Multiproposal
     ) -> u256;
+    fn DOMAIN_SEPARATOR(self: @TState) -> felt252;
+    fn MULTIPROPOSAL_DOMAIN_SEPARATOR(self: @TState) -> u256;
+    fn MULTIPROPOSAL_TYPEHASH(self: @TState) -> u256;
+    fn VERSION(self: @TState) -> felt252;
 }
 
 #[starknet::interface]
@@ -72,6 +76,7 @@ pub mod SimpleLoanProposalComponent {
         0xb1acfe094760154fa8ea8fc7c07e76f65332b482350070b57df884171f2ddb56;
     const MULTIPROPOSAL_TYPEHASH: u256 =
         0x73af92d8ed4d3261ba61cd686d2f8a9cceb2563cc7c4c5355eb121316fc5358d;
+    const VERSION: felt252 = '1.2';
 
     #[derive(Drop, Serde)]
     pub struct Multiproposal {
@@ -202,6 +207,22 @@ pub mod SimpleLoanProposalComponent {
             ];
             preimage.append(@merkle_proof::u256s_to_be_byte_array(hash_elements.span()));
             merkle_proof::keccak256(@preimage)
+        }
+
+        fn DOMAIN_SEPARATOR(self: @ComponentState<TContractState>) -> felt252 {
+            self.DOMAIN_SEPARATOR.read()
+        }
+
+        fn MULTIPROPOSAL_DOMAIN_SEPARATOR(self: @ComponentState<TContractState>) -> u256 {
+            MULTIPROPOSAL_DOMAIN_SEPARATOR
+        }
+
+        fn MULTIPROPOSAL_TYPEHASH(self: @ComponentState<TContractState>) -> u256 {
+            MULTIPROPOSAL_TYPEHASH
+        }
+
+        fn VERSION(self: @ComponentState<TContractState>) -> felt252 {
+            VERSION
         }
     }
 

@@ -23,6 +23,7 @@ pub trait ISimpleLoanFungibleProposal<TState> {
     fn get_credit_amount(
         self: @TState, collateral_amount: u256, credit_per_collateral_unit: u256
     ) -> u256;
+    fn PROPOSAL_TYPEHASH(self: @TState) -> felt252;
 }
 
 //! The `SimpleLoanFungibleProposal` module provides a mechanism for creating and accepting loan 
@@ -429,6 +430,10 @@ pub mod SimpleLoanFungibleProposal {
                 credit_per_collateral_unit,
                 CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR
             )
+        }
+
+        fn PROPOSAL_TYPEHASH(self: @ContractState) -> felt252 {
+            PROPOSAL_TYPEHASH
         }
     }
 

@@ -2,3 +2,13 @@ target
 .snfoundry_cache/
 
 .vscode/
+
+deployments/.local-keystore.json
+
+deployments/katana/.env
+
+deployments/mainnet/.env
+
+deployments/sepolia/.env
+
+deployments/sepolia/account.json

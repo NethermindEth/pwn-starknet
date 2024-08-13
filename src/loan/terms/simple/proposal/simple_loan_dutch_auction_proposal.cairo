@@ -21,6 +21,7 @@ pub trait ISimpleLoanDutchAuctionProposal<TState> {
         self: @TState, encoded_data: Array<felt252>
     ) -> (Proposal, ProposalValues);
     fn get_credit_amount(self: @TState, proposal: Proposal, timestamp: u64) -> u256;
+    fn PROPOSAL_TYPEHASH(self: @TState) -> felt252;
 }
 
 //! The `SimpleLoanDutchAuctionProposal` module provides a mechanism for creating and accepting 
@@ -503,6 +504,10 @@ pub mod SimpleLoanDutchAuctionProposal {
             } else {
                 proposal.max_credit_amount - credit_amount_delta
             }
+        }
+
+        fn PROPOSAL_TYPEHASH(self: @ContractState) -> felt252 {
+            PROPOSAL_TYPEHASH
         }
     }
 

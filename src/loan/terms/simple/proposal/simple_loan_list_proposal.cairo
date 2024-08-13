@@ -20,6 +20,7 @@ pub trait ISimpleLoanListProposal<TState> {
     fn decode_proposal_data(
         self: @TState, encoded_data: Array<felt252>
     ) -> (Proposal, ProposalValues);
+    fn PROPOSAL_TYPEHASH(self: @TState) -> felt252;
 }
 
 //! The `SimpleLoanListProposal` module provides a mechanism for creating and accepting loan 
@@ -364,6 +365,10 @@ pub mod SimpleLoanListProposal {
             let proposal_values = self.decode_serde_proposal_values(proposal_values_data);
 
             (proposal, proposal_values)
+        }
+
+        fn PROPOSAL_TYPEHASH(self: @ContractState) -> felt252 {
+            PROPOSAL_TYPEHASH
         }
     }
 
