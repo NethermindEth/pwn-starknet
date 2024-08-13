@@ -248,5 +248,7 @@ pub mod PwnLoan {
         fn loan_contract(self: @ContractState, loan_id: felt252) -> ContractAddress {
             self.loan_contract.read(loan_id)
         }
+        //Note: IERC5646-getStateFingerprint cannot be integrated. ERC5646 is not supported in
+    //Cairo.
     }
 }
