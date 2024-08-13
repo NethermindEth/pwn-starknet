@@ -1,52 +1,52 @@
-use alexandria_data_structures::array_ext::ArrayTraitExt;
-use alexandria_math::{keccak256::keccak256, BitShift};
-use keccak::cairo_keccak;
+use core::keccak::compute_keccak_byte_array;
+use core::integer::u128_byte_reverse;
 
-pub fn abi_encoded_packed(data: Array<u256>) -> Array<u8> {
-    let mut result: Array<u8> = array![];
-    let mut i = 0;
-    let len = data.len();
-    while i < len {
-        result = result.concat(@u256_to_be_bytes(*data.at(i)));
-        i += 1;
-    };
-    result
-}
-
-/// Converts a `u256` value to a big-endian byte array, removing leading zeroes.
+/// Converts a `Span<u256>` values to a big-endian `ByteArray`
 ///
 /// # Parameters
 ///
-/// - `a`: The `u256` value to convert.
+/// - `array`: The `Span<u256>` value to convert.
 ///
 /// # Returns
 ///
-/// - A `Array<u8>` containing the big-endian representation of `a`.
+/// - A `ByteArray` containing the big-endian representation of `a`.
 ///
 /// # Panics
 ///
 /// - Panics if any `u256` to `u8` conversion fails.
-fn u256_to_be_bytes(a: u256) -> Array<u8> {
-    let mut bytes: Array<u8> = array![];
+pub fn u256s_to_be_byte_array(a: Span<u256>) -> ByteArray {
     let mut i = 0;
-
-    while i < 32 {
-        let mut byte: u8 = (BitShift::shr(a, 8 * i) & 0xFF).try_into().expect('u256_to_be_bytes');
-        bytes.append(byte);
-        i += 1;
-    };
-    bytes = bytes.reversed();
-
-    let mut significant_bytes: Array<u8> = array![];
-    while bytes
-        .len() > 0 {
-            let byte = bytes.pop_front().expect('u256_to_be_bytes');
-
-            if byte != 0 {
-                significant_bytes.append(byte);
-            };
+    let mut byte_array: ByteArray = Default::default();
+    let len = a.len();
+    while i < len {
+        let val = *a.at(i);
+        let mut j = 0_u8;
+        let mut val_reversed = u256 {low: u128_byte_reverse(val.high), high: u128_byte_reverse(val.low)};
+        while j < 32 {
+            let mut byte: u8 = (val_reversed & 0xFF).try_into().expect('u256_into_bytes_array');
+            byte_array.append_byte(byte);
+            val_reversed /= 256;
+            j += 1;
         };
-    significant_bytes
+        i+=1;
+    };
+    byte_array
+} 
+
+/// Hashes a `@ByteArray` value using Solidity Compatible Keccak-256 hash function.
+///
+/// # Parameters
+///
+/// - `a`: The `u256` value to hash.
+///
+/// # Returns
+///
+/// - A `u256` hash of the input value in big endian.
+pub fn keccak256(data: @ByteArray) -> u256 {
+    let hash_le = compute_keccak_byte_array(data);
+    // reverse endianness
+    let hash_be = u256 {low: u128_byte_reverse(hash_le.high), high: u128_byte_reverse(hash_le.low)};
+    hash_be
 }
 
 /// Hashes a `u256` value using the Keccak-256 hash function.
@@ -57,9 +57,9 @@ fn u256_to_be_bytes(a: u256) -> Array<u8> {
 ///
 /// # Returns
 ///
-/// - A `u256` hash of the input value.
+/// - A `u256` hash of the input value in big endian.
 pub fn hash(a: u256) -> u256 {
-    keccak256(u256_to_be_bytes(a).span())
+    keccak256(@u256s_to_be_byte_array(array![a].span()))
 }
 
 /// Hashes two `u256` values together using Keccak-256, ensuring a stable ordering.
@@ -71,30 +71,14 @@ pub fn hash(a: u256) -> u256 {
 ///
 /// # Returns
 ///
-/// - A `u256` hash of the combined values.
+/// - A `u256` hash of the combined values in big endian.
 pub fn hash_2(a: u256, b: u256) -> u256 {
-    let a_array = if a < b {
-        u256_to_be_bytes(a)
+    let combined = if a < b {
+        u256s_to_be_byte_array(array![a, b].span())
     } else {
-        u256_to_be_bytes(b)
+        u256s_to_be_byte_array(array![b, a].span())
     };
-    let b_array = if a < b {
-        u256_to_be_bytes(b)
-    } else {
-        u256_to_be_bytes(a)
-    };
-    let mut combined = array![];
-    let mut i = 0;
-    while i < a_array.len() {
-        combined.append(*a_array.at(i));
-        i += 1;
-    };
-    i = 0;
-    while i < b_array.len() {
-        combined.append(*b_array.at(i));
-        i += 1;
-    };
-    keccak256(combined.span())
+    keccak256(@combined)
 }
 
 /// Verifies a Merkle proof against a given root and leaf.
@@ -144,7 +128,7 @@ mod tests {
         let result_a = hash(a);
 
         let expected_a: u256 =
-            39052716502752786868548403558894884608560677189476763460279165921508075402290;
+            102734820286191462857165298680782659557571830026077770507922614438696031314629;
         assert_eq!(result_a, expected_a);
 
         let b = 106298406765026699961965487713881752097005704017518589984779077308930345656963;
@@ -162,7 +146,7 @@ mod tests {
         let result = hash_2(a, b);
 
         let expected: u256 =
-            22068622680911700764321525266852476815069367068878736168591169089364878371621;
+            19309931355636491868079966867258544507227658342258340830426003559553852809999;
         assert_eq!(result, expected);
     }
 

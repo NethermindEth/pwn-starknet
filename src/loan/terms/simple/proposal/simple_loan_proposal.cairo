@@ -22,36 +22,35 @@ pub trait ISimpleLoanAcceptProposal<TState> {
     ) -> (felt252, Terms);
 }
 
-//! The `SimpleLoanProposalComponent` module is a component that provides essential functionality for creating, 
-//! managing, and accepting loan proposals . It is shared between the four
+//! The `SimpleLoanProposalComponent` module is a component that provides essential functionality
+//! for creating, managing, and accepting loan proposals . It is shared between the four
 //! proposal types.
-//! This module is designed to facilitate a secure and efficient process for handling loan proposals 
+//! This module is designed to facilitate a secure and efficient process for handling loan proposals
 //! through robust verification and hashing mechanisms.
-//! 
+//!
 //! # Features
-//! 
+//!
 //! - **Nonce Management**: Ability to revoke nonces to prevent replay attacks.
 //! - **Multiproposal Hashing**: Compute unique hashes for multiproposals to ensure data integrity.
-//! - **Proposal Acceptance**: Securely accept loan proposals with detailed verification processes 
+//! - **Proposal Acceptance**: Securely accept loan proposals with detailed verification processes
 //!   including signature checks, inclusion proof validation, and nonce management.
-//! 
+//!
 //! # Components
-//! 
-//! - `SimpleLoanProposalComponent`: The core component providing base functionality for loan 
+//!
+//! - `SimpleLoanProposalComponent`: The core component providing base functionality for loan
 //!   proposals.
 //! - `Err`: Contains error handling functions for various invalid operations and input data.
-//! 
+//!
 //! # Constants
-//! 
+//!
 //! - `MULTIPROPOSAL_TYPEHASH`: The type hash for multiproposals.
 //! - `BASE_DOMAIN_SEPARATOR`: The base domain separator used in hashing.
 //! - `MULTIPROPOSAL_DOMAIN_SEPARATOR`: The domain separator for multiproposals.
-//! 
-//! This module is designed to provide a comprehensive framework for managing loan proposals, 
+//!
+//! This module is designed to provide a comprehensive framework for managing loan proposals,
 //! integrating seamlessly with other components to ensure secure and efficient loan transactions.
 #[starknet::component]
 pub mod SimpleLoanProposalComponent {
-    use alexandria_math::keccak256::keccak256;
     use core::poseidon::poseidon_hash_span;
     use openzeppelin_account::interface::{ISRC6Dispatcher, ISRC6DispatcherTrait};
     use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
@@ -59,8 +58,8 @@ pub mod SimpleLoanProposalComponent {
     use pwn::interfaces::fingerprint_computer::{
         IStateFingerpringComputerDispatcher, IStateFingerpringComputerDispatcherTrait
     };
+    use pwn::loan::lib::merkle_proof;
     use pwn::loan::lib::signature_checker;
-    use pwn::loan::lib::{merkle_proof, merkle_proof::abi_encoded_packed};
     use pwn::nonce::revoked_nonce::{
         IRevokedNonceDispatcher, IRevokedNonceDispatcherTrait, RevokedNonce
     };
@@ -79,7 +78,7 @@ pub mod SimpleLoanProposalComponent {
         merkle_root: u256
     }
 
-    /// `ProposalBase` represents the fundamental details of a loan proposal, 
+    /// `ProposalBase` represents the fundamental details of a loan proposal,
     /// encapsulating the necessary information for processing and verification.
     #[derive(Drop)]
     pub struct ProposalBase {
@@ -170,7 +169,7 @@ pub mod SimpleLoanProposalComponent {
         TContractState, +HasComponent<TContractState>,
     > of super::ISimpleLoanProposal<ComponentState<TContractState>> {
         /// Revokes a nonce to prevent its reuse, ensuring the uniqueness of operations.
-        /// 
+        ///
         /// # Parameters
         /// - `nonce_space`: The space in which the nonce is used.
         /// - `nonce`: The nonce value to be revoked.
@@ -186,22 +185,23 @@ pub mod SimpleLoanProposalComponent {
         }
 
         /// Computes the hash for a multiproposal using the Keccac hash function.
-        /// 
+        ///
         /// # Parameters
         /// - `multiproposal`: The multiproposal data for which the hash is to be computed.
-        /// 
+        ///
         /// # Returns
         /// The computed hash value as `u256`.
         fn get_multiproposal_hash(
             self: @ComponentState<TContractState>, multiproposal: Multiproposal
         ) -> u256 {
-            let hash_elements: Array<u256> = array![
-                1901,
+            let mut preimage: ByteArray = "\x19\x01";
+            let hash_elements = array![
                 MULTIPROPOSAL_DOMAIN_SEPARATOR.into(),
                 MULTIPROPOSAL_TYPEHASH,
                 multiproposal.merkle_root
             ];
-            keccak256(abi_encoded_packed(hash_elements).span())
+            preimage.append(@merkle_proof::u256s_to_be_byte_array(hash_elements.span()));
+            merkle_proof::keccak256(@preimage)
         }
     }
 
