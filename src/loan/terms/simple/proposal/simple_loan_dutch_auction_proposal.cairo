@@ -23,38 +23,39 @@ pub trait ISimpleLoanDutchAuctionProposal<TState> {
     fn get_credit_amount(self: @TState, proposal: Proposal, timestamp: u64) -> u256;
 }
 
-//! The `SimpleLoanDutchAuctionProposal` module provides a mechanism for creating and accepting 
-//! loan proposals using a Dutch auction model . This module 
-//! integrates multiple components to offer a comprehensive solution for handling loan proposals, 
-//! including encoding and decoding proposal data, computing proposal hashes, and managing auction 
+//! The `SimpleLoanDutchAuctionProposal` module provides a mechanism for creating and accepting
+//! loan proposals using a Dutch auction model . This module
+//! integrates multiple components to offer a comprehensive solution for handling loan proposals,
+//! including encoding and decoding proposal data, computing proposal hashes, and managing auction
 //! dynamics.
-//! 
+//!
 //! # Features
-//! 
-//! - **Proposal Creation**: Allows the creation of loan proposals with specific terms and conditions.
-//! - **Proposal Acceptance**: Facilitates the acceptance of loan proposals, including the 
+//!
+//! - **Proposal Creation**: Allows the creation of loan proposals with specific terms and
+//! conditions.
+//! - **Proposal Acceptance**: Facilitates the acceptance of loan proposals, including the
 //!   verification of signatures and proposal data.
-//! - **Proposal Hashing**: Computes unique hashes for proposals to ensure data integrity and 
+//! - **Proposal Hashing**: Computes unique hashes for proposals to ensure data integrity and
 //!   security.
-//! - **Proposal Encoding/Decoding**: Provides functionality to encode and decode proposal data 
+//! - **Proposal Encoding/Decoding**: Provides functionality to encode and decode proposal data
 //!   for efficient storage and retrieval.
-//! - **Auction Dynamics**: Manages the auction process, including calculating the credit amount 
+//! - **Auction Dynamics**: Manages the auction process, including calculating the credit amount
 //!   based on the auction's progress.
-//! 
+//!
 //! # Components
-//! 
-//! - `SimpleLoanProposalComponent`: A reusable component that provides the base functionality 
+//!
+//! - `SimpleLoanProposalComponent`: A reusable component that provides the base functionality
 //!   for loan proposals.
 //! - `Err`: Contains error handling functions for various invalid operations and input data.
-//! 
+//!
 //! # Constants
-//! 
+//!
 //! - `PROPOSAL_TYPEHASH`: The type hash for proposals.
 //! - `MINUTE`: Represents one minute in seconds.
 //! - `DUTCH_PROPOSAL_DATA_LEN`: The expected length of the encoded proposal data.
-//! 
-//! This module is designed to provide a robust and flexible framework for managing loan proposals 
-//! using a Dutch auction model, integrating seamlessly with other components of the Starknet 
+//!
+//! This module is designed to provide a robust and flexible framework for managing loan proposals
+//! using a Dutch auction model, integrating seamlessly with other components of the Starknet
 //! ecosystem.
 
 #[starknet::contract]
@@ -78,7 +79,7 @@ pub mod SimpleLoanDutchAuctionProposal {
     impl SimpleLoanProposalImpl =
         SimpleLoanProposalComponent::SimpleLoanProposalImpl<ContractState>;
     impl SimpleLoanProposalInternal = SimpleLoanProposalComponent::InternalImpl<ContractState>;
-    // NOTE: we can hard code this by calculating the poseidon hash of the string 
+    // NOTE: we can hard code this by calculating the poseidon hash of the string
     // in the Solidity contract offline.
     pub const PROPOSAL_TYPEHASH: felt252 =
         0x011b95ba182b3ea59860b7ebc4e42e45c9c9ae5c8f6bd7b8dbbde7415bb396b7;
@@ -266,7 +267,8 @@ pub mod SimpleLoanDutchAuctionProposal {
         /// - Computes the proposal hash.
         /// - Calculates the credit amount based on the auction progress.
         /// - Validates the credit amount against the intended credit amount and slippage.
-        /// - Creates the proposal base and calls the componet's internal method to accept the proposal.
+        /// - Creates the proposal base and calls the componet's internal method to accept the
+        /// proposal.
         /// - Constructs the loan terms and returns them along with the proposal hash.
         fn accept_proposal(
             ref self: ContractState,
@@ -465,8 +467,10 @@ pub mod SimpleLoanDutchAuctionProposal {
         /// # Errors
         ///
         /// - `INVALID_AUCTION_DURATION`: If the auction duration is out of bounds.
-        /// - `AUCTION_DURATION_NOT_IN_FULL_MINUTES`: If the auction duration is not in full minutes.
-        /// - `INVALID_CREDIT_AMOUNT_RANGE`: If the max credit amount is not greater than the min credit amount.
+        /// - `AUCTION_DURATION_NOT_IN_FULL_MINUTES`: If the auction duration is not in full
+        /// minutes.
+        /// - `INVALID_CREDIT_AMOUNT_RANGE`: If the max credit amount is not greater than the min
+        /// credit amount.
         /// - `AUCTION_NOT_IN_PROGRESS`: If the auction is not currently in progress.
         /// - `EXPIRED`: If the auction has expired.
         fn get_credit_amount(self: @ContractState, proposal: Proposal, timestamp: u64) -> u256 {

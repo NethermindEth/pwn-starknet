@@ -38,14 +38,13 @@ fn u256_to_be_bytes(a: u256) -> Array<u8> {
     bytes = bytes.reversed();
 
     let mut significant_bytes: Array<u8> = array![];
-    while bytes
-        .len() > 0 {
-            let byte = bytes.pop_front().expect('u256_to_be_bytes');
+    while bytes.len() > 0 {
+        let byte = bytes.pop_front().expect('u256_to_be_bytes');
 
-            if byte != 0 {
-                significant_bytes.append(byte);
-            };
+        if byte != 0 {
+            significant_bytes.append(byte);
         };
+    };
     significant_bytes
 }
 

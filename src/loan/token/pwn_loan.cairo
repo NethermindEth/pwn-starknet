@@ -50,8 +50,8 @@ pub mod PwnLoan {
     };
 
     use pwn::hub::{pwn_hub_tags, pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait}};
-    use starknet::{ContractAddress, get_caller_address, contract_address_const};
     use starknet::storage::Map;
+    use starknet::{ContractAddress, get_caller_address, contract_address_const};
     use super::{IPwnLoadMetadataProviderDispatcher, IPwnLoadMetadataProviderDispatcherTrait};
 
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);
@@ -128,7 +128,7 @@ pub mod PwnLoan {
     #[abi(embed_v0)]
     impl IPwnLoanImpl of super::IPwnLoan<ContractState> {
         /// Mints a new loan token and assigns it to the specified owner.
-        /// 
+        ///
         /// # Parameters
         /// - `owner`: The `ContractAddress` of the new token's owner.
         ///
@@ -165,7 +165,8 @@ pub mod PwnLoan {
         /// - `LoanBurned`: Emitted when a loan token is successfully burned.
         ///
         /// # Errors
-        /// - `INVALID_LOAN_CONTRACT_CALLER`: If the caller is not the contract that minted the loan token.
+        /// - `INVALID_LOAN_CONTRACT_CALLER`: If the caller is not the contract that minted the loan
+        /// token.
         fn burn(ref self: ContractState, loan_id: felt252) {
             if self.loan_contract.read(loan_id) != get_caller_address() {
                 Err::INVALID_LOAN_CONTRACT_CALLER();
@@ -213,7 +214,7 @@ pub mod PwnLoan {
         }
 
         /// Retrieves the metadata URI for a specified loan token.
-        /// 
+        ///
         /// This function is an alias for `token_uri` to support different naming conventions.
         ///
         /// # Parameters
@@ -232,6 +233,7 @@ pub mod PwnLoan {
             }
                 .loan_metadata_uri()
         }
-    //Note: IERC5646-getStateFingerprint cannot be integrated. ERC5646 is not supported in Cairo.
+        //Note: IERC5646-getStateFingerprint cannot be integrated. ERC5646 is not supported in
+    //Cairo.
     }
 }

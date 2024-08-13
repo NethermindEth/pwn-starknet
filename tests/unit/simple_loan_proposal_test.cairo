@@ -1,8 +1,7 @@
 use core::num::traits::Bounded;
 use core::{
-    starknet,
-    starknet::{ContractAddress, get_contract_address},
-    poseidon::poseidon_hash_span, traits::Into
+    starknet, starknet::{ContractAddress, get_contract_address}, poseidon::poseidon_hash_span,
+    traits::Into
 };
 use openzeppelin_account::interface::{IPublicKeyDispatcher, IPublicKeyDispatcherTrait};
 use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
@@ -451,12 +450,9 @@ fn test_fuzz_should_fail_when_caller_is_not_allowed_acceptor(_caller: u128) {
     let mut params = params(dsp.signer.contract_address, dsp.key_pair);
     params.base.allowed_acceptor = starknet::contract_address_const::<'allowed_acceptor'>();
     let mut caller: ContractAddress = Into::<u128, felt252>::into(_caller).try_into().unwrap();
-    while caller == params.base.allowed_acceptor
-        || caller == params
-            .base
-            .proposer {
-                caller = Into::<u128, felt252>::into(_caller + 1).try_into().unwrap();
-            };
+    while caller == params.base.allowed_acceptor || caller == params.base.proposer {
+        caller = Into::<u128, felt252>::into(_caller + 1).try_into().unwrap();
+    };
 
     start_cheat_caller_address_global(caller);
     call_accept_proposal_with(ref dsp.component, params);
@@ -552,7 +548,8 @@ fn test_fuzz_should_increase_used_credit_when_used_credit_not_exceeds_available_
     let current_credit_used = dsp.component.credit_used.read(message_hash);
     assert_eq!(used + credit_amount, current_credit_used, "Credit used imbalanced");
 }
-// dont have vm.expectCall equivalent in snforge, ensuring call not happening by not registering SF comp
+// dont have vm.expectCall equivalent in snforge, ensuring call not happening by not registering SF
+// comp
 #[test]
 fn test_should_not_call_computer_registry_when_should_not_check_state_fingerprint() {
     let mut dsp = deploy();

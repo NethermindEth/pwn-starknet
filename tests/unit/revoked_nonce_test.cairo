@@ -208,24 +208,23 @@ mod revoke_nonces {
         nonce.revoke_nonces(nonces.clone());
 
         let mut i = 0;
-        while i < nonces
-            .len() {
-                spy
-                    .assert_emitted(
-                        @array![
-                            (
-                                nonce.contract_address,
-                                RevokedNonce::Event::NonceRevoked(
-                                    RevokedNonce::NonceRevoked {
-                                        owner: ALICE(), nonce_space, nonce: *nonces.at(i)
-                                    }
-                                )
+        while i < nonces.len() {
+            spy
+                .assert_emitted(
+                    @array![
+                        (
+                            nonce.contract_address,
+                            RevokedNonce::Event::NonceRevoked(
+                                RevokedNonce::NonceRevoked {
+                                    owner: ALICE(), nonce_space, nonce: *nonces.at(i)
+                                }
                             )
-                        ]
-                    );
+                        )
+                    ]
+                );
 
-                i += 1;
-            };
+            i += 1;
+        };
     }
 }
 

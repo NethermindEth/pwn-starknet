@@ -494,7 +494,9 @@ fn test_should_claim_defaulted_loan() {
 
     let loan_id = _create_erc1155_loan(dsp);
 
-    start_cheat_block_timestamp_global(starknet::get_block_timestamp() + dsp.simple_proposal.duration);
+    start_cheat_block_timestamp_global(
+        starknet::get_block_timestamp() + dsp.simple_proposal.duration
+    );
 
     start_cheat_caller_address(dsp.loan.contract_address, dsp.lender.contract_address);
     dsp.loan.claim_loan(loan_id);

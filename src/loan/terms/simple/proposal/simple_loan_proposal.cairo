@@ -22,32 +22,32 @@ pub trait ISimpleLoanAcceptProposal<TState> {
     ) -> (felt252, Terms);
 }
 
-//! The `SimpleLoanProposalComponent` module is a component that provides essential functionality for creating, 
-//! managing, and accepting loan proposals . It is shared between the four
+//! The `SimpleLoanProposalComponent` module is a component that provides essential functionality
+//! for creating, managing, and accepting loan proposals . It is shared between the four
 //! proposal types.
-//! This module is designed to facilitate a secure and efficient process for handling loan proposals 
+//! This module is designed to facilitate a secure and efficient process for handling loan proposals
 //! through robust verification and hashing mechanisms.
-//! 
+//!
 //! # Features
-//! 
+//!
 //! - **Nonce Management**: Ability to revoke nonces to prevent replay attacks.
 //! - **Multiproposal Hashing**: Compute unique hashes for multiproposals to ensure data integrity.
-//! - **Proposal Acceptance**: Securely accept loan proposals with detailed verification processes 
+//! - **Proposal Acceptance**: Securely accept loan proposals with detailed verification processes
 //!   including signature checks, inclusion proof validation, and nonce management.
-//! 
+//!
 //! # Components
-//! 
-//! - `SimpleLoanProposalComponent`: The core component providing base functionality for loan 
+//!
+//! - `SimpleLoanProposalComponent`: The core component providing base functionality for loan
 //!   proposals.
 //! - `Err`: Contains error handling functions for various invalid operations and input data.
-//! 
+//!
 //! # Constants
-//! 
+//!
 //! - `MULTIPROPOSAL_TYPEHASH`: The type hash for multiproposals.
 //! - `BASE_DOMAIN_SEPARATOR`: The base domain separator used in hashing.
 //! - `MULTIPROPOSAL_DOMAIN_SEPARATOR`: The domain separator for multiproposals.
-//! 
-//! This module is designed to provide a comprehensive framework for managing loan proposals, 
+//!
+//! This module is designed to provide a comprehensive framework for managing loan proposals,
 //! integrating seamlessly with other components to ensure secure and efficient loan transactions.
 #[starknet::component]
 pub mod SimpleLoanProposalComponent {
@@ -79,7 +79,7 @@ pub mod SimpleLoanProposalComponent {
         merkle_root: u256
     }
 
-    /// `ProposalBase` represents the fundamental details of a loan proposal, 
+    /// `ProposalBase` represents the fundamental details of a loan proposal,
     /// encapsulating the necessary information for processing and verification.
     #[derive(Drop)]
     pub struct ProposalBase {
@@ -170,7 +170,7 @@ pub mod SimpleLoanProposalComponent {
         TContractState, +HasComponent<TContractState>,
     > of super::ISimpleLoanProposal<ComponentState<TContractState>> {
         /// Revokes a nonce to prevent its reuse, ensuring the uniqueness of operations.
-        /// 
+        ///
         /// # Parameters
         /// - `nonce_space`: The space in which the nonce is used.
         /// - `nonce`: The nonce value to be revoked.
@@ -186,10 +186,10 @@ pub mod SimpleLoanProposalComponent {
         }
 
         /// Computes the hash for a multiproposal using the Keccac hash function.
-        /// 
+        ///
         /// # Parameters
         /// - `multiproposal`: The multiproposal data for which the hash is to be computed.
-        /// 
+        ///
         /// # Returns
         /// The computed hash value as `u256`.
         fn get_multiproposal_hash(

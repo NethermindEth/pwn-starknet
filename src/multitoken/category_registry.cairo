@@ -8,34 +8,34 @@ pub trait IMultiTokenCategoryRegistry<TState> {
 }
 
 //! The `MultiTokenCategoryRegistry` module provides a mechanism for managing and categorizing
-//! multi-token assets . This module allows the registration and 
-//! unregistration of category values for specific asset addresses, facilitating the organization 
+//! multi-token assets . This module allows the registration and
+//! unregistration of category values for specific asset addresses, facilitating the organization
 //! and classification of assets.
 //!
 //! # Features
-//! 
-//! - **Category Registration**: Allows the owner of the contract to register category values for 
+//!
+//! - **Category Registration**: Allows the owner of the contract to register category values for
 //!   specific asset addresses, enabling structured categorization of assets.
 //! - **Category Unregistration**: Provides functionality for unregistering category values,
 //!   allowing for dynamic reclassification of assets as needed.
-//! - **Category Query**: Supports querying the registered category value for a given asset 
+//! - **Category Query**: Supports querying the registered category value for a given asset
 //!   address, with special handling for unregistered categories.
-//! 
+//!
 //! # Components
-//! 
-//! - `OwnableComponent`: Ensures that only the owner can modify category registrations, providing 
+//!
+//! - `OwnableComponent`: Ensures that only the owner can modify category registrations, providing
 //!   access control for critical operations.
 //! - `SRC5Component`: Integrates with the SRC5 interface standard for introspection capabilities.
-//! - `Err`: Contains error handling functions for invalid operations, such as attempting to use 
+//! - `Err`: Contains error handling functions for invalid operations, such as attempting to use
 //!   reserved category values.
-//! 
+//!
 //! # Constants
-//! 
-//! - `CATEGORY_NOT_REGISTERED`: A constant representing the value used to denote that an asset 
+//!
+//! - `CATEGORY_NOT_REGISTERED`: A constant representing the value used to denote that an asset
 //!   does not have a registered category.
-//! 
-//! This module is designed to provide a flexible and secure system for managing multi-token 
-//! asset categories, with robust access control and event-driven architecture to support 
+//!
+//! This module is designed to provide a flexible and secure system for managing multi-token
+//! asset categories, with robust access control and event-driven architecture to support
 //! integrations and monitoring .
 
 #[starknet::contract]
@@ -43,8 +43,8 @@ pub mod MultiTokenCategoryRegistry {
     use openzeppelin_access::ownable::OwnableComponent;
     use openzeppelin_access::ownable::ownable::OwnableComponent::InternalTrait;
     use openzeppelin_introspection::src5::SRC5Component;
-    use starknet::{ContractAddress, get_caller_address};
     use starknet::storage::Map;
+    use starknet::{ContractAddress, get_caller_address};
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);

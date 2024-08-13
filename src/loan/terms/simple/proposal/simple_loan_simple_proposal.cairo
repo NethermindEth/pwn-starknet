@@ -18,33 +18,33 @@ pub trait ISimpleLoanSimpleProposal<TState> {
     fn decode_proposal_data(self: @TState, encoded_data: Array<felt252>) -> Proposal;
 }
 
-//! The `SimpleLoanSimpleProposal` module provides a streamlined approach to creating and 
-//! accepting loan proposals . This module leverages key 
-//! components and functionality to manage loan proposals efficiently, ensuring data integrity 
+//! The `SimpleLoanSimpleProposal` module provides a streamlined approach to creating and
+//! accepting loan proposals . This module leverages key
+//! components and functionality to manage loan proposals efficiently, ensuring data integrity
 //! and security throughout the process.
-//! 
+//!
 //! # Features
-//! 
-//! - **Proposal Creation**: Enables the creation of loan proposals with specific terms and 
+//!
+//! - **Proposal Creation**: Enables the creation of loan proposals with specific terms and
 //!   conditions.
-//! - **Proposal Acceptance**: Supports the acceptance of loan proposals, including validation 
+//! - **Proposal Acceptance**: Supports the acceptance of loan proposals, including validation
 //!   of signatures and proposal data.
-//! - **Proposal Hashing**: Computes unique hashes for proposals to ensure data integrity and 
+//! - **Proposal Hashing**: Computes unique hashes for proposals to ensure data integrity and
 //!   security.
-//! - **Proposal Encoding/Decoding**: Provides functionality to encode and decode proposal data 
+//! - **Proposal Encoding/Decoding**: Provides functionality to encode and decode proposal data
 //!   for efficient storage and retrieval.
-//! 
+//!
 //! # Components
-//! 
-//! - `SimpleLoanProposalComponent`: A reusable component that provides the base functionality 
+//!
+//! - `SimpleLoanProposalComponent`: A reusable component that provides the base functionality
 //!   for loan proposals.
 //! - `Err`: Contains error handling functions for various invalid operations and input data.
-//! 
+//!
 //! # Constants
-//! 
+//!
 //! - `PROPOSAL_TYPEHASH`: The type hash for proposals.
-//! 
-//! This module is designed to provide a robust and efficient framework for managing loan proposals 
+//!
+//! This module is designed to provide a robust and efficient framework for managing loan proposals
 //! integrating seamlessly with other components and ensuring a secure and reliable process.
 #[starknet::contract]
 pub mod SimpleLoanSimpleProposal {
@@ -66,7 +66,7 @@ pub mod SimpleLoanSimpleProposal {
         SimpleLoanProposalComponent::SimpleLoanProposalImpl<ContractState>;
     impl SimpleLoanProposalInternal = SimpleLoanProposalComponent::InternalImpl<ContractState>;
 
-    // NOTE: we can hard code this by calculating the poseidon hash of the string 
+    // NOTE: we can hard code this by calculating the poseidon hash of the string
     // in the Solidity contract offline.
     pub const PROPOSAL_TYPEHASH: felt252 =
         0x51f6ba475e1a1eb81008cc3bdf2084518ae00fd5f333e5738b597a26c75a761;

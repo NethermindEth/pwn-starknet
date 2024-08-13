@@ -25,38 +25,39 @@ pub trait ISimpleLoanFungibleProposal<TState> {
     ) -> u256;
 }
 
-//! The `SimpleLoanFungibleProposal` module provides a mechanism for creating and accepting loan 
-//! proposals for fungible assets . This module integrates multiple 
-//! components to offer a comprehensive solution for handling loan proposals, including encoding 
+//! The `SimpleLoanFungibleProposal` module provides a mechanism for creating and accepting loan
+//! proposals for fungible assets . This module integrates multiple
+//! components to offer a comprehensive solution for handling loan proposals, including encoding
 //! and decoding proposal data, computing proposal hashes, and managing credit calculations.
-//! 
+//!
 //! # Features
-//! 
-//! - **Proposal Creation**: Allows the creation of loan proposals with specific terms and conditions.
-//! - **Proposal Acceptance**: Facilitates the acceptance of loan proposals, including the 
+//!
+//! - **Proposal Creation**: Allows the creation of loan proposals with specific terms and
+//! conditions.
+//! - **Proposal Acceptance**: Facilitates the acceptance of loan proposals, including the
 //!   verification of signatures and proposal data.
-//! - **Proposal Hashing**: Computes unique hashes for proposals to ensure data integrity and 
+//! - **Proposal Hashing**: Computes unique hashes for proposals to ensure data integrity and
 //!   security.
-//! - **Proposal Encoding/Decoding**: Provides functionality to encode and decode proposal data 
+//! - **Proposal Encoding/Decoding**: Provides functionality to encode and decode proposal data
 //!   for efficient storage and retrieval.
-//! - **Credit Calculation**: Manages the calculation of credit amounts based on collateral and 
+//! - **Credit Calculation**: Manages the calculation of credit amounts based on collateral and
 //!   credit per collateral unit values.
-//! 
+//!
 //! # Components
-//! 
-//! - `SimpleLoanProposalComponent`: A reusable component that provides the base functionality 
+//!
+//! - `SimpleLoanProposalComponent`: A reusable component that provides the base functionality
 //!   for loan proposals.
 //! - `Err`: Contains error handling functions for various invalid operations and input data.
-//! 
+//!
 //! # Constants
-//! 
+//!
 //! - `PROPOSAL_TYPEHASH`: The type hash for proposals.
-//! - `CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR`: The denominator for credit per collateral unit 
+//! - `CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR`: The denominator for credit per collateral unit
 //!   calculations.
 //! - `FUNGIBLE_PROPOSAL_DATA_LEN`: The expected length of the encoded proposal data.
-//! 
-//! This module is designed to provide a robust and flexible framework for managing loan proposals 
-//! involving fungible assets, integrating seamlessly with other components of the Starknet 
+//!
+//! This module is designed to provide a robust and flexible framework for managing loan proposals
+//! involving fungible assets, integrating seamlessly with other components of the Starknet
 //! ecosystem.
 #[starknet::contract]
 pub mod SimpleLoanFungibleProposal {
@@ -77,7 +78,7 @@ pub mod SimpleLoanFungibleProposal {
     impl SimpleLoanProposalImpl =
         SimpleLoanProposalComponent::SimpleLoanProposalImpl<ContractState>;
     impl SimpleLoanProposalInternal = SimpleLoanProposalComponent::InternalImpl<ContractState>;
-    // NOTE: we can hard code this by calculating the poseidon hash of the string 
+    // NOTE: we can hard code this by calculating the poseidon hash of the string
     // in the Solidity contract offline.
     pub const PROPOSAL_TYPEHASH: felt252 =
         0x062dbce0eca7d4486c66e0d48cdd72744db07523b68e9e4dad30aa4bee1356;
@@ -234,14 +235,16 @@ pub mod SimpleLoanFungibleProposal {
         ///
         /// - The length of `proposal_data` must match `FUNGIBLE_PROPOSAL_DATA_LEN`.
         /// - The proposal must have a minimum collateral amount set.
-        /// - The collateral amount in `proposal_values` must meet or exceed the minimum collateral amount.
+        /// - The collateral amount in `proposal_values` must meet or exceed the minimum collateral
+        /// amount.
         ///
         /// # Actions
         ///
         /// - Decodes the proposal data.
         /// - Computes the proposal hash.
         /// - Validates the collateral amount against the minimum required collateral.
-        /// - Calculates the credit amount based on the collateral amount and credit per collateral unit.
+        /// - Calculates the credit amount based on the collateral amount and credit per collateral
+        /// unit.
         /// - Creates the proposal base and calls the internal method to accept the proposal.
         /// - Constructs the loan terms and returns them along with the proposal hash.
         fn accept_proposal(
@@ -411,7 +414,8 @@ pub mod SimpleLoanFungibleProposal {
             (proposal, proposal_values)
         }
 
-        /// Calculates the credit amount based on the collateral amount and credit per collateral unit.
+        /// Calculates the credit amount based on the collateral amount and credit per collateral
+        /// unit.
         ///
         /// # Arguments
         ///
