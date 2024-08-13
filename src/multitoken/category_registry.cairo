@@ -49,12 +49,15 @@ pub mod MultiTokenCategoryRegistry {
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
 
     #[abi(embed_v0)]
-    impl OwnableMixinImpl = OwnableComponent::OwnableMixinImpl<ContractState>;
+    impl OwnableTwoStepMixinImpl =
+        OwnableComponent::OwnableTwoStepMixinImpl<ContractState>;
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
 
     #[abi(embed_v0)]
     impl SRC5MixinImpl = SRC5Component::SRC5Impl<ContractState>;
     impl SRC5InternalImpl = SRC5Component::InternalImpl<ContractState>;
+
+    pub const CATEGORY_NOT_REGISTERED: u8 = 255;
 
     #[storage]
     struct Storage {
@@ -100,8 +103,6 @@ pub mod MultiTokenCategoryRegistry {
     fn constructor(ref self: ContractState) {
         self.ownable.initializer(starknet::get_caller_address());
     }
-
-    pub const CATEGORY_NOT_REGISTERED: u8 = 255;
 
     #[abi(embed_v0)]
     impl IMultiTokenCategoryRegistry of super::IMultiTokenCategoryRegistry<ContractState> {
