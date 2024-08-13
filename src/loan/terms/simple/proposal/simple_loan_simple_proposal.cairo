@@ -16,6 +16,7 @@ pub trait ISimpleLoanSimpleProposal<TState> {
     fn get_proposal_hash(self: @TState, proposal: Proposal) -> felt252;
     fn encode_proposal_data(self: @TState, proposal: Proposal) -> Array<felt252>;
     fn decode_proposal_data(self: @TState, encoded_data: Array<felt252>) -> Proposal;
+    fn PROPOSAL_TYPEHASH(self: @TState) -> felt252;
 }
 
 //! The `SimpleLoanSimpleProposal` module provides a streamlined approach to creating and
@@ -301,6 +302,10 @@ pub mod SimpleLoanSimpleProposal {
         /// Returns a `Proposal` object reconstructed from the encoded data.
         fn decode_proposal_data(self: @ContractState, encoded_data: Array<felt252>) -> Proposal {
             self.decode_serde_proposal(encoded_data.span())
+        }
+
+        fn PROPOSAL_TYPEHASH(self: @ContractState) -> felt252 {
+            PROPOSAL_TYPEHASH
         }
     }
 

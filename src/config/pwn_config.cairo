@@ -166,6 +166,10 @@ pub mod PwnConfig {
             self.initializable.initialize();
         }
 
+        fn get_max_fee(self: @ContractState) -> u16 {
+            MAX_FEE
+        }
+
         /// Sets the fee for the PwnConfig contract.
         ///
         /// # Arguments
@@ -308,7 +312,7 @@ pub mod PwnConfig {
         ///
         /// - The `IStateFingerpringComputerDispatcher` for the asset.
         fn get_state_fingerprint_computer(
-            ref self: ContractState, asset: ContractAddress
+            self: @ContractState, asset: ContractAddress
         ) -> IStateFingerpringComputerDispatcher {
             let computer = self.sf_computer_registry.read(asset);
 

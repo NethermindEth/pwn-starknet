@@ -8,6 +8,9 @@ pub trait IPwnLoan<TState> {
     fn symbol(self: @TState) -> ByteArray;
     fn token_uri(self: @TState, loan_id: felt252) -> ByteArray;
     fn tokenUri(self: @TState, loan_id: felt252) -> ByteArray;
+    fn hub(self: @TState) -> ContractAddress;
+    fn last_loan_id(self: @TState) -> felt252;
+    fn loan_contract(self: @TState, loan_id: felt252) -> ContractAddress;
 }
 
 #[starknet::interface]
@@ -232,6 +235,18 @@ pub mod PwnLoan {
                 contract_address: self.loan_contract.read(loan_id)
             }
                 .loan_metadata_uri()
+        }
+
+        fn hub(self: @ContractState) -> ContractAddress {
+            self.hub.read().contract_address
+        }
+
+        fn last_loan_id(self: @ContractState) -> felt252 {
+            self.last_loan_id.read()
+        }
+
+        fn loan_contract(self: @ContractState, loan_id: felt252) -> ContractAddress {
+            self.loan_contract.read(loan_id)
         }
         //Note: IERC5646-getStateFingerprint cannot be integrated. ERC5646 is not supported in
     //Cairo.

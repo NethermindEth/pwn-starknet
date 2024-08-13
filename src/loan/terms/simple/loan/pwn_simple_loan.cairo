@@ -66,11 +66,10 @@ pub mod PwnSimpleLoan {
     use pwn::multitoken::category_registry::{
         IMultiTokenCategoryRegistryDispatcher, IMultiTokenCategoryRegistryDispatcherTrait
     };
-    use pwn::multitoken::library::MultiToken::Asset;
-    use pwn::multitoken::library::MultiToken::AssetTrait;
-    use pwn::multitoken::library::MultiToken::ERC20;
-    use pwn::nonce::revoked_nonce::RevokedNonce;
-    use pwn::nonce::revoked_nonce::{IRevokedNonceDispatcher, IRevokedNonceDispatcherTrait};
+    use pwn::multitoken::library::MultiToken::{Asset, AssetTrait, ERC20};
+    use pwn::nonce::revoked_nonce::{
+        RevokedNonce, IRevokedNonceDispatcher, IRevokedNonceDispatcherTrait
+    };
     use starknet::ContractAddress;
     use starknet::storage::Map;
 
@@ -92,14 +91,13 @@ pub mod PwnSimpleLoan {
 
     impl VaultImpl = PwnVaultComponent::InternalImpl<ContractState>;
 
-    pub const ACCRUING_INTEREST_APR_DECIMALS: u256 = 100;
+    pub const ACCRUING_INTEREST_APR_DECIMALS: u16 = 100;
     pub const MIN_LOAN_DURATION: u64 = 600;
     pub const MAX_ACCRUING_INTEREST_APR: u32 = 160000;
     pub const MINUTE: u64 = 60;
-    pub const MINUTE_IN_YEAR: u256 = 525_600;
-    pub const ACCRUING_INTEREST_APR_DENOMINATOR: u256 = ACCRUING_INTEREST_APR_DECIMALS
-        * MINUTE_IN_YEAR
-        * 100;
+    pub const MINUTE_IN_YEAR: u64 = 525_600;
+    pub const ACCRUING_INTEREST_APR_DENOMINATOR: u64 = 5256000000;
+    pub const VERSION: felt252 = '1.2';
     // @note: duration in seconds
 
     // @note: 1 day
@@ -723,6 +721,46 @@ pub mod PwnSimpleLoan {
             ];
             poseidon_hash_span(hash_elements.span())
         }
+
+        fn ACCRUING_INTEREST_APR_DECIMALS(self: @ContractState) -> u16 {
+            ACCRUING_INTEREST_APR_DECIMALS
+        }
+
+        fn ACCRUING_INTEREST_APR_DENOMINATOR(self: @ContractState) -> u64 {
+            ACCRUING_INTEREST_APR_DENOMINATOR
+        }
+
+        fn DOMAIN_SEPARATOR(self: @ContractState) -> felt252 {
+            self.domain_separator.read()
+        }
+
+        fn EXTENSION_PROPOSAL_TYPEHASH(self: @ContractState) -> felt252 {
+            EXTENSION_PROPOSAL_TYPEHASH
+        }
+
+        fn MAX_ACCRUING_INTEREST_APR(self: @ContractState) -> u32 {
+            MAX_ACCRUING_INTEREST_APR
+        }
+
+        fn MINUTE_IN_YEAR(self: @ContractState) -> u64 {
+            MINUTE_IN_YEAR
+        }
+
+        fn MAX_EXTENSION_DURATION(self: @ContractState) -> u64 {
+            MAX_EXTENSION_DURATION
+        }
+
+        fn MIN_EXTENSION_DURATION(self: @ContractState) -> u64 {
+            MIN_EXTENSION_DURATION
+        }
+
+        fn MIN_LOAN_DURATION(self: @ContractState) -> u64 {
+            MIN_LOAN_DURATION
+        }
+
+        fn VERSION(self: @ContractState) -> felt252 {
+            VERSION
+        }
     }
 
     #[generate_trait]
@@ -972,7 +1010,7 @@ pub mod PwnSimpleLoan {
             let interest_amount: u256 = (accuring_minutes * loan.accruing_interest_APR.into())
                 .into();
             let accured_interest = math::mul_div(
-                loan.principal_amount, interest_amount, ACCRUING_INTEREST_APR_DENOMINATOR
+                loan.principal_amount, interest_amount, ACCRUING_INTEREST_APR_DENOMINATOR.into()
             );
             loan.fixed_interest_amount + accured_interest
         }

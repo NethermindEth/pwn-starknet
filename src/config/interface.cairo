@@ -20,8 +20,9 @@ pub trait IPwnConfig<TState> {
         ref self: TState, asset: ContractAddress, computer: ContractAddress
     );
     fn register_pool_adapter(ref self: TState, pool: ContractAddress, adapter: ContractAddress);
+    fn get_max_fee(self: @TState) -> u16;
     fn get_state_fingerprint_computer(
-        ref self: TState, asset: ContractAddress
+        self: @TState, asset: ContractAddress
     ) -> IStateFingerpringComputerDispatcher;
     fn get_pool_adapter(self: @TState, pool: ContractAddress) -> IPoolAdapterDispatcher;
     fn loan_metadata_uri(self: @TState, loan_contract: ContractAddress) -> ByteArray;

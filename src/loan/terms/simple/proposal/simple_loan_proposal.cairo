@@ -8,6 +8,10 @@ pub trait ISimpleLoanProposal<TState> {
     fn get_multiproposal_hash(
         self: @TState, multiproposal: SimpleLoanProposalComponent::Multiproposal
     ) -> u256;
+    fn DOMAIN_SEPARATOR(self: @TState) -> felt252;
+    fn MULTIPROPOSAL_DOMAIN_SEPARATOR(self: @TState) -> u256;
+    fn MULTIPROPOSAL_TYPEHASH(self: @TState) -> u256;
+    fn VERSION(self: @TState) -> felt252;
 }
 
 #[starknet::interface]
@@ -51,7 +55,6 @@ pub trait ISimpleLoanAcceptProposal<TState> {
 //! integrating seamlessly with other components to ensure secure and efficient loan transactions.
 #[starknet::component]
 pub mod SimpleLoanProposalComponent {
-    use alexandria_math::keccak256::keccak256;
     use core::poseidon::poseidon_hash_span;
     use openzeppelin_account::interface::{ISRC6Dispatcher, ISRC6DispatcherTrait};
     use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
@@ -59,8 +62,8 @@ pub mod SimpleLoanProposalComponent {
     use pwn::interfaces::fingerprint_computer::{
         IStateFingerpringComputerDispatcher, IStateFingerpringComputerDispatcherTrait
     };
+    use pwn::loan::lib::merkle_proof;
     use pwn::loan::lib::signature_checker;
-    use pwn::loan::lib::{merkle_proof, merkle_proof::abi_encoded_packed};
     use pwn::nonce::revoked_nonce::{
         IRevokedNonceDispatcher, IRevokedNonceDispatcherTrait, RevokedNonce
     };
@@ -73,6 +76,7 @@ pub mod SimpleLoanProposalComponent {
         0xb1acfe094760154fa8ea8fc7c07e76f65332b482350070b57df884171f2ddb56;
     const MULTIPROPOSAL_TYPEHASH: u256 =
         0x73af92d8ed4d3261ba61cd686d2f8a9cceb2563cc7c4c5355eb121316fc5358d;
+    const VERSION: felt252 = '1.2';
 
     #[derive(Drop, Serde)]
     pub struct Multiproposal {
@@ -195,13 +199,30 @@ pub mod SimpleLoanProposalComponent {
         fn get_multiproposal_hash(
             self: @ComponentState<TContractState>, multiproposal: Multiproposal
         ) -> u256 {
-            let hash_elements: Array<u256> = array![
-                1901,
+            let mut preimage: ByteArray = "\x19\x01";
+            let hash_elements = array![
                 MULTIPROPOSAL_DOMAIN_SEPARATOR.into(),
                 MULTIPROPOSAL_TYPEHASH,
                 multiproposal.merkle_root
             ];
-            keccak256(abi_encoded_packed(hash_elements).span())
+            preimage.append(@merkle_proof::u256s_to_be_byte_array(hash_elements.span()));
+            merkle_proof::keccak256(@preimage)
+        }
+
+        fn DOMAIN_SEPARATOR(self: @ComponentState<TContractState>) -> felt252 {
+            self.DOMAIN_SEPARATOR.read()
+        }
+
+        fn MULTIPROPOSAL_DOMAIN_SEPARATOR(self: @ComponentState<TContractState>) -> u256 {
+            MULTIPROPOSAL_DOMAIN_SEPARATOR
+        }
+
+        fn MULTIPROPOSAL_TYPEHASH(self: @ComponentState<TContractState>) -> u256 {
+            MULTIPROPOSAL_TYPEHASH
+        }
+
+        fn VERSION(self: @ComponentState<TContractState>) -> felt252 {
+            VERSION
         }
     }
 

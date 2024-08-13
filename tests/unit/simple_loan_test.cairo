@@ -2376,7 +2376,7 @@ mod loan_repayment_amount {
             + math::mul_div(
                 principal,
                 (interest_APR * minutes.into()),
-                PwnSimpleLoan::ACCRUING_INTEREST_APR_DENOMINATOR
+                PwnSimpleLoan::ACCRUING_INTEREST_APR_DENOMINATOR.into()
             );
         let expected_loan_repayment = principal + expected_interest;
         assert_eq!(
