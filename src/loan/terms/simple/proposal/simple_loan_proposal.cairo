@@ -8,6 +8,8 @@ pub trait ISimpleLoanProposal<TState> {
     fn get_multiproposal_hash(
         self: @TState, multiproposal: SimpleLoanProposalComponent::Multiproposal
     ) -> u256;
+    fn get_proposal_made(self: @TState, proposal_hash: felt252) -> bool;
+    fn get_credit_used(self: @TState, proposal_hash: felt252) -> u256;
     fn DOMAIN_SEPARATOR(self: @TState) -> felt252;
     fn MULTIPROPOSAL_DOMAIN_SEPARATOR(self: @TState) -> u256;
     fn MULTIPROPOSAL_TYPEHASH(self: @TState) -> u256;
@@ -206,6 +208,14 @@ pub mod SimpleLoanProposalComponent {
                 multiproposal.merkle_root
             ];
             keccak256(abi_encoded_packed(hash_elements).span())
+        }
+
+        fn get_proposal_made(self: @TState, proposal_hash: felt252) -> bool {
+            self.proposal_made.read(proposal_hash)
+        }
+
+        fn get_credit_used(self: @TState, proposal_hash: felt252) -> u256{
+            self.credit_used.read(proposal_hash)
         }
 
         fn DOMAIN_SEPARATOR(self: @ComponentState<TContractState>) -> felt252 {
