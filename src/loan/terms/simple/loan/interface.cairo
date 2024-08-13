@@ -36,6 +36,7 @@ pub trait IPwnSimpleLoan<TState> {
     fn get_loan_repayment_amount(self: @TState, loan_id: felt252) -> u256;
     fn get_extension_hash(self: @TState, extension: types::ExtensionProposal) -> felt252;
     fn get_loan(self: @TState, loan_id: felt252) -> types::GetLoanReturnValue;
+    fn get_extension_proposal_made(self: @TState, extension_hash: felt252) -> bool;
     fn get_is_valid_asset(self: @TState, asset: Asset) -> bool;
     fn get_loan_metadata_uri(self: @TState) -> ByteArray;
     fn get_state_fingerprint(self: @TState, token_id: felt252) -> felt252;
