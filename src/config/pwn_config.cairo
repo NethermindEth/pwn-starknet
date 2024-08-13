@@ -1,37 +1,37 @@
-//! The `PwnConfig` module provides a comprehensive configuration management system for the Pwn 
-//! protocol. This module integrates with OpenZeppelin's `Ownable` 
-//! and `Initializable` components to manage ownership and initialization processes securely 
+//! The `PwnConfig` module provides a comprehensive configuration management system for the Pwn
+//! protocol. This module integrates with OpenZeppelin's `Ownable`
+//! and `Initializable` components to manage ownership and initialization processes securely
 //! and efficiently.
-//! 
+//!
 //! # Features
-//! 
-//! - **Ownable Component**: Ensures that critical functions can only be executed by the contract 
+//!
+//! - **Ownable Component**: Ensures that critical functions can only be executed by the contract
 //!   owner.
-//! - **Initializable Component**: Manages the initialization process, ensuring the contract can 
+//! - **Initializable Component**: Manages the initialization process, ensuring the contract can
 //!   only be initialized once.
-//! - **Fee Management**: Allows the contract owner to set and update fees associated with the 
+//! - **Fee Management**: Allows the contract owner to set and update fees associated with the
 //!   protocol.
 //! - **Fee Collector Management**: Allows setting and updating of the fee collector address.
-//! - **LOAN Metadata URI Management**: Supports setting and updating metadata URIs for loan 
+//! - **LOAN Metadata URI Management**: Supports setting and updating metadata URIs for loan
 //!   contracts.
-//! - **Registry Management**: Allows registration of state fingerprint computers and pool 
+//! - **Registry Management**: Allows registration of state fingerprint computers and pool
 //!   adapters, ensuring they support the specified assets.
-//! 
+//!
 //! # Components
-//! 
-//! - `OwnableComponent`: Provides ownership control with the ability to transfer ownership in a 
+//!
+//! - `OwnableComponent`: Provides ownership control with the ability to transfer ownership in a
 //!   two-step process.
-//! - `InitializableComponent`: Manages contract initialization with checks to ensure it occurs 
+//! - `InitializableComponent`: Manages contract initialization with checks to ensure it occurs
 //!   only once.
-//! - `Storage`: Defines the storage structure for the module, including fee, fee collector, 
+//! - `Storage`: Defines the storage structure for the module, including fee, fee collector,
 //!   metadata URIs, and registries.
-//! - `Event`: Defines events emitted by the contract, including updates to fees, fee collectors, 
+//! - `Event`: Defines events emitted by the contract, including updates to fees, fee collectors,
 //!   and metadata URIs.
-//! - `Err`: Contains error handling functions for invalid operations such as setting an invalid 
+//! - `Err`: Contains error handling functions for invalid operations such as setting an invalid
 //!   fee or zero addresses.
-//! 
+//!
 //! # Constants
-//! 
+//!
 //! - `VERSION`: The current version of the module.
 //! - `MAX_FEE`: The maximum allowable fee, set to 10% (1000 basis points).
 #[starknet::contract]
@@ -132,7 +132,8 @@ pub mod PwnConfig {
 
     #[abi(embed_v0)]
     impl PwnConfigImpl of IPwnConfig<ContractState> {
-        /// Initializes the PwnConfig contract with the provided owner, fee, and fee collector address.
+        /// Initializes the PwnConfig contract with the provided owner, fee, and fee collector
+        /// address.
         ///
         /// # Arguments
         ///

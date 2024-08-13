@@ -10,7 +10,8 @@
 ///
 /// # Returns
 ///
-/// - An `Array<felt252>` containing the concatenated elements of `left` and `right` with their lengths.
+/// - An `Array<felt252>` containing the concatenated elements of `left` and `right` with their
+/// lengths.
 ///
 /// # Panics
 ///

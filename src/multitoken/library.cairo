@@ -18,8 +18,10 @@
 //!
 //! - `ERC20_INTERFACE_ID`: The interface ID for ERC20 tokens, based on the full OpenZeppelin ABI.
 //! - `ERC721_INTERFACE_ID`: The interface ID for ERC721 tokens, based on the full OpenZeppelin ABI.
-//! - `ERC1155_INTERFACE_ID`: The interface ID for ERC1155 tokens, based on the full OpenZeppelin ABI.
-//! - `CATEGORY_NOT_REGISTERED`: A sentinel value indicating that a token category is not registered.
+//! - `ERC1155_INTERFACE_ID`: The interface ID for ERC1155 tokens, based on the full OpenZeppelin
+//! ABI.
+//! - `CATEGORY_NOT_REGISTERED`: A sentinel value indicating that a token category is not
+//! registered.
 //!
 //! # Structures
 //!
@@ -28,7 +30,8 @@
 //!
 //! # Modules
 //!
-//! - `Err`: Contains error handling functions for various invalid operations or unsupported categories.
+//! - `Err`: Contains error handling functions for various invalid operations or unsupported
+//! categories.
 //!
 //! This module is designed to provide a robust and flexible framework for interacting with
 //! multiple token standards on Starknet, simplifying the management of different asset types.
@@ -47,8 +50,9 @@ pub mod MultiToken {
     use starknet::ContractAddress;
     use super::{CategoryIntoU8, CategoryEq};
 
-    // NOTE: tokens standard interface id are pretty inconsistent on Starknet at the moment due to frequent updates
-    // the interface_id below are based on the full OpenZeppelin interfaces (named as ABI)
+    // NOTE: tokens standard interface id are pretty inconsistent on Starknet at the moment due to
+    // frequent updates the interface_id below are based on the full OpenZeppelin interfaces (named
+    // as ABI)
     const ERC20_INTERFACE_ID: felt252 =
         0x3d21dcd478803698af065a01681e1f1801a5b80c367ecb5561fbf10b416756e;
     const ERC721_INTERFACE_ID: felt252 =

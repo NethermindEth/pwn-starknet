@@ -9,40 +9,40 @@ pub trait IPwnHub<TState> {
     fn has_tag(self: @TState, address: ContractAddress, tag: felt252) -> bool;
 }
 
-//! The `PwnHub` module provides a robust tagging system for contracts within the Starknet 
-//! ecosystem. This module leverages OpenZeppelin's `Ownable` component to ensure secure 
+//! The `PwnHub` module provides a robust tagging system for contracts within the Starknet
+//! ecosystem. This module leverages OpenZeppelin's `Ownable` component to ensure secure
 //! ownership management.
-//! 
+//!
 //! # Features
-//! 
-//! - **Ownable Component**: Ensures that only the contract owner can perform sensitive 
+//!
+//! - **Ownable Component**: Ensures that only the contract owner can perform sensitive
 //!   operations such as setting tags.
-//! - **Tag Management**: Provides functionality to set and manage tags for contracts, allowing 
+//! - **Tag Management**: Provides functionality to set and manage tags for contracts, allowing
 //!   for efficient categorization and identification.
-//! - **Batch Tagging**: Supports setting multiple tags for multiple addresses in a single 
+//! - **Batch Tagging**: Supports setting multiple tags for multiple addresses in a single
 //!   operation.
-//! 
+//!
 //! # Components
-//! 
-//! - `OwnableComponent`: Provides ownership control with the ability to transfer ownership in a 
+//!
+//! - `OwnableComponent`: Provides ownership control with the ability to transfer ownership in a
 //!   two-step process.
-//! - `Storage`: Defines the storage structure for the module, including a map for storing tags 
+//! - `Storage`: Defines the storage structure for the module, including a map for storing tags
 //!   and the ownable substorage.
 //! - `Event`: Defines events emitted by the contract, including tag updates.
-//! - `Err`: Contains error handling functions for invalid input data such as mismatched array 
+//! - `Err`: Contains error handling functions for invalid input data such as mismatched array
 //!   lengths.
-//! 
+//!
 //! # Constants
-//! 
-//! This module does not define any constants but relies on secure and efficient internal logic 
+//!
+//! This module does not define any constants but relies on secure and efficient internal logic
 //! for its operations.
-//! 
+//!
 //! # Interface
-//! 
-//! The `IPwnHub` trait provides the interface for interacting with the PwnHub contract, 
+//!
+//! The `IPwnHub` trait provides the interface for interacting with the PwnHub contract,
 //! including functions for setting and checking tags.
-//! 
-//! This module integrates seamlessly with other components of the Starknet ecosystem, providing 
+//!
+//! This module integrates seamlessly with other components of the Starknet ecosystem, providing
 //! a flexible and secure tagging system.
 
 #[starknet::contract]

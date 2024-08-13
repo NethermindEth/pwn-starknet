@@ -36,8 +36,9 @@ use pwn::{
     },
 };
 use snforge_std::{
-    declare, store, load, map_entry_address, cheat_caller_address, start_cheat_block_timestamp_global,
-    mock_call, spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait,
+    declare, store, load, map_entry_address, cheat_caller_address,
+    start_cheat_block_timestamp_global, mock_call, spy_events, EventSpy, EventSpyTrait,
+    EventSpyAssertionsTrait,
     signature::{
         KeyPairTrait, SignerTrait, KeyPair,
         stark_curve::{StarkCurveKeyPairImpl, StarkCurveSignerImpl, StarkCurveVerifierImpl},
@@ -250,12 +251,8 @@ pub fn setup() -> Setup {
     mock_call(t20_address, selector!("permit"), (), Bounded::<u32>::MAX);
 
     mock_call(config_address, selector!("get_fee"), 0, Bounded::<u32>::MAX);
-    mock_call(
-        config_address, selector!("get_fee_collector"), fee_collector, Bounded::<u32>::MAX
-    );
-    mock_call(
-        config_address, selector!("get_pool_adapter"), pool_adapter, Bounded::<u32>::MAX
-    );
+    mock_call(config_address, selector!("get_fee_collector"), fee_collector, Bounded::<u32>::MAX);
+    mock_call(config_address, selector!("get_pool_adapter"), pool_adapter, Bounded::<u32>::MAX);
 
     mock_call(
         proposal_contract_address,
@@ -689,9 +686,7 @@ mod create_loan {
 
         accruing_interest_APR =
             bound(
-                accruing_interest_APR,
-                PwnSimpleLoan::MAX_ACCRUING_INTEREST_APR + 1,
-                Bounded::MAX
+                accruing_interest_APR, PwnSimpleLoan::MAX_ACCRUING_INTEREST_APR + 1, Bounded::MAX
             );
 
         let mut terms = setup.simple_loan_terms;
@@ -1002,9 +997,9 @@ mod refinance_loan {
     use pwn::loan::vault::pwn_vault::PwnVaultComponent;
 
     use snforge_std::{
-        declare, store, load, map_entry_address, cheat_caller_address, start_cheat_block_timestamp_global,
-        mock_call, spy_events, EventSpy, EventSpyTrait, EventSpyAssertionsTrait, stop_mock_call,
-        CheatSpan,
+        declare, store, load, map_entry_address, cheat_caller_address,
+        start_cheat_block_timestamp_global, mock_call, spy_events, EventSpy, EventSpyTrait,
+        EventSpyAssertionsTrait, stop_mock_call, CheatSpan,
         signature::{
             KeyPairTrait, SignerTrait, KeyPair,
             stark_curve::{StarkCurveKeyPairImpl, StarkCurveSignerImpl, StarkCurveVerifierImpl},
@@ -1159,11 +1154,10 @@ mod refinance_loan {
         let simple_loan = setup.simple_loan;
         let mut _asset_address: felt252 = _asset_address.into();
         let mut asset_address: ContractAddress = _asset_address.try_into().unwrap();
-        while asset_address == simple_loan
-            .credit_address {
-                _asset_address += 1;
-                asset_address = _asset_address.try_into().unwrap();
-            };
+        while asset_address == simple_loan.credit_address {
+            _asset_address += 1;
+            asset_address = _asset_address.try_into().unwrap();
+        };
 
         let mut terms = setup.refinanced_loan_terms;
         terms.credit.asset_address = asset_address;
@@ -1222,12 +1216,10 @@ mod refinance_loan {
         let simple_loan = setup.simple_loan;
         let mut _asset_address: felt252 = _asset_address.into();
         let mut asset_address: ContractAddress = _asset_address.try_into().unwrap();
-        while asset_address == simple_loan
-            .collateral
-            .asset_address {
-                _asset_address += 1;
-                asset_address = _asset_address.try_into().unwrap();
-            };
+        while asset_address == simple_loan.collateral.asset_address {
+            _asset_address += 1;
+            asset_address = _asset_address.try_into().unwrap();
+        };
 
         let mut terms = setup.refinanced_loan_terms;
         terms.collateral.asset_address = asset_address;
@@ -1443,7 +1435,9 @@ mod refinance_loan {
 
     //#[test]
     //#[ignore] // when call fails reverts the whole tx
-    //fn test_should_update_loan_data_when_loan_owner_is_original_lender_when_direct_repayment_fails() {
+    //fn
+    //test_should_update_loan_data_when_loan_owner_is_original_lender_when_direct_repayment_fails()
+    //{
     //    let setup = setup();
     //    let mut terms = setup.refinanced_loan_terms;
     //    terms.credit.amount = setup.simple_loan.principal_amount - 1;
@@ -1676,12 +1670,13 @@ mod refinance_loan {
 
     //#[test]
     //#[ignore] // conditionally assert or remove
-    //fn test_fuzz_should_not_transfer_common_to_vault_when_lender_loan_owner_when_lender_original_lender_when_same_source_of_funds(
+    //fn
+    //test_fuzz_should_not_transfer_common_to_vault_when_lender_loan_owner_when_lender_original_lender_when_same_source_of_funds(
     //    source_of_funds_flag: u8
     //) {
     //    let setup = setup();
     //    let mut simple_loan = setup.simple_loan;
-    //    
+    //
     //    let source_of_funds = if source_of_funds_flag % 2 == 1{
     //        setup.lender2.contract_address
     //    } else {
@@ -1719,8 +1714,10 @@ mod refinance_loan {
     //        );
     //    let current_balance_source_of_funds = setup.t20.balance_of(source_of_funds);
     //    let current_balance_lender = setup.t20.balance_of(setup.lender2.contract_address);
-    //    assert_eq!(original_balance_source_of_funds + common, current_balance_source_of_funds, "source_of_funds balance mismatch!");
-    //    assert_ge!(original_balance_lender, current_balance_lender, "Transferred common from lender to vault");
+    //    assert_eq!(original_balance_source_of_funds + common, current_balance_source_of_funds,
+    //    "source_of_funds balance mismatch!");
+    //    assert_ge!(original_balance_lender, current_balance_lender, "Transferred common from
+    //    lender to vault");
     //}
 
     #[test]
@@ -2148,13 +2145,13 @@ mod repay_loan {
     // fn test_fuzz_should_fail_when_invalid_permit_owner_when_permit_provided() {
     //     assert(true, '');
     // }
-    // 
+    //
     // #[test]
     // #[ignore]
     // fn test_fuzz_should_fail_when_invalid_permit_asset_when_permit_provided() {
     //     assert(true, '');
     // }
-    // 
+    //
     // #[test]
     // #[ignore]
     // fn test_should_call_permit_when_permit_provided() {
@@ -2971,8 +2968,8 @@ mod extend_loan {
     use pwn::loan::lib::signature_checker;
     use pwn::loan::terms::simple::loan::pwn_simple_loan::PwnSimpleLoan;
     use snforge_std::{
-        declare, ContractClassTrait, start_cheat_block_timestamp_global, start_cheat_caller_address_global,
-        CheatSpan,
+        declare, ContractClassTrait, start_cheat_block_timestamp_global,
+        start_cheat_caller_address_global, CheatSpan,
         signature::{
             KeyPair, KeyPairTrait, SignerTrait,
             stark_curve::{StarkCurveKeyPairImpl, StarkCurveSignerImpl, StarkCurveVerifierImpl},
@@ -3509,8 +3506,8 @@ mod get_loan {
         MultiToken, MultiToken::Asset, MultiToken::Category, MultiToken::AssetTrait
     };
     use snforge_std::{
-        declare, ContractClassTrait, start_cheat_block_timestamp_global, start_cheat_caller_address_global,
-        CheatSpan,
+        declare, ContractClassTrait, start_cheat_block_timestamp_global,
+        start_cheat_caller_address_global, CheatSpan,
         signature::{
             KeyPair, KeyPairTrait, SignerTrait,
             stark_curve::{StarkCurveKeyPairImpl, StarkCurveSignerImpl, StarkCurveVerifierImpl},

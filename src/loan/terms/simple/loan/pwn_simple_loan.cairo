@@ -1,24 +1,24 @@
-//! The `PwnSimpleLoan` module provides a streamlined loan management system within the Starknet 
-//! ecosystem. This module integrates multiple components to offer a comprehensive solution for 
+//! The `PwnSimpleLoan` module provides a streamlined loan management system within the Starknet
+//! ecosystem. This module integrates multiple components to offer a comprehensive solution for
 //! creating, managing, and settling loans.
-//! 
+//!
 //! # Features
-//! 
+//!
 //! - **Loan Creation**: Allows creation of loans with specific terms and lender specifications.
-//! - **Loan Repayment**: Facilitates the repayment of loans, including handling of interest and 
+//! - **Loan Repayment**: Facilitates the repayment of loans, including handling of interest and
 //!   collateral management.
-//! - **Loan Claiming**: Enables the claiming of loans, whether repaid or defaulted, and handles 
+//! - **Loan Claiming**: Enables the claiming of loans, whether repaid or defaulted, and handles
 //!   the transfer of collateral or repayment assets.
-//! - **Loan Extensions**: Supports the proposal and acceptance of loan extensions, with detailed 
+//! - **Loan Extensions**: Supports the proposal and acceptance of loan extensions, with detailed
 //!   validation and error handling.
-//! 
+//!
 //! # Components
-//! 
+//!
 //! - `OwnableComponent`: Ensures ownership control for sensitive operations.
 //! - `Err`: Contains error handling functions for invalid operations and input data.
-//! 
+//!
 //! # Constants
-//! 
+//!
 //! - `ACCRUING_INTEREST_APR_DECIMALS`: Sets the decimals for accruing interest APR calculation.
 //! - `MIN_LOAN_DURATION`: The minimum duration for a loan in seconds.
 //! - `MAX_ACCRUING_INTEREST_APR`: The maximum allowable APR for accruing interest.
@@ -27,8 +27,8 @@
 //! - `MAX_EXTENSION_DURATION`: The maximum duration for a loan extension in seconds.
 //! - `EXTENSION_PROPOSAL_TYPEHASH`: The type hash for extension proposals.
 //! - `BASE_DOMAIN_SEPARATOR`: The base domain separator for hashing purposes.
-//! 
-//! This module is designed to provide a secure and flexible framework for managing simple loans, 
+//!
+//! This module is designed to provide a secure and flexible framework for managing simple loans,
 //! integrating seamlessly with other components.
 #[starknet::contract]
 pub mod PwnSimpleLoan {
@@ -72,7 +72,7 @@ pub mod PwnSimpleLoan {
     };
     use starknet::ContractAddress;
     use starknet::storage::Map;
-    
+
     component!(path: PwnVaultComponent, storage: vault, event: VaultEvent);
     component!(path: ERC721ReceiverComponent, storage: erc721, event: ERC721Event);
     component!(path: ERC1155ReceiverComponent, storage: erc1155, event: ERC1155Event);
@@ -102,7 +102,7 @@ pub mod PwnSimpleLoan {
 
     // @note: 1 day
     pub const MIN_EXTENSION_DURATION: u64 = 86400;
-    // @note: 90 days 
+    // @note: 90 days
     pub const MAX_EXTENSION_DURATION: u64 = 86400 * 90;
 
     pub const EXTENSION_PROPOSAL_TYPEHASH: felt252 =
@@ -368,7 +368,8 @@ pub mod PwnSimpleLoan {
         ///
         /// - The caller must be the loan token holder.
         /// - The loan must exist.
-        /// - The loan must be either repaid, defaulted, or running and reached the default timestamp.
+        /// - The loan must be either repaid, defaulted, or running and reached the default
+        /// timestamp.
         ///
         /// # Actions
         ///
@@ -441,7 +442,8 @@ pub mod PwnSimpleLoan {
         /// - The loan must exist and not be repaid.
         /// - The extension proposal must be valid and not expired.
         /// - The nonce must be usable.
-        /// - The caller must be either the loan owner or borrower, and the proposer must be the other party.
+        /// - The caller must be either the loan owner or borrower, and the proposer must be the
+        /// other party.
         /// - The extension duration must be within the allowed range.
         ///
         /// # Actions

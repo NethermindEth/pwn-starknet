@@ -1,5 +1,5 @@
-use core::keccak::compute_keccak_byte_array;
 use core::integer::u128_byte_reverse;
+use core::keccak::compute_keccak_byte_array;
 
 /// Converts a `Span<u256>` values to a big-endian `ByteArray`
 ///
@@ -21,17 +21,19 @@ pub fn u256s_to_be_byte_array(a: Span<u256>) -> ByteArray {
     while i < len {
         let val = *a.at(i);
         let mut j = 0_u8;
-        let mut val_reversed = u256 {low: u128_byte_reverse(val.high), high: u128_byte_reverse(val.low)};
+        let mut val_reversed = u256 {
+            low: u128_byte_reverse(val.high), high: u128_byte_reverse(val.low)
+        };
         while j < 32 {
             let mut byte: u8 = (val_reversed & 0xFF).try_into().expect('u256_into_bytes_array');
             byte_array.append_byte(byte);
             val_reversed /= 256;
             j += 1;
         };
-        i+=1;
+        i += 1;
     };
     byte_array
-} 
+}
 
 /// Hashes a `@ByteArray` value using Solidity Compatible Keccak-256 hash function.
 ///
@@ -45,7 +47,9 @@ pub fn u256s_to_be_byte_array(a: Span<u256>) -> ByteArray {
 pub fn keccak256(data: @ByteArray) -> u256 {
     let hash_le = compute_keccak_byte_array(data);
     // reverse endianness
-    let hash_be = u256 {low: u128_byte_reverse(hash_le.high), high: u128_byte_reverse(hash_le.low)};
+    let hash_be = u256 {
+        low: u128_byte_reverse(hash_le.high), high: u128_byte_reverse(hash_le.low)
+    };
     hash_be
 }
 

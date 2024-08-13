@@ -23,35 +23,35 @@ pub trait ISimpleLoanListProposal<TState> {
     fn PROPOSAL_TYPEHASH(self: @TState) -> felt252;
 }
 
-//! The `SimpleLoanListProposal` module provides a mechanism for creating and accepting loan 
-//! proposals that utilize a whitelist of collateral IDs . This 
-//! module integrates multiple components to offer a comprehensive solution for handling loan 
-//! proposals, including encoding and decoding proposal data, computing proposal hashes, and 
+//! The `SimpleLoanListProposal` module provides a mechanism for creating and accepting loan
+//! proposals that utilize a whitelist of collateral IDs . This
+//! module integrates multiple components to offer a comprehensive solution for handling loan
+//! proposals, including encoding and decoding proposal data, computing proposal hashes, and
 //! managing credit calculations.
-//! 
+//!
 //! # Features
-//! 
-//! - **Proposal Creation**: Allows the creation of loan proposals with specific terms and 
+//!
+//! - **Proposal Creation**: Allows the creation of loan proposals with specific terms and
 //!   conditions, validated against a whitelist of collateral IDs using Merkle proofs.
-//! - **Proposal Acceptance**: Facilitates the acceptance of loan proposals, including the 
+//! - **Proposal Acceptance**: Facilitates the acceptance of loan proposals, including the
 //!   verification of signatures, proposal data, and whitelist inclusion.
-//! - **Proposal Hashing**: Computes unique hashes for proposals to ensure data integrity and 
+//! - **Proposal Hashing**: Computes unique hashes for proposals to ensure data integrity and
 //!   security.
-//! - **Proposal Encoding/Decoding**: Provides functionality to encode and decode proposal data 
+//! - **Proposal Encoding/Decoding**: Provides functionality to encode and decode proposal data
 //!   for efficient storage and retrieval.
-//! 
+//!
 //! # Components
-//! 
-//! - `SimpleLoanProposalComponent`: A reusable component that provides the base functionality 
+//!
+//! - `SimpleLoanProposalComponent`: A reusable component that provides the base functionality
 //!   for loan proposals.
 //! - `Err`: Contains error handling functions for various invalid operations and input data.
-//! 
+//!
 //! # Constants
-//! 
+//!
 //! - `PROPOSAL_TYPEHASH`: The type hash for proposals.
-//! 
-//! This module is designed to provide a robust and flexible framework for managing loan proposals 
-//! involving a whitelist of collateral IDs, integrating seamlessly with other components of the 
+//!
+//! This module is designed to provide a robust and flexible framework for managing loan proposals
+//! involving a whitelist of collateral IDs, integrating seamlessly with other components of the
 //! .
 
 #[starknet::contract]
@@ -76,7 +76,7 @@ pub mod SimpleLoanListProposal {
         SimpleLoanProposalComponent::SimpleLoanProposalImpl<ContractState>;
     impl SimpleLoanProposalInternal = SimpleLoanProposalComponent::InternalImpl<ContractState>;
 
-    // NOTE: we can hard code this by calculating the poseidon hash of the string 
+    // NOTE: we can hard code this by calculating the poseidon hash of the string
     // in the Solidity contract offline.
     pub const PROPOSAL_TYPEHASH: felt252 =
         0x03bf4de294949c186bbc5f2122c5a2c96baf0ea86d6d3b740cddf83e4f890351;
@@ -197,15 +197,16 @@ pub mod SimpleLoanListProposal {
 
         /// Accepts a loan proposal, verifies the proposal's validity, and processes the loan terms.
         ///
-        /// This function decodes the provided proposal data, verifies the inclusion proof for the collateral ID, and
-        /// ensures that the proposal's terms meet the required conditions. If all checks pass, the loan terms are
-        /// constructed, and the proposal is accepted.
+        /// This function decodes the provided proposal data, verifies the inclusion proof for the
+        /// collateral ID, and ensures that the proposal's terms meet the required conditions. If
+        /// all checks pass, the loan terms are constructed, and the proposal is accepted.
         ///
         /// # Parameters
         /// - `acceptor`: The address of the account accepting the proposal.
         /// - `refinancing_loan_id`: The ID of the loan being refinanced, if applicable.
         /// - `proposal_data`: An array of felt252 values representing the proposal data.
-        /// - `proposal_inclusion_proof`: An array of felt252 values representing the proof of inclusion for the proposal.
+        /// - `proposal_inclusion_proof`: An array of felt252 values representing the proof of
+        /// inclusion for the proposal.
         /// - `signature`: The signature of the proposer.
         ///
         /// # Returns
@@ -307,7 +308,8 @@ pub mod SimpleLoanListProposal {
 
         /// Computes the hash of a given proposal to ensure data integrity and security.
         ///
-        /// This function serializes the proposal and computes its hash using a predefined type hash.
+        /// This function serializes the proposal and computes its hash using a predefined type
+        /// hash.
         ///
         /// # Parameters
         /// - `proposal`: The proposal to be hashed.
@@ -320,7 +322,8 @@ pub mod SimpleLoanListProposal {
             self.simple_loan._get_proposal_hash(PROPOSAL_TYPEHASH, serialized_proposal)
         }
 
-        /// Encodes proposal data and its values into a compact array format for storage and retrieval.
+        /// Encodes proposal data and its values into a compact array format for storage and
+        /// retrieval.
         ///
         /// This function serializes both the proposal and its associated values, then concatenates
         /// the serialized data into a single array.
@@ -473,7 +476,8 @@ pub mod SimpleLoanListProposal {
                 i += 2;
             };
 
-            // Create ProposalValues with the collateral_id being the first element after the proof array
+            // Create ProposalValues with the collateral_id being the first element after the proof
+            // array
             ProposalValues {
                 collateral_id: *data.at(0), merkle_inclusion_proof: merkle_inclusion_proof.span()
             }
