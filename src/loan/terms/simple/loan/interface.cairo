@@ -28,7 +28,7 @@ pub trait IPwnSimpleLoan<TState> {
     fn EXTENSION_PROPOSAL_TYPEHASH(self: @TState) -> felt252;
     fn MAX_ACCRUING_INTEREST_APR(self: @TState) -> u32;
     fn MAX_EXTENSION_DURATION(self: @TState) -> u64;
-    fn MINUTE_IN_YEAR(self: @TState) -> u64;
+    fn MINUTES_IN_YEAR(self: @TState) -> u64;
     fn MIN_EXTENSION_DURATION(self: @TState) -> u64;
     fn MIN_LOAN_DURATION(self: @TState) -> u64;
     fn VERSION(self: @TState) -> felt252;

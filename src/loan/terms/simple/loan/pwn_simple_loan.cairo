@@ -677,7 +677,7 @@ pub mod PwnSimpleLoan {
         ///
         /// - `true` if extension proposal corresponding to `extension_hash` has been made, `false`
         /// otherwise.
-        fn get_extension_proposal_made(self: @TState, extension_hash: felt252) -> bool {
+        fn get_extension_proposal_made(self: @ContractState, extension_hash: felt252) -> bool {
             self.extension_proposal_made.read(extension_hash)
         }
 
