@@ -32,6 +32,8 @@ pub fn u256s_to_be_byte_array(a: Span<u256>) -> ByteArray {
         };
         i += 1;
     };
+    byte_array
+}
 
 /// Hashes a `@ByteArray` value using Solidity Compatible Keccak-256 hash function.
 ///
