@@ -8,6 +8,8 @@ pub trait ISimpleLoanProposal<TState> {
     fn get_multiproposal_hash(
         self: @TState, multiproposal: SimpleLoanProposalComponent::Multiproposal
     ) -> u256;
+    fn get_proposal_made(self: @TState, proposal_hash: felt252) -> bool;
+    fn get_credit_used(self: @TState, proposal_hash: felt252) -> u256;
     fn DOMAIN_SEPARATOR(self: @TState) -> felt252;
     fn MULTIPROPOSAL_DOMAIN_SEPARATOR(self: @TState) -> u256;
     fn MULTIPROPOSAL_TYPEHASH(self: @TState) -> u256;
@@ -206,6 +208,35 @@ pub mod SimpleLoanProposalComponent {
                 multiproposal.merkle_root
             ];
             keccak256(abi_encoded_packed(hash_elements).span())
+        }
+
+        /// Retrieves whether the proposal has been made or not.
+        ///
+        /// # Arguments
+        ///
+        /// - `proposal_hash`: The unique identifier of the proposal .
+        ///
+        /// # Returns
+        ///
+        /// - `true` if proposal corresponding to `proposal_hash` has been made, `false`
+        /// otherwise.
+        fn get_proposal_made(
+            self: @ComponentState<TContractState>, proposal_hash: felt252
+        ) -> bool {
+            self.proposal_made.read(proposal_hash)
+        }
+
+        /// Retrieves the `credit_used` for the given proposal.
+        ///
+        /// # Arguments
+        ///
+        /// - `proposal_hash`: The unique identifier of the proposal .
+        ///
+        /// # Returns
+        ///
+        /// - The `credit_used` as `u256
+        fn get_credit_used(self: @ComponentState<TContractState>, proposal_hash: felt252) -> u256 {
+            self.credit_used.read(proposal_hash)
         }
 
         fn DOMAIN_SEPARATOR(self: @ComponentState<TContractState>) -> felt252 {

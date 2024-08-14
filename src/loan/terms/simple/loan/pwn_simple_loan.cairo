@@ -94,7 +94,7 @@ pub mod PwnSimpleLoan {
     pub const MIN_LOAN_DURATION: u64 = 600;
     pub const MAX_ACCRUING_INTEREST_APR: u32 = 160000;
     pub const MINUTE: u64 = 60;
-    pub const MINUTE_IN_YEAR: u64 = 525_600;
+    pub const MINUTES_IN_YEAR: u64 = 525_600;
     pub const ACCRUING_INTEREST_APR_DENOMINATOR: u64 = 5256000000;
     pub const VERSION: felt252 = '1.2';
     // @note: duration in seconds
@@ -415,7 +415,7 @@ pub mod PwnSimpleLoan {
             let caller = starknet::get_caller_address();
 
             if (caller != extension.proposer) {
-                Err::INVALID_EXTENSION_SINGNER(allowed: extension.proposer, current: caller);
+                Err::INVALID_EXTENSION_SIGNER(allowed: extension.proposer, current: caller);
             }
 
             let extension_hash = self.get_extension_hash(extension);
@@ -502,15 +502,13 @@ pub mod PwnSimpleLoan {
 
             if (caller == loan_owner) {
                 if (extension.proposer != loan.borrower) {
-                    Err::INVALID_EXTENSION_SINGNER(
+                    Err::INVALID_EXTENSION_SIGNER(
                         allowed: loan.borrower, current: extension.proposer
                     );
                 }
             } else if (caller == loan.borrower) {
                 if (extension.proposer != loan_owner) {
-                    Err::INVALID_EXTENSION_SINGNER(
-                        allowed: loan_owner, current: extension.proposer
-                    );
+                    Err::INVALID_EXTENSION_SIGNER(allowed: loan_owner, current: extension.proposer);
                 }
             } else {
                 Err::INVALID_EXTENSION_CALLER();
@@ -667,6 +665,20 @@ pub mod PwnSimpleLoan {
             loan_return_value
         }
 
+        /// Retrieves whether the extension proposal has been made or not.
+        ///
+        /// # Arguments
+        ///
+        /// - `extension_hash`: The unique identifier of the extension_proposal .
+        ///
+        /// # Returns
+        ///
+        /// - `true` if extension proposal corresponding to `extension_hash` has been made, `false`
+        /// otherwise.
+        fn get_extension_proposal_made(self: @ContractState, extension_hash: felt252) -> bool {
+            self.extension_proposal_made.read(extension_hash)
+        }
+
         /// Checks if a given asset is valid.
         ///
         /// # Arguments
@@ -739,8 +751,8 @@ pub mod PwnSimpleLoan {
             MAX_ACCRUING_INTEREST_APR
         }
 
-        fn MINUTE_IN_YEAR(self: @ContractState) -> u64 {
-            MINUTE_IN_YEAR
+        fn MINUTES_IN_YEAR(self: @ContractState) -> u64 {
+            MINUTES_IN_YEAR
         }
 
         fn MAX_EXTENSION_DURATION(self: @ContractState) -> u64 {

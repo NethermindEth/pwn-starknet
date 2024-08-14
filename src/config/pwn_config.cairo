@@ -39,6 +39,7 @@ pub mod PwnConfig {
     use core::clone::Clone;
     use openzeppelin::access::ownable::ownable::OwnableComponent;
     use openzeppelin::security::initializable::InitializableComponent;
+    use openzeppelin::upgrades::{interface::IUpgradeable, upgradeable::UpgradeableComponent};
     use pwn::config::interface::IPwnConfig;
     use pwn::interfaces::{
         pool_adapter::IPoolAdapterDispatcher,
@@ -50,6 +51,7 @@ pub mod PwnConfig {
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: InitializableComponent, storage: initializable, event: InitializableEvent);
+    component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
 
     #[abi(embed_v0)]
     impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
@@ -59,6 +61,8 @@ pub mod PwnConfig {
     impl InitializableTwoStepImpl =
         InitializableComponent::InitializableImpl<ContractState>;
     impl InitializableInternalImpl = InitializableComponent::InternalImpl<ContractState>;
+
+    impl UpgreadeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
 
     const VERSION: felt252 = '1.2';
     pub const MAX_FEE: u16 = 1000; // 10%
@@ -74,6 +78,8 @@ pub mod PwnConfig {
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
         initializable: InitializableComponent::Storage,
+        #[substorage(v0)]
+        upgradeable: UpgradeableComponent::Storage,
     }
 
     #[event]
@@ -87,6 +93,8 @@ pub mod PwnConfig {
         OwnableEvent: OwnableComponent::Event,
         #[flat]
         InitializableEvent: InitializableComponent::Event,
+        #[flat]
+        UpgradeableEvent: UpgradeableComponent::Event,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -349,6 +357,25 @@ pub mod PwnConfig {
             }
 
             uri
+        }
+    }
+
+
+    #[abi(embed_v0)]
+    impl UpgradeableImpl of IUpgradeable<ContractState> {
+        /// Replaces the contract's class hash with `new_class_hash`.
+        ///
+        /// # Arguments
+        ///
+        /// - `new_class_hash`: class_hash of the new implementation.
+        ///
+        /// # Requirements
+        ///
+        /// - `new_class_hash` is not zero.
+        /// - Only the contract owner can call this function.
+        fn upgrade(ref self: ContractState, new_class_hash: starknet::ClassHash) {
+            self.ownable.assert_only_owner();
+            self.upgradeable.upgrade(new_class_hash);
         }
     }
 

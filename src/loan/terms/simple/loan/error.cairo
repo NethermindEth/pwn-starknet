@@ -49,7 +49,7 @@ pub mod Err {
     pub fn INVALID_EXTENSION_CALLER() {
         panic!("Invalid extension caller");
     }
-    pub fn INVALID_EXTENSION_SINGNER(allowed: ContractAddress, current: ContractAddress) {
+    pub fn INVALID_EXTENSION_SIGNER(allowed: ContractAddress, current: ContractAddress) {
         panic!("Invalid extension signer. Allowed: {:?}, Current: {:?}", allowed, current);
     }
     pub fn INVALID_EXTENSION_DURATION(duration: u64, limit: u64) {
