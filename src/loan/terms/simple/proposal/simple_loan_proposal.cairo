@@ -210,10 +210,31 @@ pub mod SimpleLoanProposalComponent {
             keccak256(abi_encoded_packed(hash_elements).span())
         }
 
-        fn get_proposal_made(self: @ComponentState<TContractState>, proposal_hash: felt252) -> bool {
+        /// Retrieves whether the proposal has been made or not.
+        ///
+        /// # Arguments
+        ///
+        /// - `proposal_hash`: The unique identifier of the proposal .
+        ///
+        /// # Returns
+        ///
+        /// - `true` if proposal corresponding to `proposal_hash` has been made, `false`
+        /// otherwise.
+        fn get_proposal_made(
+            self: @ComponentState<TContractState>, proposal_hash: felt252
+        ) -> bool {
             self.proposal_made.read(proposal_hash)
         }
 
+        /// Retrieves the `credit_used` for the given proposal.
+        ///
+        /// # Arguments
+        ///
+        /// - `proposal_hash`: The unique identifier of the proposal .
+        ///
+        /// # Returns
+        ///
+        /// - The `credit_used` as `u256
         fn get_credit_used(self: @ComponentState<TContractState>, proposal_hash: felt252) -> u256 {
             self.credit_used.read(proposal_hash)
         }

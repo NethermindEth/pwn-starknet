@@ -63,7 +63,7 @@ pub mod PwnConfig {
     impl InitializableInternalImpl = InitializableComponent::InternalImpl<ContractState>;
 
     impl UpgreadeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
-    
+
     const VERSION: felt252 = '1.2';
     pub const MAX_FEE: u16 = 1000; // 10%
 
@@ -362,7 +362,7 @@ pub mod PwnConfig {
 
 
     #[abi(embed_v0)]
-    impl UpgradeableImpl of IUpgradeable<ContractState>{
+    impl UpgradeableImpl of IUpgradeable<ContractState> {
         /// Replaces the contract's class hash with `new_class_hash`.
         ///
         /// # Arguments

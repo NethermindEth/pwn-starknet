@@ -508,9 +508,7 @@ pub mod PwnSimpleLoan {
                 }
             } else if (caller == loan.borrower) {
                 if (extension.proposer != loan_owner) {
-                    Err::INVALID_EXTENSION_SIGNER(
-                        allowed: loan_owner, current: extension.proposer
-                    );
+                    Err::INVALID_EXTENSION_SIGNER(allowed: loan_owner, current: extension.proposer);
                 }
             } else {
                 Err::INVALID_EXTENSION_CALLER();
