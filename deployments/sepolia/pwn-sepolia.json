@@ -1,12 +1,12 @@
 {
-    "PwnHub": "0x01b251acc5c71426df14e25ed324b62439d66f6a0e70cc4ea99ccfc6194be5d2",
-    "PwnConfig": "0x02c24bd8c02f12870dd11431a85751c68c81cfb9c1e401e4a8af778a97df04e1",
-    "RevokedNonce": "0x01ca560a1a219be892cdec4c89747a2b9320184ca05e4855e9328411d5dec40f",
-    "SimpleLoanSimpleProposal": "0x0421393bb8ec5349f54b42152d1f418de8bdfb18109a4310fdf66b8d84d4a228",
-    "SimpleLoanFungibleProposal": "0x071bcfd7c5b4576aaf509e7dea2d1fa0183cc1a71ea0b46e2051bf97bed32b41",
-    "SimpleLoanDutchAuctionProposal": "0x01fc68b46942945a7e7129c715d0a1b15a65c405301091d5e2fda7d861d0efef",
-    "SimpleLoanListProposal": "0x0634032d279af7499a6231a4f434d1d58b955169c99796042b60d9f4a4cce948",
-    "PwnLoan": "0x036770f0794564bd2374d0f182429f09caf8286c46b0ed482cc53fb3624b7618",
-    "MultiTokenCategoryRegistry": "0x07796b48aa41fcdc3978c4e8cd6c357f7ffc691d524dc857462b6d794c7c3a15",
-    "PwnSimpleLoan": "0x06ab6639a5d48723395b1c5d638df64d58de852054be3d39ceaee48baea712ea"
+    "PwnHub": "0x049dc06417955c2aa5b54b62ec717b75b6cc073424f8201019ea152582f19e48",
+    "PwnConfig": "0x06d9b3da6ca0ab82c6eabd70c426e6372f3a480642c0e17d26fdf269cbd9b6eb",
+    "RevokedNonce": "0x07896485a3344ac8f7cc0c96a69cce66fef6e968cffb9dd1403c5a006f4e1242",
+    "SimpleLoanSimpleProposal": "0x03ce66faae2d44f161dcbd1f44bb835961d3bf05b0a535480b2fb181e41421c1",
+    "SimpleLoanFungibleProposal": "0x06f7e21068109b3233edefe0c737f0064cc11ca2194fc06db127b89e8dcb275f",
+    "SimpleLoanDutchAuctionProposal": "0x0285a68503268758883e1bef56535975ed316bd0b5318c172e6a215440e3d635",
+    "SimpleLoanListProposal": "0x024b5f31a4ca5ba9d098c0920bf66515a9396804301dea54bc9b97b4f0e1699b",
+    "PwnLoan": "0x023dda2c59f0e2810c0ebfac0c6c779ee70f38c8e6dc0b3548d740d4d07322b5",
+    "MultiTokenCategoryRegistry": "0x07e368242e6d4c2a15b94688ab230030c78e23abf032470a53ca4094a108dbc6",
+    "PwnSimpleLoan": "0x076a51774667901ca90d78df4383693e0b6c8d390264699f2b10b6b3272ab84a"
 }
