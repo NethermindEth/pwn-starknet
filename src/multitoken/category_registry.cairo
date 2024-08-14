@@ -49,12 +49,11 @@ pub mod MultiTokenCategoryRegistry {
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
 
     #[abi(embed_v0)]
-    impl OwnableTwoStepMixinImpl =
-        OwnableComponent::OwnableTwoStepMixinImpl<ContractState>;
+    impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
 
     #[abi(embed_v0)]
-    impl SRC5MixinImpl = SRC5Component::SRC5Impl<ContractState>;
+    impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
     impl SRC5InternalImpl = SRC5Component::InternalImpl<ContractState>;
 
     pub const CATEGORY_NOT_REGISTERED: u8 = 255;
