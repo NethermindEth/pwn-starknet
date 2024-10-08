@@ -24,7 +24,7 @@ fn ACCOUNT_1() -> starknet::ContractAddress {
 
 fn deploy() -> IPwnHubDispatcher {
     let contract = declare("PwnHub").unwrap();
-    let (contract_address, _) = contract.deploy(@array![]).unwrap();
+    let (contract_address, _) = contract.deploy(@array![starknet::get_contract_address().into()]).unwrap();
 
     IPwnHubDispatcher { contract_address }
 }
@@ -34,9 +34,8 @@ mod constructor {
 
     #[test]
     fn test_should_set_hub_owner() {
-        super::cheat_caller_address_global(ACCOUNT_1());
         let hub = deploy();
-        assert_eq!(hub.owner(), ACCOUNT_1());
+        assert_eq!(hub.owner(), starknet::get_contract_address());
     }
 }
 

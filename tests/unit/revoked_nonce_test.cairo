@@ -16,7 +16,9 @@ fn ALICE() -> starknet::ContractAddress {
 
 fn deploy() -> (IRevokedNonceDispatcher, IPwnHubDispatcher) {
     let contract = declare("PwnHub").unwrap();
-    let (contract_address, _) = contract.deploy(@array![]).unwrap();
+    let (contract_address, _) = contract
+        .deploy(@array![starknet::get_contract_address().into()])
+        .unwrap();
     let hub = IPwnHubDispatcher { contract_address };
 
     let contract = declare("RevokedNonce").unwrap();

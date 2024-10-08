@@ -99,8 +99,8 @@ pub mod MultiTokenCategoryRegistry {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState) {
-        self.ownable.initializer(starknet::get_caller_address());
+    fn constructor(ref self: ContractState, owner: ContractAddress) {
+        self.ownable.initializer(owner);
     }
 
     #[abi(embed_v0)]

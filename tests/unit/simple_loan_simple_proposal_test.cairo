@@ -58,7 +58,9 @@ struct Setup {
 
 fn deploy() -> Setup {
     let contract = declare("PwnHub").unwrap();
-    let (hub_address, _) = contract.deploy(@array![]).unwrap();
+    let (hub_address, _) = contract
+        .deploy(@array![starknet::get_contract_address().into()])
+        .unwrap();
     let hub = IPwnHubDispatcher { contract_address: hub_address };
 
     let contract = declare("PwnConfig").unwrap();

@@ -143,7 +143,9 @@ struct Setup {
 
 pub fn deploy() -> Setup {
     let contract = declare("PwnHub").unwrap();
-    let (hub_address, _) = contract.deploy(@array![]).unwrap();
+    let (hub_address, _) = contract
+        .deploy(@array![starknet::get_contract_address().into()])
+        .unwrap();
 
     let contract = declare("PwnConfig").unwrap();
     let (config_address, _) = contract.deploy(@array![]).unwrap();

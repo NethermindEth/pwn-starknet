@@ -23,7 +23,9 @@ fn ACCOUNT_1() -> starknet::ContractAddress {
 
 fn deploy() -> IMultiTokenCategoryRegistryDispatcher {
     let contract = declare("MultiTokenCategoryRegistry").unwrap();
-    let (contract_address, _) = contract.deploy(@array![]).unwrap();
+    let (contract_address, _) = contract
+        .deploy(@array![starknet::get_contract_address().into()])
+        .unwrap();
 
     IMultiTokenCategoryRegistryDispatcher { contract_address }
 }
@@ -33,9 +35,8 @@ mod constructor {
 
     #[test]
     fn test_should_set_contract_owner() {
-        super::cheat_caller_address_global(ACCOUNT_1());
         let registry = deploy();
-        assert_eq!(registry.owner(), ACCOUNT_1());
+        assert_eq!(registry.owner(), starknet::get_contract_address());
     }
 }
 

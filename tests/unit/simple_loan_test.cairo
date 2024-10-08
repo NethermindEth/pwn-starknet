@@ -100,9 +100,12 @@ pub struct Setup {
     pub refinanced_loan_terms: types::Terms
 }
 
+
 pub fn setup() -> Setup {
+    let owner = starknet::get_contract_address();
+
     let contract = declare("PwnHub").unwrap();
-    let (hub_address, _) = contract.deploy(@array![]).unwrap();
+    let (hub_address, _) = contract.deploy(@array![owner.into()]).unwrap();
     let hub = IPwnHubDispatcher { contract_address: hub_address };
 
     let contract = declare("PwnConfig").unwrap();
@@ -120,7 +123,7 @@ pub fn setup() -> Setup {
     let loan_token = IPwnLoanDispatcher { contract_address: loan_token_address };
 
     let contract = declare("MultiTokenCategoryRegistry").unwrap();
-    let (registry_address, _) = contract.deploy(@array![]).unwrap();
+    let (registry_address, _) = contract.deploy(@array![owner.into()]).unwrap();
     let registry = IMultiTokenCategoryRegistryDispatcher { contract_address: registry_address };
 
     let contract = declare("PwnSimpleLoan").unwrap();

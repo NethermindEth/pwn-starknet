@@ -92,9 +92,12 @@ pub struct Setup {
 }
 
 pub fn setup() -> Setup {
+    let owner = starknet::get_contract_address();
+    
     let contract = declare("PwnHub").unwrap();
-    let (hub_address, _) = contract.deploy(@array![]).unwrap();
+    let (hub_address, _) = contract.deploy(@array![owner.into()]).unwrap();
     let hub = IPwnHubDispatcher { contract_address: hub_address };
+    println!("DEPLOYED PWNHUB");
 
     let contract = declare("PwnConfig").unwrap();
     let (config_address, _) = contract.deploy(@array![]).unwrap();
@@ -158,9 +161,12 @@ pub fn setup() -> Setup {
     let (loan_token_address, _) = contract.deploy(@array![hub_address.into()]).unwrap();
     let loan_token = IPwnLoanDispatcher { contract_address: loan_token_address };
 
+    let mut calldata: Array<felt252> = array![];
+    owner.serialize(ref calldata);
     let contract = declare("MultiTokenCategoryRegistry").unwrap();
-    let (registry_address, _) = contract.deploy(@array![]).unwrap();
+    let (registry_address, _) = contract.deploy(@calldata).unwrap();
     let registry = IMultiTokenCategoryRegistryDispatcher { contract_address: registry_address };
+    println!("DEPLOYED MULTITOKEN");
 
     let contract = declare("PwnSimpleLoan").unwrap();
     let (loan_address, _) = contract
