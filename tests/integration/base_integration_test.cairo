@@ -93,7 +93,7 @@ pub struct Setup {
 
 pub fn setup() -> Setup {
     let owner = starknet::get_contract_address();
-    
+
     let contract = declare("PwnHub").unwrap();
     let (hub_address, _) = contract.deploy(@array![owner.into()]).unwrap();
     let hub = IPwnHubDispatcher { contract_address: hub_address };
