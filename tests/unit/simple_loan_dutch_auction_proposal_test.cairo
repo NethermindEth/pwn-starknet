@@ -32,6 +32,8 @@ use starknet::secp256k1::{Secp256k1Point};
 use starknet::{ContractAddress, testing};
 use super::simple_loan_proposal_test::{TOKEN, ACCEPTOR, ACTIVATE_LOAN_CONTRACT, E40};
 
+const CHAIN_ID: felt252 = 393402133025997798000961;
+
 #[starknet::interface]
 pub trait ISimpleLoanDutchAuctionProposal<TState> {
     fn make_proposal(ref self: TState, proposal: Proposal);
@@ -132,7 +134,7 @@ fn proposal_values() -> ProposalValues {
 }
 
 fn proposal_hash(proposal: Proposal, proposal_address: ContractAddress) -> felt252 {
-    let hash_elements = array![BASE_DOMAIN_SEPARATOR, 'name', 'version', proposal_address.into()];
+    let hash_elements = array![BASE_DOMAIN_SEPARATOR, 'name', 'version', CHAIN_ID, proposal_address.into()];
     let domain_separator = poseidon_hash_span(hash_elements.span());
 
     let mut serialized_proposal = array![];

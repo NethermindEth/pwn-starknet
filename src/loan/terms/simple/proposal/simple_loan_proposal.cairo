@@ -7,12 +7,12 @@ pub trait ISimpleLoanProposal<TState> {
     fn revoke_nonce(ref self: TState, nonce_space: felt252, nonce: felt252);
     fn get_multiproposal_hash(
         self: @TState, multiproposal: SimpleLoanProposalComponent::Multiproposal
-    ) -> u256;
+    ) -> felt252;
     fn get_proposal_made(self: @TState, proposal_hash: felt252) -> bool;
     fn get_credit_used(self: @TState, proposal_hash: felt252) -> u256;
     fn DOMAIN_SEPARATOR(self: @TState) -> felt252;
-    fn MULTIPROPOSAL_DOMAIN_SEPARATOR(self: @TState) -> u256;
-    fn MULTIPROPOSAL_TYPEHASH(self: @TState) -> u256;
+    fn MULTIPROPOSAL_DOMAIN_SEPARATOR(self: @TState) -> felt252;
+    fn MULTIPROPOSAL_TYPEHASH(self: @TState) -> felt252;
     fn VERSION(self: @TState) -> felt252;
 }
 
@@ -74,10 +74,10 @@ pub mod SimpleLoanProposalComponent {
 
     pub const BASE_DOMAIN_SEPARATOR: felt252 =
         0x1bd2de01ef5d7c9a15011e481320b91a90156eb700f8a5a99a373fa2dea9b10;
-    const MULTIPROPOSAL_DOMAIN_SEPARATOR: u256 =
-        0xb1acfe094760154fa8ea8fc7c07e76f65332b482350070b57df884171f2ddb56;
-    const MULTIPROPOSAL_TYPEHASH: u256 =
-        0x73af92d8ed4d3261ba61cd686d2f8a9cceb2563cc7c4c5355eb121316fc5358d;
+    pub const MULTIPROPOSAL_DOMAIN_SEPARATOR: felt252 =
+        0xed474d1b0ccfaf9cb2bac1ca5503c9169db787f25d19cb868fcd51849d8a82;
+    pub const MULTIPROPOSAL_TYPEHASH: felt252 =
+    0x6ba4da0224595f19d08dfcb6e088d036d1a2fa3726ca5fb1220e7444e6ba641;
     const VERSION: felt252 = '1.2';
 
     #[derive(Drop, Serde)]
@@ -200,14 +200,15 @@ pub mod SimpleLoanProposalComponent {
         /// The computed hash value as `u256`.
         fn get_multiproposal_hash(
             self: @ComponentState<TContractState>, multiproposal: Multiproposal
-        ) -> u256 {
-            let hash_elements: Array<u256> = array![
+        ) -> felt252 {
+            let hash_elements: Array<felt252> = array![
                 1901,
-                MULTIPROPOSAL_DOMAIN_SEPARATOR.into(),
+                MULTIPROPOSAL_DOMAIN_SEPARATOR,
                 MULTIPROPOSAL_TYPEHASH,
-                multiproposal.merkle_root
+                multiproposal.merkle_root.low.into(),
+                multiproposal.merkle_root.high.into()
             ];
-            keccak256(abi_encoded_packed(hash_elements).span())
+            poseidon_hash_span(hash_elements.span())
         }
 
         /// Retrieves whether the proposal has been made or not.
@@ -243,11 +244,11 @@ pub mod SimpleLoanProposalComponent {
             self.DOMAIN_SEPARATOR.read()
         }
 
-        fn MULTIPROPOSAL_DOMAIN_SEPARATOR(self: @ComponentState<TContractState>) -> u256 {
+        fn MULTIPROPOSAL_DOMAIN_SEPARATOR(self: @ComponentState<TContractState>) -> felt252 {
             MULTIPROPOSAL_DOMAIN_SEPARATOR
         }
 
-        fn MULTIPROPOSAL_TYPEHASH(self: @ComponentState<TContractState>) -> u256 {
+        fn MULTIPROPOSAL_TYPEHASH(self: @ComponentState<TContractState>) -> felt252 {
             MULTIPROPOSAL_TYPEHASH
         }
 
@@ -272,10 +273,13 @@ pub mod SimpleLoanProposalComponent {
             self.revoked_nonce.write(IRevokedNonceDispatcher { contract_address: revoked_nonce });
             self.config.write(IPwnConfigDispatcher { contract_address: config });
 
+            let chain_id = starknet::get_tx_info().unbox().chain_id;
+
             let hash_elements: Array<felt252> = array![
                 BASE_DOMAIN_SEPARATOR,
                 name.into(),
                 version.into(),
+                chain_id,
                 starknet::get_contract_address().into()
             ];
             let domain_separator = poseidon_hash_span(hash_elements.span());
@@ -354,15 +358,12 @@ pub mod SimpleLoanProposalComponent {
                     .get_multiproposal_hash(
                         Multiproposal { merkle_root: multiproposal_merkle_root }
                     );
-                let multiproposal_hash_felt = poseidon_hash_span(
-                    array![multiproposal_hash.low.into(), multiproposal_hash.high.into()].span()
-                );
                 if !self
                     ._is_valid_signature_now(
-                        proposal.proposer, multiproposal_hash_felt, signature
+                        proposal.proposer, multiproposal_hash, signature
                     ) {
                     signature_checker::Err::INVALID_SIGNATURE(
-                        proposal.proposer, multiproposal_hash_felt
+                        proposal.proposer, multiproposal_hash
                     );
                 }
             }

@@ -53,6 +53,8 @@ trait ISimpleLoanListProposal<TState> {
     fn get_multiproposal_hash(self: @TState, multiproposal: starknet::ClassHash) -> felt252;
 }
 
+const CHAIN_ID: felt252 = 393402133025997798000961;
+
 #[derive(Drop)]
 struct Setup {
     proposal: ISimpleLoanListProposalDispatcher,
@@ -129,7 +131,7 @@ fn proposal_values() -> ProposalValues {
 }
 
 fn proposal_hash(proposal: Proposal, proposal_address: ContractAddress) -> felt252 {
-    let hash_elements = array![BASE_DOMAIN_SEPARATOR, 'name', 'version', proposal_address.into()];
+    let hash_elements = array![BASE_DOMAIN_SEPARATOR, 'name', 'version', CHAIN_ID, proposal_address.into()];
     let domain_separator = poseidon_hash_span(hash_elements.span());
 
     let mut serialized_proposal = array![];
