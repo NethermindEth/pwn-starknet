@@ -77,7 +77,7 @@ pub mod SimpleLoanProposalComponent {
     pub const MULTIPROPOSAL_DOMAIN_SEPARATOR: felt252 =
         0xed474d1b0ccfaf9cb2bac1ca5503c9169db787f25d19cb868fcd51849d8a82;
     pub const MULTIPROPOSAL_TYPEHASH: felt252 =
-    0x6ba4da0224595f19d08dfcb6e088d036d1a2fa3726ca5fb1220e7444e6ba641;
+        0x6ba4da0224595f19d08dfcb6e088d036d1a2fa3726ca5fb1220e7444e6ba641;
     const VERSION: felt252 = '1.2';
 
     #[derive(Drop, Serde)]
@@ -358,10 +358,7 @@ pub mod SimpleLoanProposalComponent {
                     .get_multiproposal_hash(
                         Multiproposal { merkle_root: multiproposal_merkle_root }
                     );
-                if !self
-                    ._is_valid_signature_now(
-                        proposal.proposer, multiproposal_hash, signature
-                    ) {
+                if !self._is_valid_signature_now(proposal.proposer, multiproposal_hash, signature) {
                     signature_checker::Err::INVALID_SIGNATURE(
                         proposal.proposer, multiproposal_hash
                     );

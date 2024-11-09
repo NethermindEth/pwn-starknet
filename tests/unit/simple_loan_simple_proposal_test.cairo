@@ -120,7 +120,9 @@ fn proposal(proposer: ContractAddress) -> Proposal {
 }
 
 fn proposal_hash(proposal: Proposal, proposal_address: ContractAddress) -> felt252 {
-    let hash_elements = array![BASE_DOMAIN_SEPARATOR, 'name', 'version', CHAIN_ID, proposal_address.into()];
+    let hash_elements = array![
+        BASE_DOMAIN_SEPARATOR, 'name', 'version', CHAIN_ID, proposal_address.into()
+    ];
     let domain_separator = poseidon_hash_span(hash_elements.span());
 
     let mut serialized_proposal = array![];
