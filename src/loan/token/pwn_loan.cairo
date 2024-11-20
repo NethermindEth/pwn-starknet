@@ -40,6 +40,7 @@ pub trait IPwnLoadMetadataProvider<TState> {
 //! # Constants
 //!
 //! - `IERC721_ID`: The interface ID for ERC721, used to register the interface within the module.
+//! - `IERC5646_ID`: The interface ID for ERC5646, used to register the interface within the module.
 //! - `BASE_DOMAIN_SEPARATOR`: A constant used in computing domain separators for hashing purposes.
 //!
 //! This module is designed to provide a comprehensive and secure system for managing loan tokens,
@@ -52,6 +53,7 @@ pub mod PwnLoan {
         erc721::{ERC721Component, ERC721HooksEmptyImpl}, interface::IERC721_ID
     };
 
+    use pwn::interfaces::erc5646::{IERC5646, IERC5646Dispatcher, IERC5646DispatcherTrait, IERC5646_ID};
     use pwn::hub::{pwn_hub_tags, pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait}};
     use starknet::{ContractAddress, get_caller_address, contract_address_const};
     use super::{IPwnLoadMetadataProviderDispatcher, IPwnLoadMetadataProviderDispatcherTrait};
@@ -125,6 +127,7 @@ pub mod PwnLoan {
         self.erc721.ERC721_symbol.write("LOAN");
 
         self.src5.register_interface(IERC721_ID);
+        self.src5.register_interface(IERC5646_ID);
     }
 
     #[abi(embed_v0)]
@@ -247,4 +250,27 @@ pub mod PwnLoan {
             self.loan_contract.read(loan_id)
         }
     }
+
+    #[abi(embed_v0)]
+    impl IERC5646Impl of IERC5646<ContractState> {
+        /// Retrieves the state fingerprint for a specified loan token.
+        ///
+        /// # Parameters
+        /// - `token_id`: The unique identifier of the loan token.
+        ///
+        /// # Returns
+        /// - The computed state fingerprint as `felt252`.
+        fn get_state_fingerprint(self: @ContractState, token_id: felt252) -> felt252 {
+            let loan_contract_address = self.loan_contract.read(token_id);
+            if loan_contract_address == contract_address_const::<0>() {
+                return 0;
+            }
+
+            IERC5646Dispatcher {
+                contract_address: loan_contract_address
+            }
+                .get_state_fingerprint(token_id)
+        }
+    }
+
 }

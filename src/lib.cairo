@@ -9,6 +9,7 @@ pub mod hub {
 }
 
 pub mod interfaces {
+    pub mod erc5646;
     pub mod fingerprint_computer;
     pub mod pool_adapter;
 }
