@@ -14,7 +14,6 @@
 //! 
 //! # Components
 //! 
-//! - `OwnableComponent`: Ensures ownership control for sensitive operations.
 //! - `Err`: Contains error handling functions for invalid operations and input data.
 //! 
 //! # Constants
