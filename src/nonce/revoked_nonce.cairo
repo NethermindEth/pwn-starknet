@@ -51,8 +51,8 @@ pub trait IRevokedNonce<TState> {
 //!
 //! # Constants
 //! 
-//! - **CATEGORY_NOT_REGISTERED**: A constant used to denote a non-registered category in the 
-//!   category registry.
+//! This module does not define any constants but relies on secure and efficient internal logic 
+//! for its operations.
 //!
 //! The `RevokedNonce` module is critical for ensuring secure and reliable transaction processing 
 //! in decentralized applications built on Starknet, providing robust nonce management and 
