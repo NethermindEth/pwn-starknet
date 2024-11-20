@@ -291,7 +291,6 @@ pub mod SimpleLoanDutchAuctionProposal {
 
             if proposal.is_offer {
                 if credit_amount < proposal_values.intended_credit_amount
-                    || proposal_values.intended_credit_amount < proposal.min_credit_amount
                     || proposal_values.intended_credit_amount
                     + proposal_values.slippage < credit_amount {
                     Err::INVALID_CREDIT_AMOUNT(
