@@ -138,7 +138,7 @@ pub mod RevokedNonce {
         /// 
         /// # Behavior
         /// 
-        /// - If the `nonce_space` is specified, the function will check if the caller has the necessary 
+        /// - If the `owner` is specified, the function will check if the caller has the necessary 
         ///   `access_tag` to revoke the nonce for the specified owner. If the caller lacks the required 
         ///   access, the function will trigger an error.
         /// - If the `nonce_space` is not specified, the function will use the current nonce space of the 
