@@ -31,7 +31,7 @@ use pwn::{
     hub::pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait},
     config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait},
     loan::{
-        lib::{signature_checker, math,}, vault::permit,
+        lib::{signature_checker, math,},
         token::pwn_loan::{IPwnLoanDispatcher, IPwnLoanDispatcherTrait},
     },
 };
@@ -246,8 +246,6 @@ pub fn setup() -> Setup {
 
     let proposal_hash = 'proposalHash';
     let fee_collector = starknet::contract_address_const::<'feeCollector'>();
-
-    mock_call(t20_address, selector!("permit"), (), BoundedInt::<u32>::max());
 
     mock_call(config_address, selector!("get_fee"), 0, BoundedInt::<u32>::max());
     mock_call(
@@ -793,12 +791,6 @@ mod create_loan {
             );
         assert_loan_eq(setup.loan.contract_address, loan_id, setup.simple_loan);
     }
-
-    // #[test]
-    // #[ignore]
-    // fn test_should_call_permit_when_provided() {
-    //     assert(true, '');
-    // }
 
     #[test]
     fn test_should_transfer_collateral_from_borrower_to_vault() {
@@ -2119,7 +2111,7 @@ mod repay_loan {
         let mut simple_loan = setup.simple_loan;
         simple_loan.status = 0;
         store_loan(setup.loan.contract_address, setup.loan_id, simple_loan);
-        setup.loan.repay_loan(setup.loan_id, 0);
+        setup.loan.repay_loan(setup.loan_id);
     }
 
     #[test]
@@ -2132,7 +2124,7 @@ mod repay_loan {
         let mut simple_loan = setup.simple_loan;
         simple_loan.status = status;
         store_loan(setup.loan.contract_address, setup.loan_id, simple_loan);
-        setup.loan.repay_loan(setup.loan_id, 0);
+        setup.loan.repay_loan(setup.loan_id);
     }
 
     #[test]
@@ -2140,26 +2132,8 @@ mod repay_loan {
     fn test_should_fail_when_loan_is_defaulted() {
         let setup = setup();
         cheat_block_timestamp_global(setup.simple_loan.default_timestamp);
-        setup.loan.repay_loan(setup.loan_id, 0);
+        setup.loan.repay_loan(setup.loan_id);
     }
-
-    // #[test]
-    // #[ignore]
-    // fn test_fuzz_should_fail_when_invalid_permit_owner_when_permit_provided() {
-    //     assert(true, '');
-    // }
-    // 
-    // #[test]
-    // #[ignore]
-    // fn test_fuzz_should_fail_when_invalid_permit_asset_when_permit_provided() {
-    //     assert(true, '');
-    // }
-    // 
-    // #[test]
-    // #[ignore]
-    // fn test_should_call_permit_when_permit_provided() {
-    //     assert(true, '');
-    // }
 
     #[test]
     fn test_fuzz_should_update_loan_data_when_loan_owner_is_not_original_lender(
@@ -2192,7 +2166,7 @@ mod repay_loan {
         cheat_caller_address(
             setup.loan.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
         );
-        setup.loan.repay_loan(setup.loan_id, 0);
+        setup.loan.repay_loan(setup.loan_id);
 
         simple_loan.status = 3;
         simple_loan.fixed_interest_amount = loan_repayment_amount - principal;
@@ -2204,7 +2178,7 @@ mod repay_loan {
     fn test_should_delete_loan_data_when_loan_owner_is_original_lender() {
         let setup = setup();
         assert_loan_eq(setup.loan.contract_address, setup.loan_id, setup.simple_loan);
-        setup.loan.repay_loan(setup.loan_id, 0);
+        setup.loan.repay_loan(setup.loan_id);
         assert_loan_eq(setup.loan.contract_address, setup.loan_id, Default::default());
     }
 
@@ -2217,7 +2191,7 @@ mod repay_loan {
         assert_eq!(
             original_owner, setup.simple_loan.original_lender, "loan_owner is not original lender"
         );
-        setup.loan.repay_loan(setup.loan_id, 0);
+        setup.loan.repay_loan(setup.loan_id);
         let current_owner = erc721_read_owner(
             setup.loan_token.contract_address, setup.loan_id.into()
         );
@@ -2251,7 +2225,7 @@ mod repay_loan {
         cheat_caller_address(
             setup.loan.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
         );
-        setup.loan.repay_loan(setup.loan_id, 0);
+        setup.loan.repay_loan(setup.loan_id);
         let current_balance = setup.t20.balance_of(setup.borrower.contract_address);
         assert_eq!(
             original_balance - loan_repayment_amount,
@@ -2269,7 +2243,7 @@ mod repay_loan {
         assert_eq!(
             original_owner, setup.loan.contract_address, "Vault is not the owner of collateral"
         );
-        setup.loan.repay_loan(setup.loan_id, 0);
+        setup.loan.repay_loan(setup.loan_id);
         let current_owner = erc721_read_owner(
             setup.simple_loan.collateral.asset_address, setup.simple_loan.collateral.id.into()
         );
@@ -2284,7 +2258,7 @@ mod repay_loan {
     fn test_should_emit_loan_paid_back() {
         let setup = setup();
         let mut spy = spy_events();
-        setup.loan.repay_loan(setup.loan_id, 0);
+        setup.loan.repay_loan(setup.loan_id);
         spy
             .assert_emitted(
                 @array![
@@ -2302,7 +2276,7 @@ mod repay_loan {
     fn test_should_emit_loan_claimed_when_loan_owner_is_original_lender() {
         let setup = setup();
         let mut spy = spy_events();
-        setup.loan.repay_loan(setup.loan_id, 0);
+        setup.loan.repay_loan(setup.loan_id);
         spy
             .assert_emitted(
                 @array![
@@ -3417,24 +3391,6 @@ mod extend_loan {
             setup.loan.contract_address, setup.lender.contract_address, CheatSpan::TargetCalls(1)
         );
         setup.loan.extend_loan(extension, signature_checker::Signature { r, s });
-    }
-
-    #[test]
-    #[ignore]
-    fn test_fuzz_should_fail_when_invalid_permit_data_permit_owner() {
-        assert(true, '');
-    }
-
-    #[test]
-    #[ignore]
-    fn test_fuzz_should_fail_when_invalid_permit_data_permit_asset() {
-        assert(true, '');
-    }
-
-    #[test]
-    #[ignore]
-    fn test_should_call_permit_when_provided() {
-        assert(true, '');
     }
 
     #[test]

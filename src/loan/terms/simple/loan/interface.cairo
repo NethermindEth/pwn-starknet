@@ -1,6 +1,5 @@
 use pwn::loan::lib::{fee_calculator, math, signature_checker};
 use pwn::loan::terms::simple::loan::types;
-use pwn::loan::vault::permit::{Permit};
 use pwn::multitoken::library::MultiToken::Asset;
 use starknet::ContractAddress;
 
@@ -20,7 +19,7 @@ pub trait IPwnSimpleLoan<TState> {
         signature: signature_checker::Signature
     );
     fn make_extension_proposal(ref self: TState, extension: types::ExtensionProposal);
-    fn repay_loan(ref self: TState, loan_id: felt252, permit_data: felt252);
+    fn repay_loan(ref self: TState, loan_id: felt252);
 
     fn ACCRUING_INTEREST_APR_DECIMALS(self: @TState) -> u16;
     fn ACCRUING_INTEREST_APR_DENOMINATOR(self: @TState) -> u64;

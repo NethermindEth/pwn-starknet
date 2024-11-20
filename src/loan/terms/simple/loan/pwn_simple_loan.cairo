@@ -60,8 +60,6 @@ pub mod PwnSimpleLoan {
     };
     use pwn::loan::terms::simple::proposal::simple_loan_proposal;
     use pwn::loan::token::pwn_loan::{IPwnLoanDispatcher, IPwnLoanDispatcherTrait};
-    use pwn::loan::vault::permit::{Permit};
-    use pwn::loan::vault::permit;
     use pwn::loan::vault::pwn_vault::PwnVaultComponent;
     use pwn::multitoken::category_registry::{
         IMultiTokenCategoryRegistryDispatcher, IMultiTokenCategoryRegistryDispatcherTrait
@@ -323,12 +321,10 @@ pub mod PwnSimpleLoan {
         /// # Arguments
         ///
         /// - `loan_id`: The unique identifier of the loan to be repaid.
-        /// - `permit_data`: Data required for the repayment process.
         ///
         /// # Requirements
         ///
         /// - The loan must be in a state that allows repayment.
-        /// - The caller must provide valid permit data.
         ///
         /// # Actions
         ///
@@ -337,7 +333,7 @@ pub mod PwnSimpleLoan {
         /// - Pulls the repayment amount from the caller.
         /// - Pushes the collateral back to the borrower.
         /// - Attempts to claim the repaid loan for the loan token owner.
-        fn repay_loan(ref self: ContractState, loan_id: felt252, permit_data: felt252) {
+        fn repay_loan(ref self: ContractState, loan_id: felt252) {
             let caller = starknet::get_caller_address();
             let loan = self.loans.read(loan_id);
             self._check_loan_can_be_repaid(loan.status, loan.default_timestamp);
@@ -803,20 +799,6 @@ pub mod PwnSimpleLoan {
             self.domain_separator.write(domain_separator);
             self.src5.register_interface(IERC1155_RECEIVER_ID);
             self.src5.register_interface(IERC721_RECEIVER_ID);
-        }
-
-        fn _check_permit(ref self: ContractState, credit_address: ContractAddress, permit: Permit) {
-            let caller = starknet::get_caller_address();
-            if (permit.asset != Default::default()) {
-                if (permit.owner != caller) {
-                    permit::Err::InvalidPermitOwner(current: permit.owner, expected: caller);
-                }
-                if (permit.asset != credit_address) {
-                    permit::Err::InvalidPermitAsset(
-                        current: permit.asset, expected: credit_address
-                    );
-                }
-            }
         }
 
         fn _check_refinance_loan_terms(

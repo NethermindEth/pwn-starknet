@@ -231,7 +231,7 @@ fn test_use_case_should_refinance_running_loan() {
     cheat_block_timestamp_global(starknet::get_block_timestamp() + _1_DAY * 4);
 
     let caller_spec = CallerSpec {
-        refinancing_loan_id: loan_id, revoke_nonce: false, nonce: 0, permit_data: 0
+        refinancing_loan_id: loan_id, revoke_nonce: false, nonce: 0
     };
 
     start_cheat_caller_address(dsp.loan.contract_address, dsp.borrower.contract_address);

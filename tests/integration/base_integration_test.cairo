@@ -363,7 +363,7 @@ pub(crate) fn _create_loan(setup: Setup, _proposal: Proposal, revert_data: felt2
     };
     let lender_spec = LenderSpec { source_of_funds: setup.lender.contract_address };
     let caller_spec = CallerSpec {
-        refinancing_loan_id: 0, revoke_nonce: false, nonce: 0, permit_data: 0
+        refinancing_loan_id: 0, revoke_nonce: false, nonce: 0
     };
 
     start_cheat_caller_address(setup.loan.contract_address, setup.borrower.contract_address);
@@ -389,7 +389,7 @@ pub(crate) fn _repay_loan_failing(setup: Setup, loan_id: felt252, revert_data: f
     }
 
     start_cheat_caller_address(setup.loan.contract_address, setup.borrower.contract_address);
-    setup.loan.repay_loan(loan_id, '');
+    setup.loan.repay_loan(loan_id);
     stop_cheat_caller_address(setup.loan.contract_address);
 }
 

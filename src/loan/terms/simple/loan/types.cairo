@@ -55,8 +55,6 @@ pub struct CallerSpec {
     pub revoke_nonce: bool,
     /// The nonce for the operation.
     pub nonce: felt252,
-    /// The data required for the permit.
-    pub permit_data: felt252,
 }
 
 /// Represents a loan with its status and terms.
