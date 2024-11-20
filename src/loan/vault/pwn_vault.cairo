@@ -125,7 +125,7 @@ pub mod PwnVaultComponent {
             beneficiary: ContractAddress
         ) {
             let original_balance = asset.balance_of(beneficiary);
-            asset.transfer_asset_from(starknet::get_contract_address(), beneficiary, false);
+            asset.transfer_asset_from(starknet::get_contract_address(), beneficiary, true);
             self._check_transfer(asset, original_balance, beneficiary, true);
 
             self.emit(VaultPush { asset, beneficiary });
@@ -144,7 +144,7 @@ pub mod PwnVaultComponent {
             beneficiary: ContractAddress
         ) {
             let original_balance = asset.balance_of(beneficiary);
-            asset.transfer_asset_from(origin, beneficiary, false);
+            asset.transfer_asset_from(origin, beneficiary, true);
             self._check_transfer(asset, original_balance, beneficiary, true);
             self.emit(VaultPushFrom { asset, origin, beneficiary });
         }
