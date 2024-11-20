@@ -99,13 +99,11 @@ pub mod MultiToken {
     }
 
     pub fn ERC20(asset_address: ContractAddress, amount: u256) -> Asset {
-        Asset { category: Category::ERC20, asset_address, id: 0.try_into().expect('ERC20'), amount }
+        Asset { category: Category::ERC20, asset_address, id: 0, amount }
     }
 
     pub fn ERC721(asset_address: ContractAddress, id: felt252) -> Asset {
-        Asset {
-            category: Category::ERC721, asset_address, id, amount: 0.try_into().expect('ERC721')
-        }
+        Asset { category: Category::ERC721, asset_address, id, amount: 0 }
     }
 
     pub fn ERC1155(asset_address: ContractAddress, id: felt252, amount: Option<u256>) -> Asset {
