@@ -532,6 +532,7 @@ pub mod PwnSimpleLoan {
 
             let original_default_timestamp = loan.default_timestamp;
             loan.default_timestamp = original_default_timestamp + extension.duration;
+            self.loans.write(extension.loan_id, loan);
 
             self
                 .emit(
@@ -552,7 +553,6 @@ pub mod PwnSimpleLoan {
 
                 self.vault._push_from(compensation, loan.borrower, loan_owner);
             }
-            self.loans.write(extension.loan_id, loan);
         }
 
         /// Computes the hash of the lender's specifications.
