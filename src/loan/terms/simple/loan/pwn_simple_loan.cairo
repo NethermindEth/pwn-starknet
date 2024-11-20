@@ -246,6 +246,7 @@ pub mod PwnSimpleLoan {
             if (caller_spec.refinancing_loan_id != 0) {
                 let loan = self.loans.read(caller_spec.refinancing_loan_id);
                 self._check_loan_can_be_repaid(loan.status, loan.default_timestamp);
+                self._update_repaid_loan(caller_spec.refinancing_loan_id);
             }
 
             let (proposal_hash, loan_terms) = ISimpleLoanAcceptProposalDispatcher {
@@ -304,7 +305,6 @@ pub mod PwnSimpleLoan {
             if (caller_spec.refinancing_loan_id == 0) {
                 self._settle_new_loan(loan_terms, lender_spec);
             } else {
-                self._update_repaid_loan(caller_spec.refinancing_loan_id);
                 self
                     ._settle_loan_refinance(
                         refinancing_loan_id: caller_spec.refinancing_loan_id,
