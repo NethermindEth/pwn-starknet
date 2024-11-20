@@ -191,7 +191,7 @@ pub mod SimpleLoanProposalComponent {
                 );
         }
 
-        /// Computes the hash for a multiproposal using the Keccac hash function.
+        /// Computes the hash for a multiproposal using the Poseidon hash function.
         /// 
         /// # Parameters
         /// - `multiproposal`: The multiproposal data for which the hash is to be computed.
