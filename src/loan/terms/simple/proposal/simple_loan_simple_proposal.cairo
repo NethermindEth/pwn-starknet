@@ -146,10 +146,8 @@ pub mod SimpleLoanSimpleProposal {
         hub: ContractAddress,
         revoke_nonce: ContractAddress,
         config: ContractAddress,
-        name: felt252,
-        version: felt252,
     ) {
-        self.simple_loan._initialize(hub, revoke_nonce, config, name, version);
+        self.simple_loan._initialize(hub, revoke_nonce, config, 'SimpleLoanSimpleProposal', '1.2');
     }
 
     #[abi(embed_v0)]
@@ -385,4 +383,3 @@ pub mod SimpleLoanSimpleProposal {
         }
     }
 }
-

@@ -184,10 +184,8 @@ pub mod SimpleLoanFungibleProposal {
         hub: ContractAddress,
         revoke_nonce: ContractAddress,
         config: ContractAddress,
-        name: felt252,
-        version: felt252
     ) {
-        self.simple_loan._initialize(hub, revoke_nonce, config, name, version);
+        self.simple_loan._initialize(hub, revoke_nonce, config, 'SimpleLoanFungibleProposal', '1.0');
     }
 
     #[abi(embed_v0)]

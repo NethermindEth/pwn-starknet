@@ -85,7 +85,7 @@ fn deploy() -> Setup {
     let (contract_address, _) = contract
         .deploy(
             @array![
-                hub_address.into(), nonce_address.into(), config_address.into(), 'name', 'version'
+                hub_address.into(), nonce_address.into(), config_address.into()
             ]
         )
         .unwrap();
@@ -132,7 +132,7 @@ fn proposal_values() -> ProposalValues {
 
 fn proposal_hash(proposal: Proposal, proposal_address: ContractAddress) -> felt252 {
     let hash_elements = array![
-        BASE_DOMAIN_SEPARATOR, 'name', 'version', CHAIN_ID, proposal_address.into()
+        BASE_DOMAIN_SEPARATOR, 'SimpleLoanFungibleProposal', '1.0', CHAIN_ID, proposal_address.into()
     ];
     let domain_separator = poseidon_hash_span(hash_elements.span());
 

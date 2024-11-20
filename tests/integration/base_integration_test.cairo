@@ -113,7 +113,7 @@ pub fn setup() -> Setup {
     let (proposal_simple_address, _) = contract
         .deploy(
             @array![
-                hub_address.into(), nonce_address.into(), config_address.into(), 'name', 'version'
+                hub_address.into(), nonce_address.into(), config_address.into()
             ]
         )
         .unwrap();
@@ -125,7 +125,7 @@ pub fn setup() -> Setup {
     let (proposal_fungible_address, _) = contract
         .deploy(
             @array![
-                hub_address.into(), nonce_address.into(), config_address.into(), 'name', 'version'
+                hub_address.into(), nonce_address.into(), config_address.into()
             ]
         )
         .unwrap();
@@ -137,7 +137,7 @@ pub fn setup() -> Setup {
     let (proposal_dutch_address, _) = contract
         .deploy(
             @array![
-                hub_address.into(), nonce_address.into(), config_address.into(), 'name', 'version'
+                hub_address.into(), nonce_address.into(), config_address.into()
             ]
         )
         .unwrap();
@@ -149,7 +149,7 @@ pub fn setup() -> Setup {
     let (proposal_list_address, _) = contract
         .deploy(
             @array![
-                hub_address.into(), nonce_address.into(), config_address.into(), 'name', 'version'
+                hub_address.into(), nonce_address.into(), config_address.into()
             ]
         )
         .unwrap();
