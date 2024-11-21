@@ -2739,7 +2739,6 @@ mod try_claim_repaid_loan {
     #[test]
     fn test_should_burn_loan_token() {
         let (setup, mut contract_state) = setup();
-        println!("this address {:?}", starknet::get_contract_address());
         let curr_owner = erc721_read_owner(setup.loan_token.contract_address, setup.loan_id.into());
         assert_eq!(curr_owner, setup.lender.contract_address);
         contract_state

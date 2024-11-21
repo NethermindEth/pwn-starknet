@@ -97,7 +97,6 @@ pub fn setup() -> Setup {
     let contract = declare("PwnHub").unwrap();
     let (hub_address, _) = contract.deploy(@array![owner.into()]).unwrap();
     let hub = IPwnHubDispatcher { contract_address: hub_address };
-    println!("DEPLOYED PWNHUB");
 
     let contract = declare("PwnConfig").unwrap();
     let (config_address, _) = contract.deploy(@array![]).unwrap();
@@ -166,7 +165,6 @@ pub fn setup() -> Setup {
     let contract = declare("MultiTokenCategoryRegistry").unwrap();
     let (registry_address, _) = contract.deploy(@calldata).unwrap();
     let registry = IMultiTokenCategoryRegistryDispatcher { contract_address: registry_address };
-    println!("DEPLOYED MULTITOKEN");
 
     let contract = declare("PwnSimpleLoan").unwrap();
     let (loan_address, _) = contract
