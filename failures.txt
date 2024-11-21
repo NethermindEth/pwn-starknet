@@ -1,6 +1,0 @@
-Failures:
-    tests::unit::simple_loan_dutch_auction_proposal_test::test_should_make_proposal
-    tests::unit::simple_loan_simple_proposal_test::test_should_make_proposal
-    tests::unit::simple_loan_list_proposal_test::test_should_make_proposal
-    tests::unit::simple_loan_dutch_auction_proposal_test::test_should_call_loan_contract_with_loan_terms
-    tests::unit::simple_loan_fungible_proposal_test::test_should_make_proposal

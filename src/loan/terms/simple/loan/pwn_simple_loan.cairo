@@ -804,7 +804,7 @@ pub mod PwnSimpleLoan {
             ];
             let domain_separator = poseidon_hash_span(hash_elements.span());
             self.domain_separator.write(domain_separator);
-            
+
             self.src5.register_interface(IERC1155_RECEIVER_ID);
             self.src5.register_interface(IERC721_RECEIVER_ID);
         }

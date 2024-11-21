@@ -12,3 +12,5 @@ deployments/mainnet/.env
 deployments/sepolia/.env
 
 deployments/sepolia/account.json
+
+failures.txt

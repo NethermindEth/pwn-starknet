@@ -314,6 +314,7 @@ pub const E30: u256 = 1_000_000_000_000_000_000_000_000_000_000;
 pub const E20: u256 = 100_000_000_000_000_000_000;
 pub const E18: u256 = 1_000_000_000_000_000_000;
 pub const DAY: u64 = 86400;
+const CHAIN_ID: felt252 = 393402133025997798000961;
 
 pub(crate) fn erc20_mint(erc20: ContractAddress, receiver: ContractAddress, amount: u256) {
     let current_balance = ERC20ABIDispatcher { contract_address: erc20 }.balance_of(receiver);
@@ -416,7 +417,7 @@ pub(crate) fn _get_extension_hash(
     address: ContractAddress, extension: types::ExtensionProposal
 ) -> felt252 {
     let hash_elements: Array<felt252> = array![
-        PwnSimpleLoan::BASE_DOMAIN_SEPARATOR, address.into()
+        PwnSimpleLoan::BASE_DOMAIN_SEPARATOR, CHAIN_ID, address.into()
     ];
     let domain_separator_hash = poseidon_hash_span(hash_elements.span());
     let hash_elements: Array<felt252> = array![
