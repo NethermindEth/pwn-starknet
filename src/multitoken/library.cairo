@@ -223,7 +223,7 @@ pub mod MultiToken {
         fn is_valid(self: @Asset, registry: Option<ContractAddress>) -> bool {
             match registry {
                 Option::Some(registry) => _check_category(*self, registry) && _check_format(*self),
-                Option::None => _check_category_via_rsc5(*self) && _check_format(*self)
+                Option::None => _check_category_via_src5(*self) && _check_format(*self)
             }
         }
 
@@ -293,10 +293,10 @@ pub mod MultiToken {
             return asset.category.into() == category_value;
         }
 
-        _check_category_via_rsc5(asset)
+        _check_category_via_src5(asset)
     }
 
-    fn _check_category_via_rsc5(asset: Asset) -> bool {
+    fn _check_category_via_src5(asset: Asset) -> bool {
         match asset.category {
             Category::ERC20 => {
                 // NOTE: we don't check interface id since no token uses it on Starket
@@ -455,28 +455,28 @@ pub mod MultiToken {
             mock_call(token, selector!("supports_interface"), super::ERC721_INTERFACE_ID, 2);
 
             assert_eq!(
-                super::_check_category(asset, registry), super::_check_category_via_rsc5(asset)
+                super::_check_category(asset, registry), super::_check_category_via_src5(asset)
             );
         }
 
         // CHECK CATEGORY VIA SRC5
 
         #[test]
-        fn test_check_category_via_rsc5_should_return_false_when_erc20_when_src5_supports_erc721() {
+        fn test_check_category_via_src5_should_return_false_when_erc20_when_src5_supports_erc721() {
             let token = starknet::contract_address_const::<'TOKEN'>();
             let asset = super::ERC20(token, 0);
 
             mock_call(token, selector!("supports_interface"), super::ERC721_INTERFACE_ID, 1);
-            assert_eq!(super::_check_category_via_rsc5(asset), false);
+            assert_eq!(super::_check_category_via_src5(asset), false);
         }
 
         #[test]
-        fn test_check_category_via_rsc5_should_return_false_when_erc20_when_src5_supports_erc1155() {
+        fn test_check_category_via_src5_should_return_false_when_erc20_when_src5_supports_erc1155() {
             let token = starknet::contract_address_const::<'TOKEN'>();
             let asset = super::ERC20(token, 0);
 
             mock_call(token, selector!("supports_interface"), super::ERC1155_INTERFACE_ID, 1);
-            assert_eq!(super::_check_category_via_rsc5(asset), false);
+            assert_eq!(super::_check_category_via_src5(asset), false);
         }
 
         #[test]
@@ -484,7 +484,7 @@ pub mod MultiToken {
             let token = starknet::contract_address_const::<'TOKEN'>();
             let asset = super::ERC20(token, 0);
 
-            assert_eq!(super::_check_category_via_rsc5(asset), false);
+            assert_eq!(super::_check_category_via_src5(asset), false);
         }
 
         #[test]
@@ -493,7 +493,7 @@ pub mod MultiToken {
             let asset = super::ERC721(token, 0);
 
             mock_call(token, selector!("supports_interface"), super::ERC721_INTERFACE_ID, 1);
-            assert_eq!(super::_check_category_via_rsc5(asset), true);
+            assert_eq!(super::_check_category_via_src5(asset), true);
         }
 
         #[test]
@@ -502,7 +502,7 @@ pub mod MultiToken {
             let asset = super::ERC1155(token, 0, Option::Some(0));
 
             mock_call(token, selector!("supports_interface"), super::ERC1155_INTERFACE_ID, 1);
-            assert_eq!(super::_check_category_via_rsc5(asset), true);
+            assert_eq!(super::_check_category_via_src5(asset), true);
         }
     }
 }
@@ -528,5 +528,3 @@ impl CategoryEq of PartialEq<MultiToken::Category> {
     }
 }
 // NOTE: not sure if _transfer_with_calldata makes sense on starknet
-
-
