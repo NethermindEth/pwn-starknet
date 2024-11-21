@@ -32,6 +32,7 @@
 //! integrating seamlessly with other components.
 #[starknet::contract]
 pub mod PwnSimpleLoan {
+    use core::box::BoxTrait;
     use core::poseidon::poseidon_hash_span;
     use openzeppelin::account::interface::{ISRC6Dispatcher, ISRC6DispatcherTrait};
 
@@ -108,7 +109,7 @@ pub mod PwnSimpleLoan {
         0x7e09d567c8fe43c280650abe4557a43fa693063ebc6c47ff3c585866507c732;
 
     pub const BASE_DOMAIN_SEPARATOR: felt252 =
-        0x23b0e9af1d18f697d3e6d8bee3b1defcd47b5be37cf6d26fde2b5d5485065bc;
+        0x49312527561f7c98e8495803e49e31ae3918e9b5e3dcf547b2a2097e0689be7;
 
     #[storage]
     struct Storage {
@@ -796,11 +797,14 @@ pub mod PwnSimpleLoan {
             self.config.write(config_dispatcher);
             self.revoked_nonce.write(revoked_nonce_dispatcher);
             self.category_registry.write(category_registry_dispatcher);
+
+            let chain_id = starknet::get_execution_info().unbox().tx_info.unbox().chain_id;
             let hash_elements: Array<felt252> = array![
-                BASE_DOMAIN_SEPARATOR, starknet::get_contract_address().into()
+                BASE_DOMAIN_SEPARATOR, chain_id.into(), starknet::get_contract_address().into()
             ];
             let domain_separator = poseidon_hash_span(hash_elements.span());
             self.domain_separator.write(domain_separator);
+            
             self.src5.register_interface(IERC1155_RECEIVER_ID);
             self.src5.register_interface(IERC721_RECEIVER_ID);
         }
