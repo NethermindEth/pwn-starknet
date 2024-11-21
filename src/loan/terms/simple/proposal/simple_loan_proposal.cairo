@@ -59,7 +59,6 @@ pub trait ISimpleLoanAcceptProposal<TState> {
 pub mod SimpleLoanProposalComponent {
     use alexandria_math::keccak256::keccak256;
     use core::poseidon::poseidon_hash_span;
-    use openzeppelin::account::interface::{ISRC6Dispatcher, ISRC6DispatcherTrait};
     use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
     use pwn::hub::{pwn_hub_tags, pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait}};
     use pwn::interfaces::fingerprint_computer::{
@@ -337,7 +336,7 @@ pub mod SimpleLoanProposalComponent {
 
             if proposal_inclusion_proof.len() == 0 {
                 if !self.proposal_made.read(proposal_hash) {
-                    if !self._is_valid_signature_now(proposal.proposer, proposal_hash, signature) {
+                    if !signature_checker::is_valid_signature_now(proposal.proposer, proposal_hash, signature) {
                         signature_checker::Err::INVALID_SIGNATURE(proposal.proposer, proposal_hash);
                     }
                 }
@@ -358,10 +357,8 @@ pub mod SimpleLoanProposalComponent {
                     .get_multiproposal_hash(
                         Multiproposal { merkle_root: multiproposal_merkle_root }
                     );
-                if !self._is_valid_signature_now(proposal.proposer, multiproposal_hash, signature) {
-                    signature_checker::Err::INVALID_SIGNATURE(
-                        proposal.proposer, multiproposal_hash
-                    );
+                if !signature_checker::is_valid_signature_now(proposal.proposer, multiproposal_hash, signature) {
+                    signature_checker::Err::INVALID_SIGNATURE(proposal.proposer, multiproposal_hash);
                 }
             }
 
@@ -442,18 +439,6 @@ pub mod SimpleLoanProposalComponent {
                     );
                 }
             }
-        }
-
-        fn _is_valid_signature_now(
-            self: @ComponentState<TContractState>,
-            signer: ContractAddress,
-            message_hash: felt252,
-            signature: signature_checker::Signature
-        ) -> bool {
-            ISRC6Dispatcher { contract_address: signer }
-                .is_valid_signature(
-                    message_hash, array![signature.r, signature.s]
-                ) == starknet::VALIDATED
         }
     }
 }
