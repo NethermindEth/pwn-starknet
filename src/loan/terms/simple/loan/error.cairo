@@ -66,4 +66,7 @@ pub mod Err {
             amount
         );
     }
+    pub fn REFINANCING_DISABLED() {
+        panic!("Refinancing is currently disabled. Will be enabled with Cairo v0.13.4");
+    }
 }

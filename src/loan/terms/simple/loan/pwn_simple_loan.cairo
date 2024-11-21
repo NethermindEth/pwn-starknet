@@ -242,9 +242,11 @@ pub mod PwnSimpleLoan {
             }
 
             if (caller_spec.refinancing_loan_id != 0) {
-                let loan = self.loans.read(caller_spec.refinancing_loan_id);
-                self._check_loan_can_be_repaid(loan.status, loan.default_timestamp);
-                self._update_repaid_loan(caller_spec.refinancing_loan_id);
+                // Note: enable refinancing when Cairo v0.13.4 is released with try/catch support
+                Err::REFINANCING_DISABLED();
+                // let loan = self.loans.read(caller_spec.refinancing_loan_id);
+                // self._check_loan_can_be_repaid(loan.status, loan.default_timestamp);
+                // self._update_repaid_loan(caller_spec.refinancing_loan_id);
             }
 
             let (proposal_hash, loan_terms) = ISimpleLoanAcceptProposalDispatcher {
@@ -330,7 +332,6 @@ pub mod PwnSimpleLoan {
         /// - Updates the loan status to repaid.
         /// - Pulls the repayment amount from the caller.
         /// - Pushes the collateral back to the borrower.
-        /// - Attempts to claim the repaid loan for the loan token owner.
         fn repay_loan(ref self: ContractState, loan_id: felt252) {
             let caller = starknet::get_caller_address();
             let loan = self.loans.read(loan_id);
@@ -340,15 +341,16 @@ pub mod PwnSimpleLoan {
             let repayment_amount = self.get_loan_repayment_amount(loan_id);
             self.vault._pull(ERC20(loan.credit_address, repayment_amount), caller);
             self.vault._push(loan.collateral, loan.borrower);
-            self
-                ._try_claim_repaid_loan(
-                    loan_id,
-                    repayment_amount,
-                    ERC721ABIDispatcher {
-                        contract_address: self.loan_token.read().contract_address
-                    }
-                        .owner_of(loan_id.try_into().expect('repay_loan'))
-                );
+            // Note: enable automatic claim when Cairo v0.13.4 is released with try/catch support
+            // self
+            //     ._try_claim_repaid_loan(
+            //         loan_id,
+            //         repayment_amount,
+            //         ERC721ABIDispatcher {
+            //             contract_address: self.loan_token.read().contract_address
+            //         }
+            //             .owner_of(loan_id.try_into().expect('repay_loan'))
+            //     );
         }
 
         /// Claims a loan, transferring collateral or repayment assets based on loan status.
@@ -944,6 +946,8 @@ pub mod PwnSimpleLoan {
             } else {
                 0
             };
+
+            // Note: enable automatic claim when Cairo v0.13.4 is released with try/catch support
             self
                 ._try_claim_repaid_loan(
                     loan_id: refinancing_loan_id,
