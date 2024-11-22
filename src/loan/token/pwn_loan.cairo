@@ -52,9 +52,11 @@ pub mod PwnLoan {
     use openzeppelin::token::erc721::{
         erc721::{ERC721Component, ERC721HooksEmptyImpl}, interface::IERC721_ID
     };
-
-    use pwn::interfaces::erc5646::{IERC5646, IERC5646Dispatcher, IERC5646DispatcherTrait, IERC5646_ID};
     use pwn::hub::{pwn_hub_tags, pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait}};
+
+    use pwn::interfaces::erc5646::{
+        IERC5646, IERC5646Dispatcher, IERC5646DispatcherTrait, IERC5646_ID
+    };
     use starknet::{ContractAddress, get_caller_address, contract_address_const};
     use super::{IPwnLoadMetadataProviderDispatcher, IPwnLoadMetadataProviderDispatcherTrait};
 
@@ -266,11 +268,8 @@ pub mod PwnLoan {
                 return 0;
             }
 
-            IERC5646Dispatcher {
-                contract_address: loan_contract_address
-            }
+            IERC5646Dispatcher { contract_address: loan_contract_address }
                 .get_state_fingerprint(token_id)
         }
     }
-
 }
