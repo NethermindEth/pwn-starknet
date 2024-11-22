@@ -49,8 +49,8 @@ pub mod Err {
     pub fn INVALID_EXTENSION_CALLER() {
         panic!("Invalid extension caller");
     }
-    pub fn INVALID_EXTENSION_SIGNER(allowed: ContractAddress, current: ContractAddress) {
-        panic!("Invalid extension signer. Allowed: {:?}, Current: {:?}", allowed, current);
+    pub fn INVALID_EXTENSION_PROPOSER(allowed: ContractAddress, current: ContractAddress) {
+        panic!("Invalid extension proposer. Allowed: {:?}, Current: {:?}", allowed, current);
     }
     pub fn INVALID_EXTENSION_DURATION(duration: u64, limit: u64) {
         panic!("Invalid extension duration. Current: {}, Limit: {}", duration, limit);
@@ -68,5 +68,8 @@ pub mod Err {
     }
     pub fn REFINANCING_DISABLED() {
         panic!("Refinancing is currently disabled. Will be enabled with Cairo v0.13.4");
+    }
+    pub fn INVALID_EXTENSION_PROPOSAL(proposal_hash: felt252) {
+        panic!("Invalid extension proposal. Proposal hash: {:?}", proposal_hash);
     }
 }

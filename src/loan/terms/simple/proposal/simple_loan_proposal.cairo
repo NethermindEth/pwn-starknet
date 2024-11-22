@@ -1,19 +1,11 @@
-use pwn::loan::lib::{signature_checker::Signature};
 use pwn::loan::terms::simple::loan::types::Terms;
 use starknet::{ContractAddress, ClassHash};
 
 #[starknet::interface]
 pub trait ISimpleLoanProposal<TState> {
     fn revoke_nonce(ref self: TState, nonce_space: felt252, nonce: felt252);
-    fn get_multiproposal_hash(
-        self: @TState, multiproposal: SimpleLoanProposalComponent::Multiproposal
-    ) -> felt252;
     fn get_proposal_made(self: @TState, proposal_hash: felt252) -> bool;
     fn get_credit_used(self: @TState, proposal_hash: felt252) -> u256;
-    fn DOMAIN_SEPARATOR(self: @TState) -> felt252;
-    fn MULTIPROPOSAL_DOMAIN_SEPARATOR(self: @TState) -> felt252;
-    fn MULTIPROPOSAL_TYPEHASH(self: @TState) -> felt252;
-    fn VERSION(self: @TState) -> felt252;
 }
 
 #[starknet::interface]
@@ -23,8 +15,6 @@ pub trait ISimpleLoanAcceptProposal<TState> {
         acceptor: starknet::ContractAddress,
         refinancing_loan_id: felt252,
         proposal_data: Array<felt252>,
-        proposal_inclusion_proof: Array<u256>,
-        signature: Signature
     ) -> (felt252, Terms);
 }
 
@@ -37,9 +27,8 @@ pub trait ISimpleLoanAcceptProposal<TState> {
 //! # Features
 //! 
 //! - **Nonce Management**: Ability to revoke nonces to prevent replay attacks.
-//! - **Multiproposal Hashing**: Compute unique hashes for multiproposals to ensure data integrity.
 //! - **Proposal Acceptance**: Securely accept loan proposals with detailed verification processes 
-//!   including signature checks, inclusion proof validation, and nonce management.
+//!   including nonce management.
 //! 
 //! # Components
 //! 
@@ -49,9 +38,8 @@ pub trait ISimpleLoanAcceptProposal<TState> {
 //! 
 //! # Constants
 //! 
-//! - `MULTIPROPOSAL_TYPEHASH`: The type hash for multiproposals.
-//! - `BASE_DOMAIN_SEPARATOR`: The base domain separator used in hashing.
-//! - `MULTIPROPOSAL_DOMAIN_SEPARATOR`: The domain separator for multiproposals.
+//! This module currently does not define specific constants but integrates directly with 
+//! other components and modules.
 //! 
 //! This module is designed to provide a comprehensive framework for managing loan proposals, 
 //! integrating seamlessly with other components to ensure secure and efficient loan transactions.
@@ -64,20 +52,11 @@ pub mod SimpleLoanProposalComponent {
     use pwn::interfaces::fingerprint_computer::{
         IStateFingerpringComputerDispatcher, IStateFingerpringComputerDispatcherTrait
     };
-    use pwn::loan::lib::signature_checker;
     use pwn::loan::lib::{merkle_proof, merkle_proof::abi_encoded_packed};
     use pwn::nonce::revoked_nonce::{
         IRevokedNonceDispatcher, IRevokedNonceDispatcherTrait, RevokedNonce
     };
     use super::{ContractAddress, ClassHash};
-
-    pub const BASE_DOMAIN_SEPARATOR: felt252 =
-        0x1bd2de01ef5d7c9a15011e481320b91a90156eb700f8a5a99a373fa2dea9b10;
-    pub const MULTIPROPOSAL_DOMAIN_SEPARATOR: felt252 =
-        0xed474d1b0ccfaf9cb2bac1ca5503c9169db787f25d19cb868fcd51849d8a82;
-    pub const MULTIPROPOSAL_TYPEHASH: felt252 =
-        0x6ba4da0224595f19d08dfcb6e088d036d1a2fa3726ca5fb1220e7444e6ba641;
-    const VERSION: felt252 = '1.2';
 
     #[derive(Drop, Serde)]
     pub struct Multiproposal {
@@ -135,6 +114,9 @@ pub mod SimpleLoanProposalComponent {
         ) {
             panic!("Caller {:?} is not the loan contract {:?}", caller, loan_contract);
         }
+        pub fn INVALID_PROPOSAL(proposal_hash: felt252) {
+            panic!("Invalid proposal. Proposal hash: {:?}", proposal_hash);
+        }
         pub fn MISSING_STATE_FINGERPRINT_COMPUTER() {
             panic!("State fingerprint computer is not registered");
         }
@@ -190,26 +172,6 @@ pub mod SimpleLoanProposalComponent {
                 );
         }
 
-        /// Computes the hash for a multiproposal using the Poseidon hash function.
-        /// 
-        /// # Parameters
-        /// - `multiproposal`: The multiproposal data for which the hash is to be computed.
-        /// 
-        /// # Returns
-        /// The computed hash value as `u256`.
-        fn get_multiproposal_hash(
-            self: @ComponentState<TContractState>, multiproposal: Multiproposal
-        ) -> felt252 {
-            let hash_elements: Array<felt252> = array![
-                1901,
-                MULTIPROPOSAL_DOMAIN_SEPARATOR,
-                MULTIPROPOSAL_TYPEHASH,
-                multiproposal.merkle_root.low.into(),
-                multiproposal.merkle_root.high.into()
-            ];
-            poseidon_hash_span(hash_elements.span())
-        }
-
         /// Retrieves whether the proposal has been made or not.
         ///
         /// # Arguments
@@ -238,22 +200,6 @@ pub mod SimpleLoanProposalComponent {
         fn get_credit_used(self: @ComponentState<TContractState>, proposal_hash: felt252) -> u256 {
             self.credit_used.read(proposal_hash)
         }
-
-        fn DOMAIN_SEPARATOR(self: @ComponentState<TContractState>) -> felt252 {
-            self.DOMAIN_SEPARATOR.read()
-        }
-
-        fn MULTIPROPOSAL_DOMAIN_SEPARATOR(self: @ComponentState<TContractState>) -> felt252 {
-            MULTIPROPOSAL_DOMAIN_SEPARATOR
-        }
-
-        fn MULTIPROPOSAL_TYPEHASH(self: @ComponentState<TContractState>) -> felt252 {
-            MULTIPROPOSAL_TYPEHASH
-        }
-
-        fn VERSION(self: @ComponentState<TContractState>) -> felt252 {
-            VERSION
-        }
     }
 
     #[generate_trait]
@@ -265,37 +211,16 @@ pub mod SimpleLoanProposalComponent {
             hub: ContractAddress,
             revoked_nonce: ContractAddress,
             config: ContractAddress,
-            name: felt252,
-            version: felt252
         ) {
             self.hub.write(IPwnHubDispatcher { contract_address: hub });
             self.revoked_nonce.write(IRevokedNonceDispatcher { contract_address: revoked_nonce });
             self.config.write(IPwnConfigDispatcher { contract_address: config });
-
-            let chain_id = starknet::get_tx_info().unbox().chain_id;
-
-            let hash_elements: Array<felt252> = array![
-                BASE_DOMAIN_SEPARATOR,
-                name.into(),
-                version.into(),
-                chain_id,
-                starknet::get_contract_address().into()
-            ];
-            let domain_separator = poseidon_hash_span(hash_elements.span());
-
-            self.DOMAIN_SEPARATOR.write(domain_separator);
         }
 
         fn _get_proposal_hash(
-            self: @ComponentState<TContractState>,
-            proposal_type_hash: felt252,
-            encoded_proposal: Array<felt252>
+            self: @ComponentState<TContractState>, encoded_proposal: Array<felt252>
         ) -> felt252 {
             let mut hash_elements = encoded_proposal;
-            hash_elements.append(1901);
-            hash_elements.append(self.DOMAIN_SEPARATOR.read());
-            hash_elements.append(proposal_type_hash);
-
             poseidon_hash_span(hash_elements.span())
         }
 
@@ -316,8 +241,6 @@ pub mod SimpleLoanProposalComponent {
             acceptor: ContractAddress,
             refinancing_loan_id: felt252,
             proposal_hash: felt252,
-            proposal_inclusion_proof: Array<u256>,
-            signature: signature_checker::Signature,
             proposal: ProposalBase
         ) {
             let caller = starknet::get_caller_address();
@@ -334,32 +257,8 @@ pub mod SimpleLoanProposalComponent {
                 Err::ADDRESS_MISSING_HUB_TAG(proposal.loan_contract, pwn_hub_tags::ACTIVE_LOAN);
             }
 
-            if proposal_inclusion_proof.len() == 0 {
-                if !self.proposal_made.read(proposal_hash) {
-                    if !signature_checker::is_valid_signature_now(proposal.proposer, proposal_hash, signature) {
-                        signature_checker::Err::INVALID_SIGNATURE(proposal.proposer, proposal_hash);
-                    }
-                }
-            } else {
-                // TODO: verify inclusion proof type with the pwn team
-                // bytes32 multiproposalHash = getMultiproposalHash(
-                //     Multiproposal({
-                //         multiproposalMerkleRoot: MerkleProof.processProofCalldata({
-                //             proof: proposalInclusionProof,
-                //             leaf: proposalHash
-                //         })
-                //     })
-                // );
-                let multiproposal_merkle_root = merkle_proof::process_proof(
-                    proposal_inclusion_proof.span(), proposal_hash.into()
-                );
-                let multiproposal_hash = self
-                    .get_multiproposal_hash(
-                        Multiproposal { merkle_root: multiproposal_merkle_root }
-                    );
-                if !signature_checker::is_valid_signature_now(proposal.proposer, multiproposal_hash, signature) {
-                    signature_checker::Err::INVALID_SIGNATURE(proposal.proposer, multiproposal_hash);
-                }
+            if !self.proposal_made.read(proposal_hash) {
+                Err::INVALID_PROPOSAL(proposal_hash);
             }
 
             if proposal.proposer == acceptor {

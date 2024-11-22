@@ -1,6 +1,6 @@
 use core::ecdsa::check_ecdsa_signature;
-use starknet::ContractAddress;
 use openzeppelin::account::interface::{ISRC6Dispatcher, ISRC6DispatcherTrait};
+use starknet::ContractAddress;
 
 #[derive(Copy, Debug, Default, Drop, Serde)]
 pub struct Signature {
@@ -18,12 +18,8 @@ pub mod Err {
 }
 
 pub fn is_valid_signature_now(
-    signer: ContractAddress,
-    message_hash: felt252,
-    signature: Signature
+    signer: ContractAddress, message_hash: felt252, signature: Signature
 ) -> bool {
     ISRC6Dispatcher { contract_address: signer }
-        .is_valid_signature(
-            message_hash, array![signature.r, signature.s]
-        ) == starknet::VALIDATED
+        .is_valid_signature(message_hash, array![signature.r, signature.s]) == starknet::VALIDATED
 }

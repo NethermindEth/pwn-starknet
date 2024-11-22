@@ -1,5 +1,4 @@
 use SimpleLoanFungibleProposal::{Proposal, ProposalValues};
-use pwn::loan::lib::signature_checker::Signature;
 use pwn::loan::terms::simple::loan::types::Terms;
 
 #[starknet::interface]
@@ -10,8 +9,6 @@ pub trait ISimpleLoanFungibleProposal<TState> {
         acceptor: starknet::ContractAddress,
         refinancing_loan_id: felt252,
         proposal_data: Array<felt252>,
-        proposal_inclusion_proof: Array<u256>,
-        signature: Signature,
     ) -> (felt252, Terms);
     fn get_proposal_hash(self: @TState, proposal: Proposal) -> felt252;
     fn encode_proposal_data(
@@ -23,7 +20,7 @@ pub trait ISimpleLoanFungibleProposal<TState> {
     fn get_credit_amount(
         self: @TState, collateral_amount: u256, credit_per_collateral_unit: u256
     ) -> u256;
-    fn PROPOSAL_TYPEHASH(self: @TState) -> felt252;
+    fn VERSION(self: @TState) -> felt252;
 }
 
 //! The `SimpleLoanFungibleProposal` module provides a mechanism for creating and accepting loan 
@@ -35,7 +32,7 @@ pub trait ISimpleLoanFungibleProposal<TState> {
 //! 
 //! - **Proposal Creation**: Allows the creation of loan proposals with specific terms and conditions.
 //! - **Proposal Acceptance**: Facilitates the acceptance of loan proposals, including the 
-//!   verification of signatures and proposal data.
+//!   verification of proposal data.
 //! - **Proposal Hashing**: Computes unique hashes for proposals to ensure data integrity and 
 //!   security.
 //! - **Proposal Encoding/Decoding**: Provides functionality to encode and decode proposal data 
@@ -51,7 +48,7 @@ pub trait ISimpleLoanFungibleProposal<TState> {
 //! 
 //! # Constants
 //! 
-//! - `PROPOSAL_TYPEHASH`: The type hash for proposals.
+//! - `VERSION`: The version of the contract.
 //! - `CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR`: The denominator for credit per collateral unit 
 //!   calculations.
 //! - `FUNGIBLE_PROPOSAL_DATA_LEN`: The expected length of the encoded proposal data.
@@ -68,7 +65,7 @@ pub mod SimpleLoanFungibleProposal {
     };
     use pwn::multitoken::library::MultiToken;
     use starknet::ContractAddress;
-    use super::{Signature, Terms};
+    use super::Terms;
 
     component!(
         path: SimpleLoanProposalComponent, storage: simple_loan, event: SimpleLoanProposalEvent
@@ -78,10 +75,8 @@ pub mod SimpleLoanFungibleProposal {
     impl SimpleLoanProposalImpl =
         SimpleLoanProposalComponent::SimpleLoanProposalImpl<ContractState>;
     impl SimpleLoanProposalInternal = SimpleLoanProposalComponent::InternalImpl<ContractState>;
-    // NOTE: we can hard code this by calculating the poseidon hash of the string 
-    // in the Solidity contract offline.
-    pub const PROPOSAL_TYPEHASH: felt252 =
-        0x062dbce0eca7d4486c66e0d48cdd72744db07523b68e9e4dad30aa4bee1356;
+
+    pub const VERSION: felt252 = '1.0';
     pub const CREDIT_PER_COLLATERAL_UNIT_DENOMINATOR: u256 =
         100_000_000_000_000_000_000_000_000_000_000_000_000;
     pub const FUNGIBLE_PROPOSAL_DATA_LEN: usize = 29;
@@ -185,7 +180,7 @@ pub mod SimpleLoanFungibleProposal {
         revoke_nonce: ContractAddress,
         config: ContractAddress,
     ) {
-        self.simple_loan._initialize(hub, revoke_nonce, config, 'SimpleLoanFungibleProposal', '1.0');
+        self.simple_loan._initialize(hub, revoke_nonce, config);
     }
 
     #[abi(embed_v0)]
@@ -215,15 +210,13 @@ pub mod SimpleLoanFungibleProposal {
             proposal_hash
         }
 
-        /// Accepts a loan proposal using the provided details and signature.
+        /// Accepts a loan proposal using the provided details.
         ///
         /// # Arguments
         ///
         /// - `acceptor`: The address of the acceptor.
         /// - `refinancing_loan_id`: The ID of the loan being refinanced, if applicable.
         /// - `proposal_data`: The encoded data of the proposal.
-        /// - `proposal_inclusion_proof`: The inclusion proof for the proposal.
-        /// - `signature`: The signature for validating the proposal.
         ///
         /// # Returns
         ///
@@ -248,8 +241,6 @@ pub mod SimpleLoanFungibleProposal {
             acceptor: starknet::ContractAddress,
             refinancing_loan_id: felt252,
             proposal_data: Array<felt252>,
-            proposal_inclusion_proof: Array<u256>,
-            signature: Signature
         ) -> (felt252, super::Terms) {
             if proposal_data.len() != FUNGIBLE_PROPOSAL_DATA_LEN {
                 Err::INVALID_PROPOSAL_DATA(proposal_data.len());
@@ -259,9 +250,7 @@ pub mod SimpleLoanFungibleProposal {
 
             let mut serialized_proposal = array![];
             proposal.serialize(ref serialized_proposal);
-            let proposal_hash = self
-                .simple_loan
-                ._get_proposal_hash(PROPOSAL_TYPEHASH, serialized_proposal);
+            let proposal_hash = self.simple_loan._get_proposal_hash(serialized_proposal);
 
             if proposal.min_collateral_amount == 0 {
                 Err::MIN_COLLATERAL_AMOUNT_NOT_SET();
@@ -297,14 +286,7 @@ pub mod SimpleLoanFungibleProposal {
 
             self
                 .simple_loan
-                ._accept_proposal(
-                    acceptor,
-                    refinancing_loan_id,
-                    proposal_hash,
-                    proposal_inclusion_proof,
-                    signature,
-                    proposal_base
-                );
+                ._accept_proposal(acceptor, refinancing_loan_id, proposal_hash, proposal_base);
 
             let loan_terms = Terms {
                 lender: if proposal.is_offer {
@@ -354,7 +336,7 @@ pub mod SimpleLoanFungibleProposal {
         fn get_proposal_hash(self: @ContractState, proposal: Proposal) -> felt252 {
             let mut serialized_proposal = array![];
             proposal.serialize(ref serialized_proposal);
-            self.simple_loan._get_proposal_hash(PROPOSAL_TYPEHASH, serialized_proposal)
+            self.simple_loan._get_proposal_hash(serialized_proposal)
         }
 
         /// Encodes the proposal data and values into a single array.
@@ -430,8 +412,8 @@ pub mod SimpleLoanFungibleProposal {
             )
         }
 
-        fn PROPOSAL_TYPEHASH(self: @ContractState) -> felt252 {
-            PROPOSAL_TYPEHASH
+        fn VERSION(self: @ContractState) -> felt252 {
+            VERSION
         }
     }
 

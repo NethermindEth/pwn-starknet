@@ -1,17 +1,14 @@
 use SimpleLoanDutchAuctionProposal::{Proposal, ProposalValues};
-use pwn::loan::lib::signature_checker::Signature;
 use pwn::loan::terms::simple::loan::types::Terms;
 
 #[starknet::interface]
 pub trait ISimpleLoanDutchAuctionProposal<TState> {
-    fn make_proposal(ref self: TState, proposal: Proposal);
+    fn make_proposal(ref self: TState, proposal: Proposal) -> felt252;
     fn accept_proposal(
         ref self: TState,
         acceptor: starknet::ContractAddress,
         refinancing_loan_id: felt252,
         proposal_data: Array<felt252>,
-        proposal_inclusion_proof: Array<u256>,
-        signature: Signature,
     ) -> (felt252, Terms);
     fn get_proposal_hash(self: @TState, proposal: Proposal) -> felt252;
     fn encode_proposal_data(
@@ -21,11 +18,11 @@ pub trait ISimpleLoanDutchAuctionProposal<TState> {
         self: @TState, encoded_data: Array<felt252>
     ) -> (Proposal, ProposalValues);
     fn get_credit_amount(self: @TState, proposal: Proposal, timestamp: u64) -> u256;
-    fn PROPOSAL_TYPEHASH(self: @TState) -> felt252;
+    fn VERSION(self: @TState) -> felt252;
 }
 
 //! The `SimpleLoanDutchAuctionProposal` module provides a mechanism for creating and accepting 
-//! loan proposals using a Dutch auction model . This module 
+//! loan proposals using a Dutch auction model. This module 
 //! integrates multiple components to offer a comprehensive solution for handling loan proposals, 
 //! including encoding and decoding proposal data, computing proposal hashes, and managing auction 
 //! dynamics.
@@ -34,7 +31,7 @@ pub trait ISimpleLoanDutchAuctionProposal<TState> {
 //! 
 //! - **Proposal Creation**: Allows the creation of loan proposals with specific terms and conditions.
 //! - **Proposal Acceptance**: Facilitates the acceptance of loan proposals, including the 
-//!   verification of signatures and proposal data.
+//!   verification of proposal data.
 //! - **Proposal Hashing**: Computes unique hashes for proposals to ensure data integrity and 
 //!   security.
 //! - **Proposal Encoding/Decoding**: Provides functionality to encode and decode proposal data 
@@ -50,14 +47,13 @@ pub trait ISimpleLoanDutchAuctionProposal<TState> {
 //! 
 //! # Constants
 //! 
-//! - `PROPOSAL_TYPEHASH`: The type hash for proposals.
+//! - `VERSION`: The version of the contract.
 //! - `MINUTE`: Represents one minute in seconds.
 //! - `DUTCH_PROPOSAL_DATA_LEN`: The expected length of the encoded proposal data.
 //! 
 //! This module is designed to provide a robust and flexible framework for managing loan proposals 
 //! using a Dutch auction model, integrating seamlessly with other components of the Starknet 
 //! ecosystem.
-
 #[starknet::contract]
 pub mod SimpleLoanDutchAuctionProposal {
     use core::integer::BoundedInt;
@@ -68,7 +64,7 @@ pub mod SimpleLoanDutchAuctionProposal {
     };
     use pwn::multitoken::library::MultiToken;
     use starknet::ContractAddress;
-    use super::{Signature, Terms};
+    use super::Terms;
 
     component!(
         path: SimpleLoanProposalComponent, storage: simple_loan, event: SimpleLoanProposalEvent
@@ -78,10 +74,8 @@ pub mod SimpleLoanDutchAuctionProposal {
     impl SimpleLoanProposalImpl =
         SimpleLoanProposalComponent::SimpleLoanProposalImpl<ContractState>;
     impl SimpleLoanProposalInternal = SimpleLoanProposalComponent::InternalImpl<ContractState>;
-    // NOTE: we can hard code this by calculating the poseidon hash of the string 
-    // in the Solidity contract offline.
-    pub const PROPOSAL_TYPEHASH: felt252 =
-        0x011b95ba182b3ea59860b7ebc4e42e45c9c9ae5c8f6bd7b8dbbde7415bb396b7;
+
+    pub const VERSION: felt252 = '1.0';
     pub const MINUTE: u64 = 60;
     pub const DUTCH_PROPOSAL_DATA_LEN: usize = 34;
 
@@ -214,7 +208,7 @@ pub mod SimpleLoanDutchAuctionProposal {
         revoke_nonce: ContractAddress,
         config: ContractAddress,
     ) {
-        self.simple_loan._initialize(hub, revoke_nonce, config, 'SimpleLoanDutchAuctionProposal', '1.0');
+        self.simple_loan._initialize(hub, revoke_nonce, config);
     }
 
     #[abi(embed_v0)]
@@ -232,22 +226,22 @@ pub mod SimpleLoanDutchAuctionProposal {
         /// - Computes the hash of the proposal.
         /// - Calls the internal method to make the proposal.
         /// - Emits a `ProposalMade` event.
-        fn make_proposal(ref self: ContractState, proposal: Proposal) {
+        fn make_proposal(ref self: ContractState, proposal: Proposal) -> felt252 {
             let proposal_hash = self.get_proposal_hash(proposal);
             self.simple_loan._make_proposal(proposal_hash, proposal.proposer);
 
             self.emit(ProposalMade { proposal_hash, proposer: proposal.proposer, proposal, });
+
+            proposal_hash
         }
 
-        /// Accepts a loan proposal using the provided details and signature.
+        /// Accepts a loan proposal using the provided details.
         ///
         /// # Arguments
         ///
         /// - `acceptor`: The address of the acceptor.
         /// - `refinancing_loan_id`: The ID of the loan being refinanced, if applicable.
         /// - `proposal_data`: The encoded data of the proposal.
-        /// - `proposal_inclusion_proof`: The inclusion proof for the proposal.
-        /// - `signature`: The signature for validating the proposal.
         ///
         /// # Returns
         ///
@@ -271,8 +265,6 @@ pub mod SimpleLoanDutchAuctionProposal {
             acceptor: starknet::ContractAddress,
             refinancing_loan_id: felt252,
             proposal_data: Array<felt252>,
-            proposal_inclusion_proof: Array<u256>,
-            signature: Signature,
         ) -> (felt252, Terms) {
             if proposal_data.len() != DUTCH_PROPOSAL_DATA_LEN {
                 Err::INVALID_PROPOSAL_DATA_LEN(proposal_data.len());
@@ -281,9 +273,7 @@ pub mod SimpleLoanDutchAuctionProposal {
 
             let mut serialized_proposal = array![];
             proposal.serialize(ref serialized_proposal);
-            let proposal_hash = self
-                .simple_loan
-                ._get_proposal_hash(PROPOSAL_TYPEHASH, serialized_proposal);
+            let proposal_hash = self.simple_loan._get_proposal_hash(serialized_proposal);
 
             let credit_amount = self.get_credit_amount(proposal, starknet::get_block_timestamp());
 
@@ -328,14 +318,7 @@ pub mod SimpleLoanDutchAuctionProposal {
 
             self
                 .simple_loan
-                ._accept_proposal(
-                    acceptor,
-                    refinancing_loan_id,
-                    proposal_hash,
-                    proposal_inclusion_proof,
-                    signature,
-                    proposal_base
-                );
+                ._accept_proposal(acceptor, refinancing_loan_id, proposal_hash, proposal_base);
 
             let loan_terms = Terms {
                 lender: if proposal.is_offer {
@@ -385,7 +368,7 @@ pub mod SimpleLoanDutchAuctionProposal {
         fn get_proposal_hash(self: @ContractState, proposal: Proposal) -> felt252 {
             let mut serialized_proposal = array![];
             proposal.serialize(ref serialized_proposal);
-            self.simple_loan._get_proposal_hash(PROPOSAL_TYPEHASH, serialized_proposal)
+            self.simple_loan._get_proposal_hash(serialized_proposal)
         }
 
         /// Encodes the proposal data and values into a single array.
@@ -502,8 +485,8 @@ pub mod SimpleLoanDutchAuctionProposal {
             }
         }
 
-        fn PROPOSAL_TYPEHASH(self: @ContractState) -> felt252 {
-            PROPOSAL_TYPEHASH
+        fn VERSION(self: @ContractState) -> felt252 {
+            VERSION
         }
     }
 

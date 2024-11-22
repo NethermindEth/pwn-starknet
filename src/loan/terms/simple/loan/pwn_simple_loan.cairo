@@ -24,8 +24,6 @@
 //! - `MINUTE`: A constant representing one minute in seconds.
 //! - `MIN_EXTENSION_DURATION`: The minimum duration for a loan extension in seconds.
 //! - `MAX_EXTENSION_DURATION`: The maximum duration for a loan extension in seconds.
-//! - `EXTENSION_PROPOSAL_TYPEHASH`: The type hash for extension proposals.
-//! - `BASE_DOMAIN_SEPARATOR`: The base domain separator for hashing purposes.
 //! 
 //! This module is designed to provide a secure and flexible framework for managing simple loans, 
 //! integrating seamlessly with other components.
@@ -45,7 +43,7 @@ pub mod PwnSimpleLoan {
     use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
     use pwn::hub::pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait};
     use pwn::hub::pwn_hub_tags;
-    use pwn::loan::lib::{fee_calculator, math, signature_checker};
+    use pwn::loan::lib::{fee_calculator, math};
     use pwn::loan::terms::simple::loan::error::Err;
     use pwn::loan::terms::simple::loan::{
         types::{
@@ -100,17 +98,10 @@ pub mod PwnSimpleLoan {
     // @note: 90 days 
     pub const MAX_EXTENSION_DURATION: u64 = 86400 * 90;
 
-    pub const EXTENSION_PROPOSAL_TYPEHASH: felt252 =
-        0x7e09d567c8fe43c280650abe4557a43fa693063ebc6c47ff3c585866507c732;
-
-    pub const BASE_DOMAIN_SEPARATOR: felt252 =
-        0x23b0e9af1d18f697d3e6d8bee3b1defcd47b5be37cf6d26fde2b5d5485065bc;
-
     #[storage]
     struct Storage {
         loans: LegacyMap::<felt252, Loan>,
         extension_proposal_made: LegacyMap::<felt252, bool>,
-        domain_separator: felt252,
         hub: IPwnHubDispatcher,
         loan_token: IPwnLoanDispatcher,
         config: IPwnConfigDispatcher,
@@ -244,9 +235,9 @@ pub mod PwnSimpleLoan {
             if (caller_spec.refinancing_loan_id != 0) {
                 // Note: enable refinancing when Cairo v0.13.4 is released with try/catch support
                 Err::REFINANCING_DISABLED();
-                // let loan = self.loans.read(caller_spec.refinancing_loan_id);
-                // self._check_loan_can_be_repaid(loan.status, loan.default_timestamp);
-                // self._update_repaid_loan(caller_spec.refinancing_loan_id);
+            // let loan = self.loans.read(caller_spec.refinancing_loan_id);
+            // self._check_loan_can_be_repaid(loan.status, loan.default_timestamp);
+            // self._update_repaid_loan(caller_spec.refinancing_loan_id);
             }
 
             let (proposal_hash, loan_terms) = ISimpleLoanAcceptProposalDispatcher {
@@ -256,8 +247,6 @@ pub mod PwnSimpleLoan {
                     acceptor: caller,
                     refinancing_loan_id: caller_spec.refinancing_loan_id,
                     proposal_data: proposal_spec.proposal_data,
-                    proposal_inclusion_proof: proposal_spec.proposal_inclusion_proof,
-                    signature: proposal_spec.signature
                 );
 
             let current_lender_spec_hash = self.get_lender_spec_hash(lender_spec.clone());
@@ -341,16 +330,16 @@ pub mod PwnSimpleLoan {
             let repayment_amount = self.get_loan_repayment_amount(loan_id);
             self.vault._pull(ERC20(loan.credit_address, repayment_amount), caller);
             self.vault._push(loan.collateral, loan.borrower);
-            // Note: enable automatic claim when Cairo v0.13.4 is released with try/catch support
-            // self
-            //     ._try_claim_repaid_loan(
-            //         loan_id,
-            //         repayment_amount,
-            //         ERC721ABIDispatcher {
-            //             contract_address: self.loan_token.read().contract_address
-            //         }
-            //             .owner_of(loan_id.try_into().expect('repay_loan'))
-            //     );
+        // Note: enable automatic claim when Cairo v0.13.4 is released with try/catch support
+        // self
+        //     ._try_claim_repaid_loan(
+        //         loan_id,
+        //         repayment_amount,
+        //         ERC721ABIDispatcher {
+        //             contract_address: self.loan_token.read().contract_address
+        //         }
+        //             .owner_of(loan_id.try_into().expect('repay_loan'))
+        //     );
         }
 
         /// Claims a loan, transferring collateral or repayment assets based on loan status.
@@ -407,11 +396,13 @@ pub mod PwnSimpleLoan {
         /// - Validates the caller as the proposer.
         /// - Computes the extension hash and marks the proposal as made.
         /// - Emits an `ExtensionProposalMade` event.
-        fn make_extension_proposal(ref self: ContractState, extension: ExtensionProposal) {
+        fn make_extension_proposal(
+            ref self: ContractState, extension: ExtensionProposal
+        ) -> felt252 {
             let caller = starknet::get_caller_address();
 
             if (caller != extension.proposer) {
-                Err::INVALID_EXTENSION_SIGNER(allowed: extension.proposer, current: caller);
+                Err::INVALID_EXTENSION_PROPOSER(allowed: extension.proposer, current: caller);
             }
 
             let extension_hash = self.get_extension_hash(extension);
@@ -422,14 +413,15 @@ pub mod PwnSimpleLoan {
                         extension_hash, proposer: extension.proposer, extension_proposal: extension
                     }
                 );
+
+            extension_hash
         }
 
-        /// Extends a loan based on an extension proposal and a valid signature.
+        /// Extends a loan based on an extension proposal.
         ///
         /// # Arguments
         ///
         /// - `extension`: The extension proposal details.
-        /// - `signature`: The signature for validating the extension.
         ///
         /// # Requirements
         ///
@@ -441,15 +433,11 @@ pub mod PwnSimpleLoan {
         ///
         /// # Actions
         ///
-        /// - Validates the extension proposal, signature, and nonce.
+        /// - Validates the extension proposal.
         /// - Updates the loan's default timestamp with the extension duration.
         /// - Emits a `LoanExtended` event.
         /// - If compensation is provided, it transfers the compensation to the loan owner.
-        fn extend_loan(
-            ref self: ContractState,
-            extension: ExtensionProposal,
-            signature: signature_checker::Signature,
-        ) {
+        fn extend_loan(ref self: ContractState, extension: ExtensionProposal,) {
             let mut loan = self.loans.read(extension.loan_id);
             let caller = starknet::get_caller_address();
 
@@ -464,11 +452,7 @@ pub mod PwnSimpleLoan {
             let extension_hash = self.get_extension_hash(extension.clone());
 
             if (!self.extension_proposal_made.read(extension_hash)) {
-                if (!signature_checker::is_valid_signature_now(extension.proposer, extension_hash, signature)) {
-                    signature_checker::Err::INVALID_SIGNATURE(
-                        signer: extension.proposer, digest: extension_hash
-                    );
-                }
+                Err::INVALID_EXTENSION_PROPOSAL(extension_hash);
             }
 
             let current_block_timestamp = starknet::get_block_timestamp();
@@ -498,13 +482,15 @@ pub mod PwnSimpleLoan {
 
             if (caller == loan_owner) {
                 if (extension.proposer != loan.borrower) {
-                    Err::INVALID_EXTENSION_SIGNER(
+                    Err::INVALID_EXTENSION_PROPOSER(
                         allowed: loan.borrower, current: extension.proposer
                     );
                 }
             } else if (caller == loan.borrower) {
                 if (extension.proposer != loan_owner) {
-                    Err::INVALID_EXTENSION_SIGNER(allowed: loan_owner, current: extension.proposer);
+                    Err::INVALID_EXTENSION_PROPOSER(
+                        allowed: loan_owner, current: extension.proposer
+                    );
                 }
             } else {
                 Err::INVALID_EXTENSION_CALLER();
@@ -605,12 +591,7 @@ pub mod PwnSimpleLoan {
         ///
         /// - The computed hash as `felt252`.
         fn get_extension_hash(self: @ContractState, extension: ExtensionProposal) -> felt252 {
-            let domain_separator = self.domain_separator.read();
-
             let hash_elements: Array<felt252> = array![
-                1901,
-                domain_separator,
-                EXTENSION_PROPOSAL_TYPEHASH,
                 extension.loan_id,
                 extension.compensation_address.try_into().expect('get_extension_hash'),
                 extension.compensation_amount.try_into().expect('get_extension_hash'),
@@ -735,14 +716,6 @@ pub mod PwnSimpleLoan {
             ACCRUING_INTEREST_APR_DENOMINATOR
         }
 
-        fn DOMAIN_SEPARATOR(self: @ContractState) -> felt252 {
-            self.domain_separator.read()
-        }
-
-        fn EXTENSION_PROPOSAL_TYPEHASH(self: @ContractState) -> felt252 {
-            EXTENSION_PROPOSAL_TYPEHASH
-        }
-
         fn MAX_ACCRUING_INTEREST_APR(self: @ContractState) -> u32 {
             MAX_ACCRUING_INTEREST_APR
         }
@@ -792,11 +765,6 @@ pub mod PwnSimpleLoan {
             self.config.write(config_dispatcher);
             self.revoked_nonce.write(revoked_nonce_dispatcher);
             self.category_registry.write(category_registry_dispatcher);
-            let hash_elements: Array<felt252> = array![
-                BASE_DOMAIN_SEPARATOR, starknet::get_contract_address().into()
-            ];
-            let domain_separator = poseidon_hash_span(hash_elements.span());
-            self.domain_separator.write(domain_separator);
             self.src5.register_interface(IERC1155_RECEIVER_ID);
             self.src5.register_interface(IERC721_RECEIVER_ID);
         }
