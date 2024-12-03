@@ -6,7 +6,6 @@ mod unit {
     mod multitoken_category_registry_test;
     mod multitoken_library_test;
     mod revoked_nonce_test;
-    mod signature_checker_test;
     mod simple_loan_dutch_auction_proposal_test;
     mod simple_loan_fungible_proposal_test;
     mod simple_loan_list_proposal_test;

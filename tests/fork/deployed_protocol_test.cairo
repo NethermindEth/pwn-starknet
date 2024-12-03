@@ -9,7 +9,6 @@ use openzeppelin::token::{
 };
 use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
 use pwn::hub::{pwn_hub::{PwnHub, IPwnHubDispatcher, IPwnHubDispatcherTrait}, pwn_hub_tags};
-use pwn::loan::lib::signature_checker::Signature;
 use pwn::loan::terms::simple::loan::{
     interface::{IPwnSimpleLoanDispatcher, IPwnSimpleLoanDispatcherTrait},
     types::{LenderSpec, ProposalSpec, CallerSpec}

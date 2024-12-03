@@ -21,7 +21,10 @@ use pwn::mocks::pwn_vault::{IPwnVaultTestContractDispatcher, IPwnVaultTestContra
 use pwn::multitoken::library::{
     MultiToken, MultiToken::Asset, MultiToken::Category, MultiToken::AssetTrait
 };
-
+use snforge_std::signature::stark_curve::{
+    StarkCurveKeyPairImpl, StarkCurveSignerImpl, StarkCurveVerifierImpl
+};
+use snforge_std::signature::{KeyPairTrait, KeyPair};
 use snforge_std::{
     declare, ContractClassTrait, store, load, map_entry_address, start_cheat_caller_address,
     CheatSpan, cheat_caller_address, spy_events, mock_call, EventSpy, EventSpyTrait,
@@ -32,11 +35,21 @@ use starknet::ContractAddress;
 use super::super::integration::base_integration_test::{erc20_mint, erc721_mint};
 
 fn ALICE() -> ContractAddress {
-    starknet::contract_address_const::<'Alice'>()
+    let key_pair = KeyPairTrait::<felt252, felt252>::generate();
+    let contract = declare("AccountUpgradeable").unwrap();
+    let (alice, _) = contract.deploy(@array![key_pair.public_key]).unwrap();
+    alice
 }
 
-fn BOB() -> ContractAddress {
-    starknet::contract_address_const::<'Bob'>()
+fn ALICE_and_BOB() -> (ContractAddress, ContractAddress) {
+    let key_pair = KeyPairTrait::<felt252, felt252>::generate();
+    let contract = declare("AccountUpgradeable").unwrap();
+    let (alice, _) = contract.deploy(@array![key_pair.public_key]).unwrap();
+
+    let key_pair = KeyPairTrait::<felt252, felt252>::generate();
+    let (bob, _) = contract.deploy(@array![key_pair.public_key]).unwrap();
+
+    (alice, bob)
 }
 
 fn deploy() -> (
@@ -88,10 +101,10 @@ mod pwn_vault_pull_test {
         MultiToken, MultiToken::Asset, MultiToken::Category, MultiToken::AssetTrait
     };
     use super::{
-        ERC721ABIDispatcher, ERC721ABIDispatcherTrait, PwnVaultTestContract, deploy, ALICE, BOB,
-        store, map_entry_address, CheatSpan, cheat_caller_address, mock_call, spy_events,
-        EventSpyTrait, EventSpyAssertionsTrait, ContractAddress, IPwnVaultTestContractDispatcher,
-        IPwnVaultTestContractDispatcherTrait, PwnVaultComponent
+        ERC721ABIDispatcher, ERC721ABIDispatcherTrait, PwnVaultTestContract, deploy, ALICE,
+        ALICE_and_BOB, store, map_entry_address, CheatSpan, cheat_caller_address, mock_call,
+        spy_events, EventSpyTrait, EventSpyAssertionsTrait, ContractAddress,
+        IPwnVaultTestContractDispatcher, IPwnVaultTestContractDispatcherTrait, PwnVaultComponent
     };
 
     #[test]
@@ -148,8 +161,8 @@ mod pwn_vault_push_test {
         MultiToken, MultiToken::Asset, MultiToken::Category, MultiToken::AssetTrait
     };
     use super::{
-        ERC721ABIDispatcher, ERC721ABIDispatcherTrait, PwnVaultTestContract, deploy, ALICE, BOB,
-        CheatSpan, cheat_caller_address, mock_call, spy_events, EventSpyTrait,
+        ERC721ABIDispatcher, ERC721ABIDispatcherTrait, PwnVaultTestContract, deploy, ALICE,
+        ALICE_and_BOB, CheatSpan, cheat_caller_address, mock_call, spy_events, EventSpyTrait,
         EventSpyAssertionsTrait, ContractAddress, IPwnVaultTestContractDispatcher,
         IPwnVaultTestContractDispatcherTrait
     };
@@ -205,8 +218,8 @@ mod pwn_vault_push_from_test {
         MultiToken, MultiToken::Asset, MultiToken::Category, MultiToken::AssetTrait
     };
     use super::{
-        ERC721ABIDispatcher, ERC721ABIDispatcherTrait, PwnVaultTestContract, deploy, ALICE, BOB,
-        CheatSpan, cheat_caller_address, mock_call, spy_events, EventSpyTrait,
+        ERC721ABIDispatcher, ERC721ABIDispatcherTrait, PwnVaultTestContract, deploy, ALICE,
+        ALICE_and_BOB, CheatSpan, cheat_caller_address, mock_call, spy_events, EventSpyTrait,
         EventSpyAssertionsTrait, ContractAddress, IPwnVaultTestContractDispatcher,
         IPwnVaultTestContractDispatcherTrait
     };
@@ -214,8 +227,7 @@ mod pwn_vault_push_from_test {
     #[test]
     fn test_should_call_safe_transfer_from_from_origin_to_beneficiary() {
         let (vault, erc721, _, _) = deploy();
-        let ALICE: ContractAddress = ALICE();
-        let BOB: ContractAddress = BOB();
+        let (ALICE, BOB) = ALICE_and_BOB();
         super::erc721_mint(
             erc721.contract_address, ALICE, 42
         ); // Alice got minted an ERC721 token with id 42
@@ -254,8 +266,7 @@ mod pwn_vault_push_from_test {
     #[should_panic]
     fn test_should_fail_when_incomplete_transaction() {
         let (vault, erc721, _, _) = deploy();
-        let ALICE: ContractAddress = ALICE();
-        let BOB: ContractAddress = BOB();
+        let (ALICE, BOB) = ALICE_and_BOB();
         mock_call(erc721.contract_address, selector!("transferFrom"), true, 1);
         let asset: Asset = Asset {
             category: Category::ERC721, asset_address: erc721.contract_address, id: 42, amount: 1
@@ -271,8 +282,8 @@ mod pwn_vault_withdraw_from_pool_test {
     };
     use super::{
         ERC20ABIDispatcher, ERC20ABIDispatcherTrait, declare, PwnVaultTestContract, MockPoolAdapter,
-        deploy, ALICE, BOB, CheatSpan, cheat_caller_address, mock_call, spy_events, EventSpyTrait,
-        EventSpyAssertionsTrait, ContractAddress, IPwnVaultTestContractDispatcher,
+        deploy, ALICE, ALICE_and_BOB, CheatSpan, cheat_caller_address, mock_call, spy_events,
+        EventSpyTrait, EventSpyAssertionsTrait, ContractAddress, IPwnVaultTestContractDispatcher,
         IPwnVaultTestContractDispatcherTrait, IPoolAdapterDispatcher, IPoolAdapterDispatcherTrait
     };
 
@@ -325,8 +336,8 @@ mod pwn_vault_supply_to_pool_test {
     };
     use super::{
         ERC20ABIDispatcher, ERC20ABIDispatcherTrait, declare, PwnVaultTestContract, MockPoolAdapter,
-        deploy, ALICE, BOB, CheatSpan, cheat_caller_address, mock_call, spy_events, EventSpyTrait,
-        EventSpyAssertionsTrait, ContractAddress, IPwnVaultTestContractDispatcher,
+        deploy, ALICE, ALICE_and_BOB, CheatSpan, cheat_caller_address, mock_call, spy_events,
+        EventSpyTrait, EventSpyAssertionsTrait, ContractAddress, IPwnVaultTestContractDispatcher,
         IPwnVaultTestContractDispatcherTrait, IPoolAdapterDispatcher, IPoolAdapterDispatcherTrait
     };
 
@@ -367,4 +378,3 @@ mod pwn_vault_supply_to_pool_test {
         vault.supply_to_pool(asset, pool_adapter, pool, ALICE);
     }
 }
-

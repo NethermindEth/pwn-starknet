@@ -131,7 +131,7 @@ pub mod SimpleLoanDutchAuctionProposal {
     }
 
 
-    #[derive(Default, Drop, Serde)]
+    #[derive(Copy, Default, Drop, Serde)]
     pub struct ProposalValues {
         pub intended_credit_amount: u256,
         pub slippage: u256,
