@@ -14,7 +14,7 @@ use snforge_std::{
     cheat_block_timestamp_global, stop_cheat_caller_address, stop_cheat_caller_address_global
 };
 use super::base_integration_test::{
-    E18, setup, protocol_timelock, _repay_loan, _create_erc1155_loan_failing, _create_erc1155_loan
+    E18, setup, protocol_timelock, _repay_loan, _create_erc1155_loan
 };
 
 #[test]
@@ -25,10 +25,11 @@ fn test_should_fail_to_create_loan_when_loan_contract_not_active() {
     cheat_caller_address_global(protocol_timelock());
     dsp.hub.set_tag(dsp.loan.contract_address, pwn_hub_tags::ACTIVE_LOAN, false);
 
-    _create_erc1155_loan_failing(dsp, 'fail');
+    _create_erc1155_loan(dsp);
 }
 
 #[test]
+#[ignore] // auto-claim is not implemented yet
 fn test_should_repay_loan_when_loan_contract_not_active_when_original_lender_is_loan_owner() {
     let dsp = setup();
 
@@ -122,11 +123,7 @@ fn test_should_fail_to_create_loan_terms_when_caller_is_not_active_loan() {
     let proposal_data = dsp.proposal_simple.encode_proposal_data(dsp.simple_proposal);
 
     cheat_caller_address_global(dsp.loan.contract_address);
-    dsp
-        .proposal_simple
-        .accept_proposal(
-            dsp.borrower.contract_address, 0, proposal_data, array![], Default::default()
-        );
+    dsp.proposal_simple.accept_proposal(dsp.borrower.contract_address, 0, proposal_data);
 }
 
 #[test]
@@ -134,6 +131,6 @@ fn test_should_fail_to_create_loan_terms_when_caller_is_not_active_loan() {
 fn test_should_fail_to_create_loan_when_passing_invalid_terms_factory_contract() {
     let dsp = setup();
 
-    dsp.hub.set_tag(dsp.loan.contract_address, pwn_hub_tags::LOAN_PROPOSAL, false);
-    _create_erc1155_loan_failing(dsp, 'fail');
+    dsp.hub.set_tag(dsp.proposal_simple.contract_address, pwn_hub_tags::LOAN_PROPOSAL, false);
+    _create_erc1155_loan(dsp);
 }

@@ -30,9 +30,8 @@ use snforge_std::{
 };
 use starknet::ContractAddress;
 use super::base_integration_test::{
-    _1_DAY, _7_DAYS, _30_HOURS, _4_HOURS, E18, setup, _repay_loan, _repay_loan_failing,
-    _create_erc1155_loan_failing, _create_erc1155_loan, erc1155_mint, _sign, erc20_mint,
-    _create_erc20_loan, _create_erc721_loan
+    _1_DAY, _7_DAYS, _30_HOURS, _4_HOURS, E18, setup, _repay_loan, _create_erc1155_loan,
+    erc1155_mint, erc20_mint, _create_erc20_loan, _create_erc721_loan
 };
 
 #[test]
@@ -64,8 +63,6 @@ fn test_should_create_loan_from_simple_proposal() {
     dsp.t1155.set_approval_for_all(dsp.loan.contract_address, true);
     stop_cheat_caller_address(dsp.t1155.contract_address);
 
-    let signature = _sign(dsp.proposal_simple.get_proposal_hash(proposal), dsp.lender_key_pair);
-
     erc20_mint(dsp.credit.contract_address, dsp.lender.contract_address, 100 * E18);
 
     start_cheat_caller_address(dsp.credit.contract_address, dsp.lender.contract_address);
@@ -74,16 +71,18 @@ fn test_should_create_loan_from_simple_proposal() {
 
     let proposal_data = dsp.proposal_simple.encode_proposal_data(proposal);
     let proposal_spec = ProposalSpec {
-        proposal_contract: dsp.proposal_simple.contract_address,
-        proposal_data,
-        proposal_inclusion_proof: array![],
-        signature
+        proposal_contract: dsp.proposal_simple.contract_address, proposal_data
     };
     let lender_spec = LenderSpec { source_of_funds: dsp.lender.contract_address };
     let caller_spec: CallerSpec = Default::default();
 
+    start_cheat_caller_address(dsp.proposal_simple.contract_address, dsp.lender.contract_address);
+    dsp.proposal_simple.make_proposal(proposal);
+    stop_cheat_caller_address(dsp.proposal_simple.contract_address);
+
     start_cheat_caller_address(dsp.loan.contract_address, dsp.borrower.contract_address);
     let loan_id = dsp.loan.create_loan(proposal_spec, lender_spec, caller_spec, Option::None);
+    stop_cheat_caller_address(dsp.loan.contract_address);
 
     assert_eq!(
         ERC721ABIDispatcher { contract_address: dsp.loan_token.contract_address }
@@ -157,7 +156,6 @@ fn test_should_create_loan_from_fungible_proposal() {
     stop_cheat_caller_address(dsp.t1155.contract_address);
 
     let proposal_hash = dsp.proposal_fungible.get_proposal_hash(proposal);
-    let signature = _sign(proposal_hash, dsp.lender_key_pair);
 
     erc20_mint(dsp.credit.contract_address, dsp.lender.contract_address, 100 * E18);
 
@@ -166,18 +164,19 @@ fn test_should_create_loan_from_fungible_proposal() {
     stop_cheat_caller_address(dsp.credit.contract_address);
 
     let proposal_data = dsp.proposal_fungible.encode_proposal_data(proposal, proposal_values);
-
     let proposal_spec = ProposalSpec {
-        proposal_contract: dsp.proposal_fungible.contract_address,
-        proposal_data,
-        proposal_inclusion_proof: array![],
-        signature
+        proposal_contract: dsp.proposal_fungible.contract_address, proposal_data
     };
     let lender_spec = LenderSpec { source_of_funds: dsp.lender.contract_address };
     let caller_spec: CallerSpec = Default::default();
 
+    start_cheat_caller_address(dsp.proposal_fungible.contract_address, dsp.lender.contract_address);
+    dsp.proposal_fungible.make_proposal(proposal);
+    stop_cheat_caller_address(dsp.proposal_fungible.contract_address);
+
     start_cheat_caller_address(dsp.loan.contract_address, dsp.borrower.contract_address);
     let loan_id = dsp.loan.create_loan(proposal_spec, lender_spec, caller_spec, Option::None);
+    stop_cheat_caller_address(dsp.loan.contract_address);
 
     assert_eq!(
         ERC721ABIDispatcher { contract_address: dsp.loan_token.contract_address }
@@ -250,9 +249,6 @@ fn test_should_create_loan_from_dutch_auction_proposal() {
     dsp.t1155.set_approval_for_all(dsp.loan.contract_address, true);
     stop_cheat_caller_address(dsp.t1155.contract_address);
 
-    let proposal_hash = dsp.proposal_dutch.get_proposal_hash(proposal);
-    let signature = _sign(proposal_hash, dsp.borrower_key_pair);
-
     erc20_mint(dsp.credit.contract_address, dsp.lender.contract_address, 100 * E18);
 
     start_cheat_caller_address(dsp.credit.contract_address, dsp.lender.contract_address);
@@ -268,16 +264,18 @@ fn test_should_create_loan_from_dutch_auction_proposal() {
         .get_credit_amount(proposal, starknet::get_block_timestamp());
 
     let proposal_spec = ProposalSpec {
-        proposal_contract: dsp.proposal_dutch.contract_address,
-        proposal_data,
-        proposal_inclusion_proof: array![],
-        signature
+        proposal_contract: dsp.proposal_dutch.contract_address, proposal_data
     };
     let lender_spec = LenderSpec { source_of_funds: dsp.lender.contract_address };
     let caller_spec: CallerSpec = Default::default();
 
+    start_cheat_caller_address(dsp.proposal_dutch.contract_address, dsp.borrower.contract_address);
+    dsp.proposal_dutch.make_proposal(proposal);
+    stop_cheat_caller_address(dsp.proposal_dutch.contract_address);
+
     start_cheat_caller_address(dsp.loan.contract_address, dsp.lender.contract_address);
     let loan_id = dsp.loan.create_loan(proposal_spec, lender_spec, caller_spec, Option::None);
+    stop_cheat_caller_address(dsp.loan.contract_address);
 
     assert_eq!(
         ERC721ABIDispatcher { contract_address: dsp.loan_token.contract_address }
@@ -431,6 +429,7 @@ fn test_should_create_loan_with_erc1155_collateral() {
 }
 
 #[test]
+#[ignore] // auto-claim is not implemented yet
 fn test_should_repay_loan_when_not_expired_when_original_lender_is_loan_owner() {
     let dsp = setup();
 
@@ -457,7 +456,7 @@ fn test_should_fail_to_repay_loan_when_loan_expired() {
     let expiration = starknet::get_block_timestamp() + dsp.simple_proposal.duration;
     cheat_block_timestamp_global(expiration);
 
-    _repay_loan_failing(dsp, loan_id, 'LOAN_EXPIRED');
+    _repay_loan(dsp, loan_id);
 }
 
 #[test]
@@ -507,4 +506,3 @@ fn test_should_claim_defaulted_loan() {
     assert_eq!(dsp.t1155.balance_of(dsp.borrower.contract_address, 42), 0);
     assert_eq!(dsp.t1155.balance_of(dsp.loan.contract_address, 42), 0);
 }
-

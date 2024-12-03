@@ -1,17 +1,14 @@
 use SimpleLoanListProposal::{Proposal, ProposalValues};
-use pwn::loan::lib::signature_checker::Signature;
 use pwn::loan::terms::simple::loan::types::Terms;
 
 #[starknet::interface]
 pub trait ISimpleLoanListProposal<TState> {
-    fn make_proposal(ref self: TState, proposal: Proposal);
+    fn make_proposal(ref self: TState, proposal: Proposal) -> felt252;
     fn accept_proposal(
         ref self: TState,
         acceptor: starknet::ContractAddress,
         refinancing_loan_id: felt252,
         proposal_data: Array<felt252>,
-        proposal_inclusion_proof: Array<u256>,
-        signature: Signature
     ) -> (felt252, Terms);
     fn get_proposal_hash(self: @TState, proposal: Proposal) -> felt252;
     fn encode_proposal_data(
@@ -20,7 +17,7 @@ pub trait ISimpleLoanListProposal<TState> {
     fn decode_proposal_data(
         self: @TState, encoded_data: Array<felt252>
     ) -> (Proposal, ProposalValues);
-    fn PROPOSAL_TYPEHASH(self: @TState) -> felt252;
+    fn VERSION(self: @TState) -> felt252;
 }
 
 //! The `SimpleLoanListProposal` module provides a mechanism for creating and accepting loan 
@@ -34,7 +31,7 @@ pub trait ISimpleLoanListProposal<TState> {
 //! - **Proposal Creation**: Allows the creation of loan proposals with specific terms and 
 //!   conditions, validated against a whitelist of collateral IDs using Merkle proofs.
 //! - **Proposal Acceptance**: Facilitates the acceptance of loan proposals, including the 
-//!   verification of signatures, proposal data, and whitelist inclusion.
+//!   verification of proposal data and whitelist inclusion.
 //! - **Proposal Hashing**: Computes unique hashes for proposals to ensure data integrity and 
 //!   security.
 //! - **Proposal Encoding/Decoding**: Provides functionality to encode and decode proposal data 
@@ -48,12 +45,11 @@ pub trait ISimpleLoanListProposal<TState> {
 //! 
 //! # Constants
 //! 
-//! - `PROPOSAL_TYPEHASH`: The type hash for proposals.
+//! - `VERSION`: The version of the contract.
 //! 
 //! This module is designed to provide a robust and flexible framework for managing loan proposals 
 //! involving a whitelist of collateral IDs, integrating seamlessly with other components of the 
 //! .
-
 #[starknet::contract]
 pub mod SimpleLoanListProposal {
     use core::array::SpanTrait;
@@ -65,7 +61,7 @@ pub mod SimpleLoanListProposal {
     };
     use pwn::multitoken::library::MultiToken;
     use starknet::ContractAddress;
-    use super::{Signature, Terms};
+    use super::Terms;
 
     component!(
         path: SimpleLoanProposalComponent, storage: simple_loan, event: SimpleLoanProposalEvent
@@ -76,10 +72,7 @@ pub mod SimpleLoanListProposal {
         SimpleLoanProposalComponent::SimpleLoanProposalImpl<ContractState>;
     impl SimpleLoanProposalInternal = SimpleLoanProposalComponent::InternalImpl<ContractState>;
 
-    // NOTE: we can hard code this by calculating the poseidon hash of the string 
-    // in the Solidity contract offline.
-    pub const PROPOSAL_TYPEHASH: felt252 =
-        0x03bf4de294949c186bbc5f2122c5a2c96baf0ea86d6d3b740cddf83e4f890351;
+    pub const VERSION: felt252 = '1.2';
 
     /// Represents a loan proposal with specific terms and conditions.
     #[derive(Copy, Default, Drop, Serde)]
@@ -169,10 +162,8 @@ pub mod SimpleLoanListProposal {
         hub: ContractAddress,
         revoke_nonce: ContractAddress,
         config: ContractAddress,
-        name: felt252,
-        version: felt252,
     ) {
-        self.simple_loan._initialize(hub, revoke_nonce, config, name, version);
+        self.simple_loan._initialize(hub, revoke_nonce, config);
     }
 
     #[abi(embed_v0)]
@@ -188,25 +179,25 @@ pub mod SimpleLoanListProposal {
         /// - Computes the hash of the proposal.
         /// - Calls the internal method to make the proposal.
         /// - Emits a `ProposalMade` event.
-        fn make_proposal(ref self: ContractState, proposal: Proposal) {
+        fn make_proposal(ref self: ContractState, proposal: Proposal) -> felt252 {
             let proposal_hash = self.get_proposal_hash(proposal);
             self.simple_loan._make_proposal(proposal_hash, proposal.proposer);
 
             self.emit(ProposalMade { proposal_hash, proposer: proposal.proposer, proposal, });
+
+            proposal_hash
         }
 
         /// Accepts a loan proposal, verifies the proposal's validity, and processes the loan terms.
         ///
-        /// This function decodes the provided proposal data, verifies the inclusion proof for the collateral ID, and
-        /// ensures that the proposal's terms meet the required conditions. If all checks pass, the loan terms are
-        /// constructed, and the proposal is accepted.
+        /// This function decodes the provided proposal data and ensures that the proposal's terms 
+        /// meet the required conditions. If all checks pass, the loan terms are constructed, and 
+        /// the proposal is accepted.
         ///
         /// # Parameters
         /// - `acceptor`: The address of the account accepting the proposal.
         /// - `refinancing_loan_id`: The ID of the loan being refinanced, if applicable.
         /// - `proposal_data`: An array of felt252 values representing the proposal data.
-        /// - `proposal_inclusion_proof`: An array of felt252 values representing the proof of inclusion for the proposal.
-        /// - `signature`: The signature of the proposer.
         ///
         /// # Returns
         /// A tuple containing the proposal hash and the constructed loan terms.
@@ -220,16 +211,12 @@ pub mod SimpleLoanListProposal {
             acceptor: starknet::ContractAddress,
             refinancing_loan_id: felt252,
             proposal_data: Array<felt252>,
-            proposal_inclusion_proof: Array<u256>,
-            signature: Signature
         ) -> (felt252, super::Terms) {
             let (proposal, proposal_values) = self.decode_proposal_data(proposal_data);
 
             let mut serialized_proposal = array![];
             proposal.serialize(ref serialized_proposal);
-            let proposal_hash = self
-                .simple_loan
-                ._get_proposal_hash(PROPOSAL_TYPEHASH, serialized_proposal);
+            let proposal_hash = self.simple_loan._get_proposal_hash(serialized_proposal);
 
             if proposal.collateral_ids_whitelist_merkle_root != 0 {
                 if !merkle_proof::verify(
@@ -260,14 +247,7 @@ pub mod SimpleLoanListProposal {
 
             self
                 .simple_loan
-                ._accept_proposal(
-                    acceptor,
-                    refinancing_loan_id,
-                    proposal_hash,
-                    proposal_inclusion_proof,
-                    signature,
-                    proposal_base
-                );
+                ._accept_proposal(acceptor, refinancing_loan_id, proposal_hash, proposal_base);
 
             let loan_terms = Terms {
                 lender: if proposal.is_offer {
@@ -307,7 +287,7 @@ pub mod SimpleLoanListProposal {
 
         /// Computes the hash of a given proposal to ensure data integrity and security.
         ///
-        /// This function serializes the proposal and computes its hash using a predefined type hash.
+        /// This function serializes the proposal and computes its hash.
         ///
         /// # Parameters
         /// - `proposal`: The proposal to be hashed.
@@ -317,7 +297,7 @@ pub mod SimpleLoanListProposal {
         fn get_proposal_hash(self: @ContractState, proposal: Proposal) -> felt252 {
             let mut serialized_proposal = array![];
             proposal.serialize(ref serialized_proposal);
-            self.simple_loan._get_proposal_hash(PROPOSAL_TYPEHASH, serialized_proposal)
+            self.simple_loan._get_proposal_hash(serialized_proposal)
         }
 
         /// Encodes proposal data and its values into a compact array format for storage and retrieval.
@@ -367,8 +347,8 @@ pub mod SimpleLoanListProposal {
             (proposal, proposal_values)
         }
 
-        fn PROPOSAL_TYPEHASH(self: @ContractState) -> felt252 {
-            PROPOSAL_TYPEHASH
+        fn VERSION(self: @ContractState) -> felt252 {
+            VERSION
         }
     }
 

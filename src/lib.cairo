@@ -9,6 +9,7 @@ pub mod hub {
 }
 
 pub mod interfaces {
+    pub mod erc5646;
     pub mod fingerprint_computer;
     pub mod pool_adapter;
 }
@@ -19,7 +20,6 @@ pub mod loan {
         pub mod math;
         pub mod merkle_proof;
         pub mod serialization;
-        pub mod signature_checker;
     }
 
     pub mod terms {
@@ -46,7 +46,6 @@ pub mod loan {
     }
 
     pub mod vault {
-        pub mod permit;
         pub mod pwn_vault;
     }
 }

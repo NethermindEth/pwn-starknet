@@ -62,28 +62,28 @@ echo " "
 
 # SimpleLoanSimpleProposal
 echo "Deploying SimpleLoanSimpleProposal..."
-proposal_simple_address=$(starkli deploy "$simple_loan_simple_proposal_class_hash" "$hub_address" "$nonce_address" "$config_address" 0x73696d706c652d73696d706c65 0x312c30 -w)
+proposal_simple_address=$(starkli deploy "$simple_loan_simple_proposal_class_hash" "$hub_address" "$nonce_address" "$config_address" -w)
 echo "SimpleLoanSimpleProposal: $proposal_simple_address" >> "$output_file"
 echo "SimpleLoanSimpleProposal address: $proposal_simple_address"
 echo " "
 
 # SimpleLoanFungibleProposal
 echo "Deploying SimpleLoanFungibleProposal..."
-proposal_fungible_address=$(starkli deploy "$simple_loan_fungible_proposal_class_hash" "$hub_address" "$nonce_address" "$config_address" 0x73696d706c652d66756e6769626c65 0x312c30  -w)
+proposal_fungible_address=$(starkli deploy "$simple_loan_fungible_proposal_class_hash" "$hub_address" "$nonce_address" "$config_address" -w)
 echo "SimpleLoanFungibleProposal: $proposal_fungible_address" >> "$output_file"
 echo "SimpleLoanFungibleProposal address: $proposal_fungible_address"
 echo " "
 
 # SimpleLoanDutchAuctionProposal
 echo "Deploying SimpleLoanDutchAuctionProposal..."
-proposal_dutch_address=$(starkli deploy "$simple_loan_dutch_auction_proposal_class_hash" "$hub_address" "$nonce_address" "$config_address" 0x73696d706c652d6475746368 0x312c30  -w)
+proposal_dutch_address=$(starkli deploy "$simple_loan_dutch_auction_proposal_class_hash" "$hub_address" "$nonce_address" "$config_address" -w)
 echo "SimpleLoanDutchAuctionProposal: $proposal_dutch_address" >> "$output_file"
 echo "SimpleLoanDutchAuctionProposal address: $proposal_dutch_address"
 echo " "
 
 # SimpleLoanListProposal
 echo "Deploying SimpleLoanListProposal..."
-proposal_list_address=$(starkli deploy "$simple_loan_list_proposal_class_hash" "$hub_address" "$nonce_address" "$config_address" 0x73696d706c652d6c697374 0x312c30  -w)
+proposal_list_address=$(starkli deploy "$simple_loan_list_proposal_class_hash" "$hub_address" "$nonce_address" "$config_address" -w)
 echo "SimpleLoanListProposal: $proposal_list_address" >> "$output_file"
 echo "SimpleLoanListProposal address: $proposal_list_address"
 echo " "

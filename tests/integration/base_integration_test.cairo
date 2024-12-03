@@ -6,7 +6,6 @@ use openzeppelin::token::{
 };
 use pwn::config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait};
 use pwn::hub::{pwn_hub::{PwnHub, IPwnHubDispatcher, IPwnHubDispatcherTrait}, pwn_hub_tags};
-use pwn::loan::lib::signature_checker::Signature;
 use pwn::loan::terms::simple::loan::{
     interface::{IPwnSimpleLoanDispatcher, IPwnSimpleLoanDispatcherTrait},
     types::{LenderSpec, ProposalSpec, CallerSpec}
@@ -104,17 +103,13 @@ pub fn setup() -> Setup {
 
     let contract = declare("RevokedNonce").unwrap();
     let (nonce_address, _) = contract
-        .deploy(@array![hub_address.into(), pwn_hub_tags::ACTIVE_LOAN])
+        .deploy(@array![hub_address.into(), pwn_hub_tags::NONCE_MANAGER])
         .unwrap();
     let nonce = IRevokedNonceDispatcher { contract_address: nonce_address };
 
     let contract = declare("SimpleLoanSimpleProposal").unwrap();
     let (proposal_simple_address, _) = contract
-        .deploy(
-            @array![
-                hub_address.into(), nonce_address.into(), config_address.into(), 'name', 'version'
-            ]
-        )
+        .deploy(@array![hub_address.into(), nonce_address.into(), config_address.into()])
         .unwrap();
     let proposal_simple = ISimpleLoanSimpleProposalDispatcher {
         contract_address: proposal_simple_address
@@ -122,11 +117,7 @@ pub fn setup() -> Setup {
 
     let contract = declare("SimpleLoanFungibleProposal").unwrap();
     let (proposal_fungible_address, _) = contract
-        .deploy(
-            @array![
-                hub_address.into(), nonce_address.into(), config_address.into(), 'name', 'version'
-            ]
-        )
+        .deploy(@array![hub_address.into(), nonce_address.into(), config_address.into()])
         .unwrap();
     let proposal_fungible = ISimpleLoanFungibleProposalDispatcher {
         contract_address: proposal_fungible_address
@@ -134,11 +125,7 @@ pub fn setup() -> Setup {
 
     let contract = declare("SimpleLoanDutchAuctionProposal").unwrap();
     let (proposal_dutch_address, _) = contract
-        .deploy(
-            @array![
-                hub_address.into(), nonce_address.into(), config_address.into(), 'name', 'version'
-            ]
-        )
+        .deploy(@array![hub_address.into(), nonce_address.into(), config_address.into()])
         .unwrap();
     let proposal_dutch = ISimpleLoanDutchAuctionProposalDispatcher {
         contract_address: proposal_dutch_address
@@ -146,11 +133,7 @@ pub fn setup() -> Setup {
 
     let contract = declare("SimpleLoanListProposal").unwrap();
     let (proposal_list_address, _) = contract
-        .deploy(
-            @array![
-                hub_address.into(), nonce_address.into(), config_address.into(), 'name', 'version'
-            ]
-        )
+        .deploy(@array![hub_address.into(), nonce_address.into(), config_address.into()])
         .unwrap();
     let proposal_list = ISimpleLoanListProposalDispatcher {
         contract_address: proposal_list_address
@@ -213,19 +196,15 @@ pub fn setup() -> Setup {
     let borrower = IPublicKeyDispatcher { contract_address: borrower_address };
 
     hub.set_tag(proposal_simple_address, pwn_hub_tags::LOAN_PROPOSAL, true);
-    hub.set_tag(proposal_simple_address, pwn_hub_tags::ACTIVE_LOAN, true);
     hub.set_tag(proposal_simple_address, pwn_hub_tags::NONCE_MANAGER, true);
 
     hub.set_tag(proposal_fungible_address, pwn_hub_tags::LOAN_PROPOSAL, true);
-    hub.set_tag(proposal_fungible_address, pwn_hub_tags::ACTIVE_LOAN, true);
     hub.set_tag(proposal_fungible_address, pwn_hub_tags::NONCE_MANAGER, true);
 
     hub.set_tag(proposal_dutch_address, pwn_hub_tags::LOAN_PROPOSAL, true);
-    hub.set_tag(proposal_dutch_address, pwn_hub_tags::ACTIVE_LOAN, true);
     hub.set_tag(proposal_dutch_address, pwn_hub_tags::NONCE_MANAGER, true);
 
     hub.set_tag(proposal_list_address, pwn_hub_tags::LOAN_PROPOSAL, true);
-    hub.set_tag(proposal_list_address, pwn_hub_tags::ACTIVE_LOAN, true);
     hub.set_tag(proposal_list_address, pwn_hub_tags::NONCE_MANAGER, true);
 
     hub.set_tag(loan_address, pwn_hub_tags::ACTIVE_LOAN, true);
@@ -280,11 +259,6 @@ pub fn setup() -> Setup {
     }
 }
 
-pub(crate) fn _sign(digest: felt252, key_pair: KeyPair<felt252, felt252>) -> Signature {
-    let (r, s): (felt252, felt252) = key_pair.sign(digest).unwrap();
-    Signature { r, s }
-}
-
 pub(crate) fn _create_erc20_loan(setup: Setup) -> felt252 {
     let mut simple_proposal = setup.simple_proposal;
     simple_proposal.collateral_category = MultiToken::Category::ERC20;
@@ -298,7 +272,7 @@ pub(crate) fn _create_erc20_loan(setup: Setup) -> felt252 {
     setup.t20.approve(setup.loan.contract_address, 10 * E18);
     stop_cheat_caller_address(setup.t20.contract_address);
 
-    _create_loan(setup, simple_proposal, '')
+    _create_loan(setup, simple_proposal)
 }
 
 pub(crate) fn _create_erc721_loan(setup: Setup) -> felt252 {
@@ -314,14 +288,10 @@ pub(crate) fn _create_erc721_loan(setup: Setup) -> felt252 {
     setup.t721.approve(setup.loan.contract_address, 42);
     stop_cheat_caller_address(setup.t721.contract_address);
 
-    _create_loan(setup, simple_proposal, '')
+    _create_loan(setup, simple_proposal)
 }
 
 pub(crate) fn _create_erc1155_loan(setup: Setup) -> felt252 {
-    _create_erc1155_loan_failing(setup, '')
-}
-
-pub(crate) fn _create_erc1155_loan_failing(setup: Setup, revert_data: felt252) -> felt252 {
     let mut simple_proposal = setup.simple_proposal;
     simple_proposal.collateral_category = MultiToken::Category::ERC1155;
     simple_proposal.collateral_address = setup.t1155.contract_address;
@@ -334,35 +304,28 @@ pub(crate) fn _create_erc1155_loan_failing(setup: Setup, revert_data: felt252) -
     setup.t1155.set_approval_for_all(setup.loan.contract_address, true);
     stop_cheat_caller_address(setup.t1155.contract_address);
 
-    _create_loan(setup, simple_proposal, revert_data)
+    _create_loan(setup, simple_proposal)
 }
 
-pub(crate) fn _create_loan(setup: Setup, _proposal: Proposal, revert_data: felt252) -> felt252 {
-    let signature = _sign(
-        setup.proposal_simple.get_proposal_hash(_proposal), setup.lender_key_pair
-    );
-
+pub(crate) fn _create_loan(setup: Setup, _proposal: Proposal) -> felt252 {
     erc20_mint(setup.credit.contract_address, setup.lender.contract_address, 100 * E18);
 
     start_cheat_caller_address(setup.credit.contract_address, setup.lender.contract_address);
     setup.credit.approve(setup.loan.contract_address, 100 * E18);
     stop_cheat_caller_address(setup.credit.contract_address);
 
-    if revert_data != '' {
-        panic!("{}", revert_data);
-    }
-
     let proposal_data = setup.proposal_simple.encode_proposal_data(_proposal);
     let proposal_spec = ProposalSpec {
-        proposal_contract: setup.proposal_simple.contract_address,
-        proposal_data,
-        proposal_inclusion_proof: array![],
-        signature
+        proposal_contract: setup.proposal_simple.contract_address, proposal_data
     };
     let lender_spec = LenderSpec { source_of_funds: setup.lender.contract_address };
-    let caller_spec = CallerSpec {
-        refinancing_loan_id: 0, revoke_nonce: false, nonce: 0, permit_data: 0
-    };
+    let caller_spec = CallerSpec { refinancing_loan_id: 0, revoke_nonce: false, nonce: 0 };
+
+    start_cheat_caller_address(
+        setup.proposal_simple.contract_address, setup.lender.contract_address
+    );
+    setup.proposal_simple.make_proposal(_proposal);
+    stop_cheat_caller_address(setup.proposal_simple.contract_address);
 
     start_cheat_caller_address(setup.loan.contract_address, setup.borrower.contract_address);
     let loan_id = setup.loan.create_loan(proposal_spec, lender_spec, caller_spec, Option::None);
@@ -372,22 +335,14 @@ pub(crate) fn _create_loan(setup: Setup, _proposal: Proposal, revert_data: felt2
 }
 
 pub(crate) fn _repay_loan(setup: Setup, loan_id: felt252,) {
-    _repay_loan_failing(setup, loan_id, '')
-}
-
-pub(crate) fn _repay_loan_failing(setup: Setup, loan_id: felt252, revert_data: felt252) {
     erc20_mint(setup.credit.contract_address, setup.borrower.contract_address, 10 * E18);
 
     start_cheat_caller_address(setup.credit.contract_address, setup.borrower.contract_address);
     setup.credit.approve(setup.loan.contract_address, 110 * E18);
     stop_cheat_caller_address(setup.credit.contract_address);
 
-    if revert_data != '' {
-        panic!("{}", revert_data);
-    }
-
     start_cheat_caller_address(setup.loan.contract_address, setup.borrower.contract_address);
-    setup.loan.repay_loan(loan_id, '');
+    setup.loan.repay_loan(loan_id);
     stop_cheat_caller_address(setup.loan.contract_address);
 }
 

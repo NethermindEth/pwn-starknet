@@ -99,10 +99,7 @@ fn _create_loan(dsp: Setup, proposal: Proposal) -> felt252 {
     let proposal_data = dsp.proposal_simple.encode_proposal_data(proposal);
 
     let proposal_spec = ProposalSpec {
-        proposal_contract: dsp.proposal_simple.contract_address,
-        proposal_data,
-        proposal_inclusion_proof: array![],
-        signature: Default::default()
+        proposal_contract: dsp.proposal_simple.contract_address, proposal_data
     };
     let lender_spec = LenderSpec { source_of_funds: dsp.lender.contract_address };
     let caller_spec: CallerSpec = Default::default();
@@ -210,10 +207,7 @@ fn test_use_case_should_refinance_running_loan() {
     let proposal_data = dsp.proposal_simple.encode_proposal_data(proposal);
 
     let proposal_spec = ProposalSpec {
-        proposal_contract: dsp.proposal_simple.contract_address,
-        proposal_data,
-        proposal_inclusion_proof: array![],
-        signature: Default::default()
+        proposal_contract: dsp.proposal_simple.contract_address, proposal_data
     };
     let lender_spec = LenderSpec { source_of_funds: dsp.lender.contract_address };
     let caller_spec: CallerSpec = Default::default();
@@ -230,9 +224,7 @@ fn test_use_case_should_refinance_running_loan() {
 
     cheat_block_timestamp_global(starknet::get_block_timestamp() + _1_DAY * 4);
 
-    let caller_spec = CallerSpec {
-        refinancing_loan_id: loan_id, revoke_nonce: false, nonce: 0, permit_data: 0
-    };
+    let caller_spec = CallerSpec { refinancing_loan_id: loan_id, revoke_nonce: false, nonce: 0 };
 
     start_cheat_caller_address(dsp.loan.contract_address, dsp.borrower.contract_address);
     dsp.loan.create_loan(proposal_spec, lender_spec, caller_spec, Option::None);

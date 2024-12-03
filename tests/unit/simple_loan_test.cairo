@@ -30,10 +30,7 @@ use pwn::{
     interfaces::pool_adapter::{IPoolAdapterDispatcher, IPoolAdapterDispatcherTrait},
     hub::pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait},
     config::interface::{IPwnConfigDispatcher, IPwnConfigDispatcherTrait},
-    loan::{
-        lib::{signature_checker, math,}, vault::permit,
-        token::pwn_loan::{IPwnLoanDispatcher, IPwnLoanDispatcherTrait},
-    },
+    loan::{lib::math, token::pwn_loan::{IPwnLoanDispatcher, IPwnLoanDispatcherTrait},},
 };
 use snforge_std::{
     declare, store, load, map_entry_address, cheat_caller_address, cheat_block_timestamp_global,
@@ -172,8 +169,11 @@ pub fn setup() -> Setup {
     let (pool_adapter_address, _) = contract.deploy(@array![]).unwrap();
     let pool_adapter = IPoolAdapterDispatcher { contract_address: pool_adapter_address };
     let proposal_contract_address = starknet::contract_address_const::<'proposalContract'>();
+
     hub.set_tag(proposal_contract_address, pwn_hub_tags::LOAN_PROPOSAL, true);
-    hub.set_tag(loan_address, pwn_hub_tags::ACTIVE_LOAN, true);
+    hub.set_tag(loan.contract_address, pwn_hub_tags::ACTIVE_LOAN, true);
+    hub.set_tag(loan.contract_address, pwn_hub_tags::NONCE_MANAGER, true);
+
     let loan_duration_days = 101;
     let simple_loan = types::Loan {
         status: 2_u8,
@@ -209,14 +209,8 @@ pub fn setup() -> Setup {
         borrower_spec_hash: 0
     };
 
-    let key_pair = KeyPairTrait::<felt252, felt252>::generate();
-    let (r, s) = key_pair.sign(poseidon_hash_span(array!['proposalHash'].span())).unwrap();
-
     let proposal_spec = types::ProposalSpec {
-        proposal_contract: proposal_contract_address,
-        proposal_data: array!['proposalData'],
-        proposal_inclusion_proof: array![],
-        signature: signature_checker::Signature { r, s }
+        proposal_contract: proposal_contract_address, proposal_data: array!['proposalData'],
     };
 
     let lender_spec = types::LenderSpec { source_of_funds: lender_address };
@@ -247,8 +241,6 @@ pub fn setup() -> Setup {
     let proposal_hash = 'proposalHash';
     let fee_collector = starknet::contract_address_const::<'feeCollector'>();
 
-    mock_call(t20_address, selector!("permit"), (), BoundedInt::<u32>::max());
-
     mock_call(config_address, selector!("get_fee"), 0, BoundedInt::<u32>::max());
     mock_call(
         config_address, selector!("get_fee_collector"), fee_collector, BoundedInt::<u32>::max()
@@ -266,14 +258,15 @@ pub fn setup() -> Setup {
 
     mock_call(loan_token_address, selector!("owner_of"), lender_address, 1);
 
+    let loan_id = 42;
     let extension = types::ExtensionProposal {
-        loan_id: 42,
+        loan_id: loan_id,
         compensation_address: t20_address,
         compensation_amount: 100,
         duration: 2 * DAY,
         expiration: simple_loan.default_timestamp,
         proposer: borrower_address,
-        nonce_space: 1,
+        nonce_space: 0,
         nonce: 1,
     };
 
@@ -296,8 +289,8 @@ pub fn setup() -> Setup {
         fee_collector: fee_collector,
         proposal_contract: proposal_contract_address,
         source_of_funds: source_of_funds,
-        loan_id: 42,
-        loan_duration_days: 101,
+        loan_id: loan_id,
+        loan_duration_days: loan_duration_days,
         simple_loan: simple_loan,
         simple_loan_terms: simple_loan_terms,
         proposal_spec: proposal_spec,
@@ -417,13 +410,6 @@ pub(crate) fn _get_extension_hash(
     address: ContractAddress, extension: types::ExtensionProposal
 ) -> felt252 {
     let hash_elements: Array<felt252> = array![
-        PwnSimpleLoan::BASE_DOMAIN_SEPARATOR, CHAIN_ID, address.into()
-    ];
-    let domain_separator_hash = poseidon_hash_span(hash_elements.span());
-    let hash_elements: Array<felt252> = array![
-        1901,
-        domain_separator_hash,
-        PwnSimpleLoan::EXTENSION_PROPOSAL_TYPEHASH,
         extension.loan_id,
         extension.compensation_address.into(),
         extension.compensation_amount.try_into().expect('get_extension_hash'),
@@ -795,12 +781,6 @@ mod create_loan {
         assert_loan_eq(setup.loan.contract_address, loan_id, setup.simple_loan);
     }
 
-    // #[test]
-    // #[ignore]
-    // fn test_should_call_permit_when_provided() {
-    //     assert(true, '');
-    // }
-
     #[test]
     fn test_should_transfer_collateral_from_borrower_to_vault() {
         let setup = setup();
@@ -1114,973 +1094,985 @@ mod refinance_loan {
     pub const REFINANCING_LOAN_ID: felt252 = 44;
 
     #[test]
-    #[should_panic(expected: "Loan does not exist")]
-    fn test_should_fail_when_loan_does_not_exist() {
+    #[should_panic(
+        expected: "Refinancing is currently disabled. Will be enabled with Cairo v0.13.4"
+    )]
+    fn test_should_fail_when_refinancing_disabled() {
         let setup = setup();
-        let mut simple_loan = setup.simple_loan;
-        simple_loan.status = 0;
-        store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
         setup
             .loan
             .create_loan(
                 setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
             );
     }
-
-    #[test]
-    #[should_panic(expected: "Loan is not running")]
-    fn test_should_fail_when_loan_is_not_running() {
-        let setup = setup();
-        let mut simple_loan = setup.simple_loan;
-        simple_loan.status = 3;
-        store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_should_fail_when_loan_is_defaulted() {
-        let setup = setup();
-        cheat_block_timestamp_global(setup.simple_loan.default_timestamp);
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-    }
-
-    #[test]
-    #[should_panic(expected: "Credit is not the same")]
-    fn test_fuzz_should_fail_when_credit_asset_mismatch(_asset_address: u128) {
-        let setup = setup();
-        let simple_loan = setup.simple_loan;
-        let mut _asset_address: felt252 = _asset_address.into();
-        let mut asset_address: ContractAddress = _asset_address.try_into().unwrap();
-        while asset_address == simple_loan
-            .credit_address {
-                _asset_address += 1;
-                asset_address = _asset_address.try_into().unwrap();
-            };
-
-        let mut terms = setup.refinanced_loan_terms;
-        terms.credit.asset_address = asset_address;
-        mock_call(
-            setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-        );
-
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-    }
-
-    #[test]
-    #[should_panic(expected: "Credit is not the same")]
-    fn test_should_fail_when_credit_asset_amount_zero() {
-        let setup = setup();
-        let mut terms = setup.refinanced_loan_terms;
-        terms.credit.amount = 0;
-        mock_call(
-            setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-        );
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-    }
-
-    #[test]
-    #[should_panic(expected: "Collateral is not the same")]
-    fn test_fuzz_should_fail_when_collateral_category_mismatch(mut category: u8) {
-        let setup = setup();
-        category = bound(category, 0, 3);
-        let simple_loan = setup.simple_loan;
-        if category == simple_loan.collateral.category.into() {
-            category = (category + 1) % 3;
-        }
-        let mut terms = setup.refinanced_loan_terms;
-        terms.collateral.category = category.into();
-        mock_call(
-            setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-        );
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-    }
-
-    #[test]
-    #[should_panic(expected: "Collateral is not the same")]
-    fn test_fuzz_should_fail_when_collateral_address_mismatch(_asset_address: u128) {
-        let setup = setup();
-        let simple_loan = setup.simple_loan;
-        let mut _asset_address: felt252 = _asset_address.into();
-        let mut asset_address: ContractAddress = _asset_address.try_into().unwrap();
-        while asset_address == simple_loan
-            .collateral
-            .asset_address {
-                _asset_address += 1;
-                asset_address = _asset_address.try_into().unwrap();
-            };
-
-        let mut terms = setup.refinanced_loan_terms;
-        terms.collateral.asset_address = asset_address;
-        mock_call(
-            setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-        );
-
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-    }
-
-    #[test]
-    #[should_panic(expected: "Collateral is not the same")]
-    fn test_fuzz_should_fail_when_collateral_id_mismatch(mut id: felt252) {
-        let setup = setup();
-        let simple_loan = setup.simple_loan;
-        if id == simple_loan.collateral.id {
-            id += 1;
-        };
-
-        let mut terms = setup.refinanced_loan_terms;
-        terms.collateral.id = id;
-        mock_call(
-            setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-        );
-
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-    }
-
-    #[test]
-    #[should_panic(expected: "Collateral is not the same")]
-    fn test_fuzz_should_fail_when_collateral_amount_mismatch(mut amount: u256) {
-        let setup = setup();
-        let simple_loan = setup.simple_loan;
-        if amount == simple_loan.collateral.amount {
-            amount += 1;
-        };
-
-        let mut terms = setup.refinanced_loan_terms;
-        terms.collateral.amount = amount;
-        mock_call(
-            setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-        );
-
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_fuzz_should_fail_when_borrower_mismatch(_borrower: u128) {
-        let setup = setup();
-        let simple_loan = setup.simple_loan;
-        let mut _borrower: felt252 = _borrower.into();
-        let mut borrower: ContractAddress = _borrower.try_into().unwrap();
-        if borrower == simple_loan.borrower {
-            borrower = (_borrower + 1).try_into().unwrap();
-        };
-
-        let mut terms = setup.refinanced_loan_terms;
-        terms.borrower = borrower;
-        mock_call(
-            setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-        );
-
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-    }
-
-    #[test]
-    fn test_should_emit_loan_paid_back() {
-        let setup = setup();
-
-        let mut spy = spy_events();
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec,
-                setup.lender_spec,
-                setup.caller_spec,
-                Option::Some(array!['lil extra'])
-            );
-        spy
-            .assert_emitted(
-                @array![
-                    (
-                        setup.loan.contract_address,
-                        PwnSimpleLoan::Event::LoanPaidBack(
-                            PwnSimpleLoan::LoanPaidBack { loan_id: REFINANCING_LOAN_ID }
-                        )
-                    )
-                ]
-            );
-    }
-
-    #[test]
-    fn test_should_emit_loan_created() {
-        let setup = setup();
-
-        let mut spy = spy_events();
-        let loan_id = setup
-            .loan
-            .create_loan(
-                setup.proposal_spec,
-                setup.lender_spec,
-                setup.caller_spec,
-                Option::Some(array!['lil extra'])
-            );
-
-        spy
-            .assert_emitted(
-                @array![
-                    (
-                        setup.loan.contract_address,
-                        PwnSimpleLoan::Event::LoanCreated(
-                            PwnSimpleLoan::LoanCreated {
-                                loan_id: loan_id,
-                                proposal_hash: setup.proposal_hash,
-                                proposal_contract: setup.proposal_contract,
-                                refinancing_loan_id: REFINANCING_LOAN_ID,
-                                terms: setup.refinanced_loan_terms,
-                                lender_spec: setup.lender_spec,
-                                extra: Option::Some(array!['lil extra']),
-                            }
-                        )
-                    )
-                ]
-            );
-    }
-
-    #[test]
-    fn test_should_delete_loan_when_loan_owner_is_original_lender() {
-        let setup = setup();
-        assert_eq!(
-            setup.simple_loan.original_lender,
-            ERC721ABIDispatcher { contract_address: setup.loan_token.contract_address }
-                .owner_of(REFINANCING_LOAN_ID.into()),
-            "loan_owner not equals to original lender"
-        );
-        assert_loan_eq(setup.loan.contract_address, REFINANCING_LOAN_ID, setup.simple_loan);
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec,
-                setup.lender_spec,
-                setup.caller_spec,
-                Option::Some(array!['lil extra'])
-            );
-        assert_loan_eq(setup.loan.contract_address, REFINANCING_LOAN_ID, Default::default());
-    }
-
-    #[test]
-    fn test_should_emit_loan_claimed_when_loan_owner_is_original_lender() {
-        let setup = setup();
-
-        let mut spy = spy_events();
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-
-        spy
-            .assert_emitted(
-                @array![
-                    (
-                        setup.loan.contract_address,
-                        PwnSimpleLoan::Event::LoanClaimed(
-                            PwnSimpleLoan::LoanClaimed {
-                                loan_id: REFINANCING_LOAN_ID, defaulted: false
-                            }
-                        )
-                    )
-                ]
-            );
-    }
-
-    #[test]
-    fn test_should_update_loan_data_when_loan_owner_is_not_original_lender() {
-        let setup = setup();
-        let not_original_sender = starknet::contract_address_const::<'notOriginalSender'>();
-        mock_call(setup.loan_token.contract_address, selector!("owner_of"), not_original_sender, 1);
-
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-
-        let mut simple_loan = setup.simple_loan;
-        simple_loan.status = 3;
-        simple_loan
-            .fixed_interest_amount = setup
-            .loan
-            .get_loan_repayment_amount(REFINANCING_LOAN_ID)
-            - simple_loan.principal_amount;
-        simple_loan.accruing_interest_APR = 0;
-        assert_loan_eq(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
-    }
-
-    //#[test]
-    //#[ignore] // when call fails reverts the whole tx
-    //fn test_should_update_loan_data_when_loan_owner_is_original_lender_when_direct_repayment_fails() {
-    //    let setup = setup();
-    //    let mut terms = setup.refinanced_loan_terms;
-    //    terms.credit.amount = setup.simple_loan.principal_amount - 1;
-    //    mock_call(
-    //        setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-    //    );
-    //
-    //    erc20_mint(setup.t20.contract_address, setup.lender.contract_address, BoundedInt::max());
-    //
-    //    setup
-    //        .loan
-    //        .create_loan(
-    //            setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
-    //        );
-    //
-    //    let mut simple_loan = setup.simple_loan;
-    //    simple_loan.status = 3;
-    //    simple_loan
-    //        .fixed_interest_amount = setup
-    //        .loan
-    //        .get_loan_repayment_amount(REFINANCING_LOAN_ID)
-    //        - simple_loan.principal_amount;
-    //    simple_loan.accruing_interest_APR = 0;
-    //    assert_loan_eq(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
-    //}
-
-    #[test]
-    #[should_panic]
-    fn test_should_fail_when_pool_adapter_not_registered_when_pool_source_of_funds() {
-        let setup = setup();
-        let lender_spec = types::LenderSpec { source_of_funds: setup.source_of_funds };
-        let mut terms = setup.simple_loan_terms;
-        terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
-        mock_call(
-            setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-        );
-        mock_call(
-            setup.config.contract_address,
-            selector!("get_pool_adapter"),
-            starknet::contract_address_const::<0>(),
-            1
-        );
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-    }
-
-    #[test]
-    fn test_should_withdraw_full_credit_amount_when_should_transfer_common_when_pool_source_of_funds() {
-        let setup = setup();
-        let lender_spec = types::LenderSpec { source_of_funds: setup.source_of_funds };
-        let mut terms = setup.refinanced_loan_terms;
-        terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
-        mock_call(
-            setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-        );
-        let prev_bal = setup.t20.balance_of(setup.source_of_funds);
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-        let curr_bal = setup.t20.balance_of(setup.source_of_funds);
-        assert_eq!(prev_bal - terms.credit.amount, curr_bal, "Source of funds balance mismatch!");
-    }
-
-    #[test]
-    fn test_should_withdraw_credit_without_common_when_should_not_transfer_common_when_pool_source_of_funds() {
-        let setup = setup();
-        let lender_spec = types::LenderSpec { source_of_funds: setup.source_of_funds };
-        let mut terms = setup.refinanced_loan_terms;
-        terms.lender = setup.lender2.contract_address;
-        terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
-        mock_call(
-            setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-        );
-        mock_call(
-            setup.loan_token.contract_address,
-            selector!("owner_of"),
-            setup.lender2.contract_address,
-            1
-        );
-        let repayment = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
-        let common = if terms.credit.amount < repayment {
-            terms.credit.amount
-        } else {
-            repayment
-        };
-        let credit_asset = ERC20ABIDispatcher { contract_address: terms.credit.asset_address };
-        let prev_bal = credit_asset.balance_of(setup.source_of_funds);
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-        let curr_bal = credit_asset.balance_of(setup.source_of_funds);
-        assert_eq!(
-            prev_bal - terms.credit.amount + common, curr_bal, "Source of funds balance mismatch!"
-        );
-    }
-
-    #[test]
-    fn test_should_not_withdraw_credit_when_should_not_transfer_common_when_no_surplus_when_no_fee_when_pool_source_of_funds() {
-        let setup = setup();
-        let lender_spec = types::LenderSpec { source_of_funds: setup.source_of_funds };
-        let mut terms = setup.refinanced_loan_terms;
-        terms.lender = setup.lender2.contract_address;
-        terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
-        terms.credit.amount = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
-        mock_call(
-            setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-        );
-        mock_call(
-            setup.loan_token.contract_address,
-            selector!("owner_of"),
-            setup.lender2.contract_address,
-            1
-        );
-        let credit_asset = ERC20ABIDispatcher { contract_address: terms.credit.asset_address };
-        let prev_bal = credit_asset.balance_of(setup.source_of_funds);
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-        let curr_bal = credit_asset.balance_of(setup.source_of_funds);
-        assert_eq!(prev_bal, curr_bal, "Source of funds balance mismatch!");
-    }
-
-    #[test]
-    fn test_fuzz_should_transfer_fee_to_collector(mut fee: u16) {
-        let setup = setup();
-        fee = bound(fee, 1, 9999);
-
-        let terms = setup.refinanced_loan_terms;
-        let (fee_amount, _) = fee_calculator::calculate_fee_amount(fee, terms.credit.amount);
-        let credit_asset = ERC20ABIDispatcher { contract_address: terms.credit.asset_address };
-        let prev_bal = credit_asset.balance_of(setup.fee_collector);
-        mock_call(setup.config.contract_address, selector!("get_fee"), fee, 1);
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-        let curr_bal = credit_asset.balance_of(setup.fee_collector);
-        assert_eq!(prev_bal + fee_amount, curr_bal, "Fee collector balance mismatch!");
-    }
-
-    #[test]
-    fn test_should_transfer_common_to_vault_when_lender_not_loan_owner() {
-        let setup = setup();
-        let lender_spec = types::LenderSpec { source_of_funds: setup.lender2.contract_address };
-        let mut terms = setup.refinanced_loan_terms;
-        terms.lender = setup.lender2.contract_address;
-        terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
-        mock_call(
-            setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-        );
-        mock_call(
-            setup.loan_token.contract_address,
-            selector!("owner_of"),
-            starknet::contract_address_const::<'loanOwner'>(),
-            1
-        );
-        let repayment = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
-        let common = if terms.credit.amount < repayment {
-            terms.credit.amount
-        } else {
-            repayment
-        };
-        let prev_bal = setup.t20.balance_of(setup.loan.contract_address);
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-        let curr_bal = setup.t20.balance_of(setup.loan.contract_address);
-        assert_eq!(prev_bal + common, curr_bal, "SimpleLoan balance mismatch!");
-    }
-
-    #[test]
-    fn test_fuzz_should_transfer_common_to_vault_when_lender_original_lender_when_different_source_of_funds(
-        _source_of_funds: u128
-    ) {
-        let setup = setup();
-        let mut simple_loan = setup.simple_loan;
-        let mut _source_of_funds: felt252 = _source_of_funds.into();
-        if _source_of_funds == 0 {
-            _source_of_funds = 1;
-        }
-
-        let mut source_of_funds: ContractAddress = _source_of_funds.try_into().unwrap();
-        if source_of_funds == setup.simple_loan.original_source_of_funds {
-            source_of_funds = (_source_of_funds + 1).try_into().unwrap();
-        }
-        let lender_spec = types::LenderSpec { source_of_funds: setup.lender2.contract_address };
-        let mut terms = setup.refinanced_loan_terms;
-        terms.lender = setup.lender2.contract_address;
-        terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
-
-        simple_loan.original_lender = setup.lender2.contract_address;
-        simple_loan.original_source_of_funds = source_of_funds;
-        store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
-        mock_call(
-            setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-        );
-        mock_call(
-            setup.loan_token.contract_address,
-            selector!("owner_of"),
-            setup.lender2.contract_address,
-            1
-        );
-        let repayment = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
-        let common = if terms.credit.amount < repayment {
-            terms.credit.amount
-        } else {
-            repayment
-        };
-        let prev_bal = setup.t20.balance_of(source_of_funds);
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-        let curr_bal = setup.t20.balance_of(source_of_funds);
-        assert_eq!(prev_bal + common, curr_bal, "source_of_funds balance mismatch!");
-    }
-
-    //#[test]
-    //#[ignore] // conditionally assert or remove
-    //fn test_fuzz_should_not_transfer_common_to_vault_when_lender_loan_owner_when_lender_original_lender_when_same_source_of_funds(
-    //    source_of_funds_flag: u8
-    //) {
-    //    let setup = setup();
-    //    let mut simple_loan = setup.simple_loan;
-    //    
-    //    let source_of_funds = if source_of_funds_flag % 2 == 1{
-    //        setup.lender2.contract_address
-    //    } else {
-    //        setup.source_of_funds
-    //    };
-    //
-    //    let lender_spec = types::LenderSpec { source_of_funds: source_of_funds};
-    //    let mut terms = setup.refinanced_loan_terms;
-    //    terms.lender = setup.lender2.contract_address;
-    //    terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
-    //    simple_loan.original_lender = setup.lender2.contract_address;
-    //    simple_loan.original_source_of_funds = source_of_funds;
-    //    store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
-    //    mock_call(
-    //        setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-    //    );
-    //    mock_call(
-    //        setup.loan_token.contract_address,
-    //        selector!("owner_of"),
-    //        setup.lender2.contract_address,
-    //        1
-    //    );
-    //    let repayment = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
-    //    let common = if terms.credit.amount < repayment {
-    //        terms.credit.amount
-    //    } else {
-    //        repayment
-    //    };
-    //    let original_balance_lender = setup.t20.balance_of(setup.lender2.contract_address);
-    //    let original_balance_source_of_funds = setup.t20.balance_of(source_of_funds);
-    //    setup
-    //        .loan
-    //        .create_loan(
-    //            setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
-    //        );
-    //    let current_balance_source_of_funds = setup.t20.balance_of(source_of_funds);
-    //    let current_balance_lender = setup.t20.balance_of(setup.lender2.contract_address);
-    //    assert_eq!(original_balance_source_of_funds + common, current_balance_source_of_funds, "source_of_funds balance mismatch!");
-    //    assert_ge!(original_balance_lender, current_balance_lender, "Transferred common from lender to vault");
-    //}
-
-    #[test]
-    fn test_should_transfer_surplus_to_borrower() {
-        let setup = setup();
-        let new_lender = setup.lender2.contract_address;
-        let lender_spec = types::LenderSpec { source_of_funds: new_lender };
-        let mut terms = setup.refinanced_loan_terms;
-        terms.lender = new_lender;
-        terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
-        mock_call(
-            setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-        );
-        let surplus = terms.credit.amount
-            - setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
-        let credit_asset = ERC20ABIDispatcher { contract_address: terms.credit.asset_address };
-        let prev_bal = credit_asset.balance_of(setup.borrower.contract_address);
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-        let curr_bal = credit_asset.balance_of(setup.borrower.contract_address);
-        assert_eq!(prev_bal + surplus, curr_bal, "BORROWER balance mismatch!");
-    }
-
-    #[test]
-    fn test_should_not_transfer_surplus_to_borrower_when_no_surplus() {
-        let setup = setup();
-        let new_lender = setup.lender2.contract_address;
-        let lender_spec = types::LenderSpec { source_of_funds: new_lender };
-        let mut terms = setup.refinanced_loan_terms;
-        terms.lender = new_lender;
-        terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
-        terms.credit.amount = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
-        mock_call(
-            setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-        );
-        let credit_asset = ERC20ABIDispatcher { contract_address: terms.credit.asset_address };
-        let prev_bal = credit_asset.balance_of(setup.borrower.contract_address);
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-        let curr_bal = credit_asset.balance_of(setup.borrower.contract_address);
-        assert_eq!(prev_bal, curr_bal, "BORROWER balance mismatch!");
-    }
-
-    #[test]
-    fn test_should_transfer_shortage_from_borrower_to_vault() {
-        let setup = setup();
-        let mut simple_loan = setup.simple_loan;
-        let terms = setup.refinanced_loan_terms;
-        simple_loan.principal_amount = terms.credit.amount + 1;
-        store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
-
-        let shortage = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID)
-            - terms.credit.amount;
-        let credit_asset = ERC20ABIDispatcher { contract_address: simple_loan.credit_address };
-        let prev_bal = credit_asset.balance_of(setup.borrower.contract_address);
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-        let curr_bal = credit_asset.balance_of(setup.borrower.contract_address);
-        assert_eq!(prev_bal - shortage, curr_bal, "BORROWER balance mismatch!");
-    }
-
-    #[test]
-    fn test_should_not_transfer_shortage_from_borrower_to_vault_when_no_shortage() {
-        let setup = setup();
-        let mut terms = setup.refinanced_loan_terms;
-        terms.credit.amount = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
-        mock_call(
-            setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-        );
-        let credit_asset = ERC20ABIDispatcher { contract_address: terms.credit.asset_address };
-        let prev_bal = credit_asset.balance_of(setup.borrower.contract_address);
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-        let curr_bal = credit_asset.balance_of(setup.borrower.contract_address);
-        assert_eq!(prev_bal, curr_bal, "BORROWER balance mismatch!");
-    }
-
-    //#[test]
-    //#[ignore]
-    //fn test_fuzz_should_try_claim_repaid_loan_full_amount_when_should_transfer_common(
-    //    _loan_owner: u128
-    //) {
-    //    let setup = setup();
-    //    let mut _loan_owner: felt252 = _loan_owner.into();
-    //    let mut loan_owner: ContractAddress = _loan_owner.try_into().unwrap();
-    //    while loan_owner == starknet::contract_address_const::<0>()
-    //        || loan_owner == setup
-    //            .lender
-    //            .contract_address {
-    //                _loan_owner += 1;
-    //                loan_owner = _loan_owner.try_into().unwrap();
-    //            };
-    //    let mut simple_loan = setup.simple_loan;
-    //    simple_loan.original_lender = loan_owner;
-    //    store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
-    //    mock_call(setup.loan_token.contract_address, selector!("owner_of"), loan_owner, 1);
-    //    let original_balance = setup.t20.balance_of(loan_owner);
-    //    setup
-    //        .loan
-    //        .create_loan(
-    //            setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
-    //        );
-    //    let current_balance = setup.t20.balance_of(loan_owner);
-    //    assert_eq!(original_balance, current_balance);
-    //}
-
-    #[test]
-    fn test_fuzz_should_try_claim_repaid_loan_shortage_amount_when_should_not_transfer_common(
-        mut shortage: u256
-    ) {
-        let setup = setup();
-        let mut simple_loan = setup.simple_loan;
-        simple_loan.principal_amount = setup.refinanced_loan_terms.credit.amount + 1;
-        store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
-        let loan_repayment_amount = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
-        shortage = bound(shortage, 0, loan_repayment_amount - 1);
-        erc20_mint(setup.t20.contract_address, setup.borrower.contract_address, shortage);
-        let mut terms = setup.refinanced_loan_terms;
-        terms.credit.amount = loan_repayment_amount - shortage;
-        mock_call(
-            setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-        );
-        let original_balance = setup.t20.balance_of(setup.borrower.contract_address);
-        let original_balance_lender = setup.t20.balance_of(setup.lender.contract_address);
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-        let current_balance = setup.t20.balance_of(setup.borrower.contract_address);
-        let current_balance_lender = setup.t20.balance_of(setup.lender.contract_address);
-        assert_eq!(
-            original_balance_lender + shortage, current_balance_lender, "Lender balance mismatch!"
-        );
-        assert_eq!(original_balance - shortage, current_balance, "Shortage not transferred");
-    }
-
-    // #[test]
-    // #[ignore]
-    // fn test_should_not_fail_when_try_claim_repaid_loan_fails() {
-    //     assert(true, '');
-    // }
-
-    #[test]
-    fn test_fuzz_should_repay_original_loan(
-        mut days: u64,
-        mut principal: u256,
-        mut fixed_interest: u256,
-        mut interest_APR: u32,
-        mut refinance_amount: u256
-    ) {
-        let setup = setup();
-        days = bound(days, 0, setup.loan_duration_days - 1);
-        principal = bound(principal, 1, E40);
-        fixed_interest = bound(fixed_interest, 0, E40);
-        interest_APR = bound(interest_APR, 1, 16_000_000);
-
-        let mut simple_loan = setup.simple_loan;
-        simple_loan.principal_amount = principal;
-        simple_loan.fixed_interest_amount = fixed_interest;
-        simple_loan.accruing_interest_APR = interest_APR;
-        store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
-
-        cheat_block_timestamp_global(simple_loan.start_timestamp + days * DAY);
-        let loan_repayment_amount = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
-        refinance_amount %= BoundedInt::max() - loan_repayment_amount - setup.t20.total_supply();
-        if refinance_amount == 0 {
-            refinance_amount = 1;
-        }
-        let new_lender = setup.lender2.contract_address;
-        let mut lender_spec = setup.lender_spec;
-        lender_spec.source_of_funds = new_lender;
-        let mut terms = setup.refinanced_loan_terms;
-        terms.credit.amount = refinance_amount;
-        terms.lender = new_lender;
-        terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
-        mock_call(
-            setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-        );
-        mock_call(
-            setup.loan_token.contract_address,
-            selector!("owner_of"),
-            setup.lender.contract_address,
-            1
-        );
-        erc20_mint(setup.t20.contract_address, new_lender, refinance_amount);
-
-        if loan_repayment_amount > refinance_amount {
-            erc20_mint(
-                setup.t20.contract_address,
-                setup.borrower.contract_address,
-                loan_repayment_amount - refinance_amount
-            );
-        }
-
-        let original_balance = setup.t20.balance_of(setup.lender.contract_address);
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-        let current_balance = setup.t20.balance_of(setup.lender.contract_address);
-        assert_eq!(current_balance, original_balance + loan_repayment_amount);
-    }
-
-    #[test]
-    fn test_fuzz_should_collect_protocol_fee(
-        mut days: u64,
-        mut principal: u256,
-        mut fixed_interest: u256,
-        mut interest_APR: u32,
-        mut refinance_amount: u256,
-        mut fee: u16
-    ) {
-        let setup = setup();
-        days = bound(days, 0, setup.loan_duration_days - 1);
-        principal = bound(principal, 1, E40);
-        fixed_interest = bound(fixed_interest, 0, E40);
-        interest_APR = bound(interest_APR, 1, 16_000_000);
-
-        let mut simple_loan = setup.simple_loan;
-        simple_loan.principal_amount = principal;
-        simple_loan.fixed_interest_amount = fixed_interest;
-        simple_loan.accruing_interest_APR = interest_APR;
-        store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
-
-        cheat_block_timestamp_global(simple_loan.start_timestamp + days * DAY);
-        let loan_repayment_amount = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
-        fee = bound(fee, 1, 9999);
-        refinance_amount %= BoundedInt::max() - loan_repayment_amount - setup.t20.total_supply();
-        if refinance_amount == 0 {
-            refinance_amount += 1;
-        }
-        let new_lender = setup.lender2.contract_address;
-        let (fee_amount, _) = fee_calculator::calculate_fee_amount(fee, refinance_amount);
-        let lender_spec = types::LenderSpec { source_of_funds: new_lender };
-        let mut terms = setup.refinanced_loan_terms;
-        terms.credit.amount = refinance_amount;
-        terms.lender = new_lender;
-        terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
-        mock_call(
-            setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-        );
-        mock_call(
-            setup.loan_token.contract_address,
-            selector!("owner_of"),
-            setup.lender.contract_address,
-            1
-        );
-        mock_call(setup.config.contract_address, selector!("get_fee"), fee, 2);
-
-        erc20_mint(setup.t20.contract_address, setup.lender2.contract_address, refinance_amount);
-
-        if loan_repayment_amount > refinance_amount - fee_amount {
-            erc20_mint(
-                setup.t20.contract_address,
-                setup.borrower.contract_address,
-                loan_repayment_amount - (refinance_amount - fee_amount)
-            );
-        }
-
-        let original_balance = setup.t20.balance_of(setup.fee_collector);
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-        let current_balance = setup.t20.balance_of(setup.fee_collector);
-        assert_eq!(original_balance + fee_amount, current_balance, "Protocol fees not collected");
-    }
-
-    #[test]
-    fn test_fuzz_should_transfer_surplus_to_borrower(mut refinance_amount: u256) {
-        let setup = setup();
-        let loan_repayment_amount = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
-        refinance_amount =
-            bound(
-                refinance_amount,
-                loan_repayment_amount + 1,
-                BoundedInt::max() - loan_repayment_amount - setup.t20.total_supply()
-            );
-
-        let surplus = refinance_amount - loan_repayment_amount;
-        let new_lender = setup.lender2.contract_address;
-        let lender_spec = types::LenderSpec { source_of_funds: new_lender };
-        let mut terms = setup.refinanced_loan_terms;
-        terms.credit.amount = refinance_amount;
-        terms.lender = new_lender;
-        terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
-        terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
-        mock_call(
-            setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-        );
-        mock_call(
-            setup.loan_token.contract_address,
-            selector!("owner_of"),
-            setup.lender.contract_address,
-            1
-        );
-        erc20_mint(setup.t20.contract_address, new_lender, refinance_amount);
-
-        let original_balance = setup.t20.balance_of(setup.borrower.contract_address);
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-        let current_balance = setup.t20.balance_of(setup.borrower.contract_address);
-        assert_eq!(
-            original_balance + surplus, current_balance, "Surplus not transfered to borrower"
-        );
-    }
-
-    #[test]
-    fn test_fuzz_should_transfer_shortage_from_borrower(mut refinance_amount: u256) {
-        let setup = setup();
-        let loan_repayment_amount = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
-        refinance_amount = bound(refinance_amount, 1, loan_repayment_amount - 1);
-        let contribution = loan_repayment_amount - refinance_amount;
-        let new_lender = setup.lender2.contract_address;
-        let lender_spec = types::LenderSpec { source_of_funds: new_lender };
-        let mut terms = setup.refinanced_loan_terms;
-        terms.credit.amount = refinance_amount;
-        terms.lender = new_lender;
-        terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
-        mock_call(
-            setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
-        );
-        mock_call(
-            setup.loan_token.contract_address,
-            selector!("owner_of"),
-            setup.lender.contract_address,
-            1
-        );
-        erc20_mint(setup.t20.contract_address, new_lender, refinance_amount);
-
-        let original_balance = setup.t20.balance_of(setup.borrower.contract_address);
-        setup
-            .loan
-            .create_loan(
-                setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
-            );
-        let current_balance = setup.t20.balance_of(setup.borrower.contract_address);
-        assert_eq!(
-            original_balance - contribution, current_balance, "Shortage not taken from borrower"
-        );
-    }
+// #[test]
+// #[should_panic(expected: "Loan does not exist")]
+// fn test_should_fail_when_loan_does_not_exist() {
+//     let setup = setup();
+//     let mut simple_loan = setup.simple_loan;
+//     simple_loan.status = 0;
+//     store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+// }
+
+// #[test]
+// #[should_panic(expected: "Loan is not running")]
+// fn test_should_fail_when_loan_is_not_running() {
+//     let setup = setup();
+//     let mut simple_loan = setup.simple_loan;
+//     simple_loan.status = 3;
+//     store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+// }
+
+// #[test]
+// #[should_panic]
+// fn test_should_fail_when_loan_is_defaulted() {
+//     let setup = setup();
+//     cheat_block_timestamp_global(setup.simple_loan.default_timestamp);
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+// }
+
+// #[test]
+// #[should_panic(expected: "Credit is not the same")]
+// fn test_fuzz_should_fail_when_credit_asset_mismatch(_asset_address: u128) {
+//     let setup = setup();
+//     let simple_loan = setup.simple_loan;
+//     let mut _asset_address: felt252 = _asset_address.into();
+//     let mut asset_address: ContractAddress = _asset_address.try_into().unwrap();
+//     while asset_address == simple_loan
+//         .credit_address {
+//             _asset_address += 1;
+//             asset_address = _asset_address.try_into().unwrap();
+//         };
+
+//     let mut terms = setup.refinanced_loan_terms;
+//     terms.credit.asset_address = asset_address;
+//     mock_call(
+//         setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+//     );
+
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+// }
+
+// #[test]
+// #[should_panic(expected: "Credit is not the same")]
+// fn test_should_fail_when_credit_asset_amount_zero() {
+//     let setup = setup();
+//     let mut terms = setup.refinanced_loan_terms;
+//     terms.credit.amount = 0;
+//     mock_call(
+//         setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+//     );
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+// }
+
+// #[test]
+// #[should_panic(expected: "Collateral is not the same")]
+// fn test_fuzz_should_fail_when_collateral_category_mismatch(mut category: u8) {
+//     let setup = setup();
+//     category = bound(category, 0, 3);
+//     let simple_loan = setup.simple_loan;
+//     if category == simple_loan.collateral.category.into() {
+//         category = (category + 1) % 3;
+//     }
+//     let mut terms = setup.refinanced_loan_terms;
+//     terms.collateral.category = category.into();
+//     mock_call(
+//         setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+//     );
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+// }
+
+// #[test]
+// #[should_panic(expected: "Collateral is not the same")]
+// fn test_fuzz_should_fail_when_collateral_address_mismatch(_asset_address: u128) {
+//     let setup = setup();
+//     let simple_loan = setup.simple_loan;
+//     let mut _asset_address: felt252 = _asset_address.into();
+//     let mut asset_address: ContractAddress = _asset_address.try_into().unwrap();
+//     while asset_address == simple_loan
+//         .collateral
+//         .asset_address {
+//             _asset_address += 1;
+//             asset_address = _asset_address.try_into().unwrap();
+//         };
+
+//     let mut terms = setup.refinanced_loan_terms;
+//     terms.collateral.asset_address = asset_address;
+//     mock_call(
+//         setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+//     );
+
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+// }
+
+// #[test]
+// #[should_panic(expected: "Collateral is not the same")]
+// fn test_fuzz_should_fail_when_collateral_id_mismatch(mut id: felt252) {
+//     let setup = setup();
+//     let simple_loan = setup.simple_loan;
+//     if id == simple_loan.collateral.id {
+//         id += 1;
+//     };
+
+//     let mut terms = setup.refinanced_loan_terms;
+//     terms.collateral.id = id;
+//     mock_call(
+//         setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+//     );
+
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+// }
+
+// #[test]
+// #[should_panic(expected: "Collateral is not the same")]
+// fn test_fuzz_should_fail_when_collateral_amount_mismatch(mut amount: u256) {
+//     let setup = setup();
+//     let simple_loan = setup.simple_loan;
+//     if amount == simple_loan.collateral.amount {
+//         amount += 1;
+//     };
+
+//     let mut terms = setup.refinanced_loan_terms;
+//     terms.collateral.amount = amount;
+//     mock_call(
+//         setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+//     );
+
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+// }
+
+// #[test]
+// #[should_panic]
+// fn test_fuzz_should_fail_when_borrower_mismatch(_borrower: u128) {
+//     let setup = setup();
+//     let simple_loan = setup.simple_loan;
+//     let mut _borrower: felt252 = _borrower.into();
+//     let mut borrower: ContractAddress = _borrower.try_into().unwrap();
+//     if borrower == simple_loan.borrower {
+//         borrower = (_borrower + 1).try_into().unwrap();
+//     };
+
+//     let mut terms = setup.refinanced_loan_terms;
+//     terms.borrower = borrower;
+//     mock_call(
+//         setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+//     );
+
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+// }
+
+// #[test]
+// fn test_should_emit_loan_paid_back() {
+//     let setup = setup();
+
+//     let mut spy = spy_events();
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec,
+//             setup.lender_spec,
+//             setup.caller_spec,
+//             Option::Some(array!['lil extra'])
+//         );
+//     spy
+//         .assert_emitted(
+//             @array![
+//                 (
+//                     setup.loan.contract_address,
+//                     PwnSimpleLoan::Event::LoanPaidBack(
+//                         PwnSimpleLoan::LoanPaidBack { loan_id: REFINANCING_LOAN_ID }
+//                     )
+//                 )
+//             ]
+//         );
+// }
+
+// #[test]
+// fn test_should_emit_loan_created() {
+//     let setup = setup();
+
+//     let mut spy = spy_events();
+//     let loan_id = setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec,
+//             setup.lender_spec,
+//             setup.caller_spec,
+//             Option::Some(array!['lil extra'])
+//         );
+
+//     spy
+//         .assert_emitted(
+//             @array![
+//                 (
+//                     setup.loan.contract_address,
+//                     PwnSimpleLoan::Event::LoanCreated(
+//                         PwnSimpleLoan::LoanCreated {
+//                             loan_id: loan_id,
+//                             proposal_hash: setup.proposal_hash,
+//                             proposal_contract: setup.proposal_contract,
+//                             refinancing_loan_id: REFINANCING_LOAN_ID,
+//                             terms: setup.refinanced_loan_terms,
+//                             lender_spec: setup.lender_spec,
+//                             extra: Option::Some(array!['lil extra']),
+//                         }
+//                     )
+//                 )
+//             ]
+//         );
+// }
+
+// #[test]
+// fn test_should_delete_loan_when_loan_owner_is_original_lender() {
+//     let setup = setup();
+//     assert_eq!(
+//         setup.simple_loan.original_lender,
+//         ERC721ABIDispatcher { contract_address: setup.loan_token.contract_address }
+//             .owner_of(REFINANCING_LOAN_ID.into()),
+//         "loan_owner not equals to original lender"
+//     );
+//     assert_loan_eq(setup.loan.contract_address, REFINANCING_LOAN_ID, setup.simple_loan);
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec,
+//             setup.lender_spec,
+//             setup.caller_spec,
+//             Option::Some(array!['lil extra'])
+//         );
+//     assert_loan_eq(setup.loan.contract_address, REFINANCING_LOAN_ID, Default::default());
+// }
+
+// #[test]
+// fn test_should_emit_loan_claimed_when_loan_owner_is_original_lender() {
+//     let setup = setup();
+
+//     let mut spy = spy_events();
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+
+//     spy
+//         .assert_emitted(
+//             @array![
+//                 (
+//                     setup.loan.contract_address,
+//                     PwnSimpleLoan::Event::LoanClaimed(
+//                         PwnSimpleLoan::LoanClaimed {
+//                             loan_id: REFINANCING_LOAN_ID, defaulted: false
+//                         }
+//                     )
+//                 )
+//             ]
+//         );
+// }
+
+// #[test]
+// fn test_should_update_loan_data_when_loan_owner_is_not_original_lender() {
+//     let setup = setup();
+//     let not_original_sender = starknet::contract_address_const::<'notOriginalSender'>();
+//     mock_call(setup.loan_token.contract_address, selector!("owner_of"), not_original_sender, 1);
+
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+
+//     let mut simple_loan = setup.simple_loan;
+//     simple_loan.status = 3;
+//     simple_loan
+//         .fixed_interest_amount = setup
+//         .loan
+//         .get_loan_repayment_amount(REFINANCING_LOAN_ID)
+//         - simple_loan.principal_amount;
+//     simple_loan.accruing_interest_APR = 0;
+//     assert_loan_eq(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
+// }
+
+// //#[test]
+// //#[ignore] // when call fails reverts the whole tx
+// //fn test_should_update_loan_data_when_loan_owner_is_original_lender_when_direct_repayment_fails() {
+// //    let setup = setup();
+// //    let mut terms = setup.refinanced_loan_terms;
+// //    terms.credit.amount = setup.simple_loan.principal_amount - 1;
+// //    mock_call(
+// //        setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+// //    );
+// //
+// //    erc20_mint(setup.t20.contract_address, setup.lender.contract_address, BoundedInt::max());
+// //
+// //    setup
+// //        .loan
+// //        .create_loan(
+// //            setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
+// //        );
+// //
+// //    let mut simple_loan = setup.simple_loan;
+// //    simple_loan.status = 3;
+// //    simple_loan
+// //        .fixed_interest_amount = setup
+// //        .loan
+// //        .get_loan_repayment_amount(REFINANCING_LOAN_ID)
+// //        - simple_loan.principal_amount;
+// //    simple_loan.accruing_interest_APR = 0;
+// //    assert_loan_eq(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
+// //}
+
+// #[test]
+// #[should_panic]
+// fn test_should_fail_when_pool_adapter_not_registered_when_pool_source_of_funds() {
+//     let setup = setup();
+//     let lender_spec = types::LenderSpec { source_of_funds: setup.source_of_funds };
+//     let mut terms = setup.simple_loan_terms;
+//     terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
+//     mock_call(
+//         setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+//     );
+//     mock_call(
+//         setup.config.contract_address,
+//         selector!("get_pool_adapter"),
+//         starknet::contract_address_const::<0>(),
+//         1
+//     );
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+// }
+
+// #[test]
+// fn test_should_withdraw_full_credit_amount_when_should_transfer_common_when_pool_source_of_funds() {
+//     let setup = setup();
+//     let lender_spec = types::LenderSpec { source_of_funds: setup.source_of_funds };
+//     let mut terms = setup.refinanced_loan_terms;
+//     terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
+//     mock_call(
+//         setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+//     );
+//     let prev_bal = setup.t20.balance_of(setup.source_of_funds);
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+//     let curr_bal = setup.t20.balance_of(setup.source_of_funds);
+//     assert_eq!(prev_bal - terms.credit.amount, curr_bal, "Source of funds balance mismatch!");
+// }
+
+// #[test]
+// fn test_should_withdraw_credit_without_common_when_should_not_transfer_common_when_pool_source_of_funds() {
+//     let setup = setup();
+//     let lender_spec = types::LenderSpec { source_of_funds: setup.source_of_funds };
+//     let mut terms = setup.refinanced_loan_terms;
+//     terms.lender = setup.lender2.contract_address;
+//     terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
+//     mock_call(
+//         setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+//     );
+//     mock_call(
+//         setup.loan_token.contract_address,
+//         selector!("owner_of"),
+//         setup.lender2.contract_address,
+//         1
+//     );
+//     let repayment = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
+//     let common = if terms.credit.amount < repayment {
+//         terms.credit.amount
+//     } else {
+//         repayment
+//     };
+//     let credit_asset = ERC20ABIDispatcher { contract_address: terms.credit.asset_address };
+//     let prev_bal = credit_asset.balance_of(setup.source_of_funds);
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+//     let curr_bal = credit_asset.balance_of(setup.source_of_funds);
+//     assert_eq!(
+//         prev_bal - terms.credit.amount + common, curr_bal, "Source of funds balance mismatch!"
+//     );
+// }
+
+// #[test]
+// fn test_should_not_withdraw_credit_when_should_not_transfer_common_when_no_surplus_when_no_fee_when_pool_source_of_funds() {
+//     let setup = setup();
+//     let lender_spec = types::LenderSpec { source_of_funds: setup.source_of_funds };
+//     let mut terms = setup.refinanced_loan_terms;
+//     terms.lender = setup.lender2.contract_address;
+//     terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
+//     terms.credit.amount = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
+//     mock_call(
+//         setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+//     );
+//     mock_call(
+//         setup.loan_token.contract_address,
+//         selector!("owner_of"),
+//         setup.lender2.contract_address,
+//         1
+//     );
+//     let credit_asset = ERC20ABIDispatcher { contract_address: terms.credit.asset_address };
+//     let prev_bal = credit_asset.balance_of(setup.source_of_funds);
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+//     let curr_bal = credit_asset.balance_of(setup.source_of_funds);
+//     assert_eq!(prev_bal, curr_bal, "Source of funds balance mismatch!");
+// }
+
+// #[test]
+// fn test_fuzz_should_transfer_fee_to_collector(mut fee: u16) {
+//     let setup = setup();
+//     fee = bound(fee, 1, 9999);
+
+//     let terms = setup.refinanced_loan_terms;
+//     let (fee_amount, _) = fee_calculator::calculate_fee_amount(fee, terms.credit.amount);
+//     let credit_asset = ERC20ABIDispatcher { contract_address: terms.credit.asset_address };
+//     let prev_bal = credit_asset.balance_of(setup.fee_collector);
+//     mock_call(setup.config.contract_address, selector!("get_fee"), fee, 1);
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+//     let curr_bal = credit_asset.balance_of(setup.fee_collector);
+//     assert_eq!(prev_bal + fee_amount, curr_bal, "Fee collector balance mismatch!");
+// }
+
+// #[test]
+// fn test_should_transfer_common_to_vault_when_lender_not_loan_owner() {
+//     let setup = setup();
+//     let lender_spec = types::LenderSpec { source_of_funds: setup.lender2.contract_address };
+//     let mut terms = setup.refinanced_loan_terms;
+//     terms.lender = setup.lender2.contract_address;
+//     terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
+//     mock_call(
+//         setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+//     );
+//     mock_call(
+//         setup.loan_token.contract_address,
+//         selector!("owner_of"),
+//         starknet::contract_address_const::<'loanOwner'>(),
+//         1
+//     );
+//     let repayment = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
+//     let common = if terms.credit.amount < repayment {
+//         terms.credit.amount
+//     } else {
+//         repayment
+//     };
+//     let prev_bal = setup.t20.balance_of(setup.loan.contract_address);
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+//     let curr_bal = setup.t20.balance_of(setup.loan.contract_address);
+//     assert_eq!(prev_bal + common, curr_bal, "SimpleLoan balance mismatch!");
+// }
+
+// #[test]
+// fn test_fuzz_should_transfer_common_to_vault_when_lender_original_lender_when_different_source_of_funds(
+//     _source_of_funds: u128
+// ) {
+//     let setup = setup();
+//     let mut simple_loan = setup.simple_loan;
+//     let mut _source_of_funds: felt252 = _source_of_funds.into();
+//     if _source_of_funds == 0 {
+//         _source_of_funds = 1;
+//     }
+
+//     let mut source_of_funds: ContractAddress = _source_of_funds.try_into().unwrap();
+//     if source_of_funds == setup.simple_loan.original_source_of_funds {
+//         source_of_funds = (_source_of_funds + 1).try_into().unwrap();
+//     }
+//     let lender_spec = types::LenderSpec { source_of_funds: setup.lender2.contract_address };
+//     let mut terms = setup.refinanced_loan_terms;
+//     terms.lender = setup.lender2.contract_address;
+//     terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
+
+//     simple_loan.original_lender = setup.lender2.contract_address;
+//     simple_loan.original_source_of_funds = source_of_funds;
+//     store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
+//     mock_call(
+//         setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+//     );
+//     mock_call(
+//         setup.loan_token.contract_address,
+//         selector!("owner_of"),
+//         setup.lender2.contract_address,
+//         1
+//     );
+//     let repayment = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
+//     let common = if terms.credit.amount < repayment {
+//         terms.credit.amount
+//     } else {
+//         repayment
+//     };
+//     let prev_bal = setup.t20.balance_of(source_of_funds);
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+//     let curr_bal = setup.t20.balance_of(source_of_funds);
+//     assert_eq!(prev_bal + common, curr_bal, "source_of_funds balance mismatch!");
+// }
+
+// //#[test]
+// //#[ignore] // conditionally assert or remove
+// //fn test_fuzz_should_not_transfer_common_to_vault_when_lender_loan_owner_when_lender_original_lender_when_same_source_of_funds(
+// //    source_of_funds_flag: u8
+// //) {
+// //    let setup = setup();
+// //    let mut simple_loan = setup.simple_loan;
+// //    
+// //    let source_of_funds = if source_of_funds_flag % 2 == 1{
+// //        setup.lender2.contract_address
+// //    } else {
+// //        setup.source_of_funds
+// //    };
+// //
+// //    let lender_spec = types::LenderSpec { source_of_funds: source_of_funds};
+// //    let mut terms = setup.refinanced_loan_terms;
+// //    terms.lender = setup.lender2.contract_address;
+// //    terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
+// //    simple_loan.original_lender = setup.lender2.contract_address;
+// //    simple_loan.original_source_of_funds = source_of_funds;
+// //    store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
+// //    mock_call(
+// //        setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+// //    );
+// //    mock_call(
+// //        setup.loan_token.contract_address,
+// //        selector!("owner_of"),
+// //        setup.lender2.contract_address,
+// //        1
+// //    );
+// //    let repayment = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
+// //    let common = if terms.credit.amount < repayment {
+// //        terms.credit.amount
+// //    } else {
+// //        repayment
+// //    };
+// //    let original_balance_lender = setup.t20.balance_of(setup.lender2.contract_address);
+// //    let original_balance_source_of_funds = setup.t20.balance_of(source_of_funds);
+// //    setup
+// //        .loan
+// //        .create_loan(
+// //            setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
+// //        );
+// //    let current_balance_source_of_funds = setup.t20.balance_of(source_of_funds);
+// //    let current_balance_lender = setup.t20.balance_of(setup.lender2.contract_address);
+// //    assert_eq!(original_balance_source_of_funds + common, current_balance_source_of_funds, "source_of_funds balance mismatch!");
+// //    assert_ge!(original_balance_lender, current_balance_lender, "Transferred common from lender to vault");
+// //}
+
+// #[test]
+// fn test_should_transfer_surplus_to_borrower() {
+//     let setup = setup();
+//     let new_lender = setup.lender2.contract_address;
+//     let lender_spec = types::LenderSpec { source_of_funds: new_lender };
+//     let mut terms = setup.refinanced_loan_terms;
+//     terms.lender = new_lender;
+//     terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
+//     mock_call(
+//         setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+//     );
+//     let surplus = terms.credit.amount
+//         - setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
+//     let credit_asset = ERC20ABIDispatcher { contract_address: terms.credit.asset_address };
+//     let prev_bal = credit_asset.balance_of(setup.borrower.contract_address);
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+//     let curr_bal = credit_asset.balance_of(setup.borrower.contract_address);
+//     assert_eq!(prev_bal + surplus, curr_bal, "BORROWER balance mismatch!");
+// }
+
+// #[test]
+// fn test_should_not_transfer_surplus_to_borrower_when_no_surplus() {
+//     let setup = setup();
+//     let new_lender = setup.lender2.contract_address;
+//     let lender_spec = types::LenderSpec { source_of_funds: new_lender };
+//     let mut terms = setup.refinanced_loan_terms;
+//     terms.lender = new_lender;
+//     terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
+//     terms.credit.amount = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
+//     mock_call(
+//         setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+//     );
+//     let credit_asset = ERC20ABIDispatcher { contract_address: terms.credit.asset_address };
+//     let prev_bal = credit_asset.balance_of(setup.borrower.contract_address);
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+//     let curr_bal = credit_asset.balance_of(setup.borrower.contract_address);
+//     assert_eq!(prev_bal, curr_bal, "BORROWER balance mismatch!");
+// }
+
+// #[test]
+// fn test_should_transfer_shortage_from_borrower_to_vault() {
+//     let setup = setup();
+//     let mut simple_loan = setup.simple_loan;
+//     let terms = setup.refinanced_loan_terms;
+//     simple_loan.principal_amount = terms.credit.amount + 1;
+//     store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
+
+//     let shortage = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID)
+//         - terms.credit.amount;
+//     let credit_asset = ERC20ABIDispatcher { contract_address: simple_loan.credit_address };
+//     let prev_bal = credit_asset.balance_of(setup.borrower.contract_address);
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+//     let curr_bal = credit_asset.balance_of(setup.borrower.contract_address);
+//     assert_eq!(prev_bal - shortage, curr_bal, "BORROWER balance mismatch!");
+// }
+
+// #[test]
+// fn test_should_not_transfer_shortage_from_borrower_to_vault_when_no_shortage() {
+//     let setup = setup();
+//     let mut terms = setup.refinanced_loan_terms;
+//     terms.credit.amount = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
+//     mock_call(
+//         setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+//     );
+//     let credit_asset = ERC20ABIDispatcher { contract_address: terms.credit.asset_address };
+//     let prev_bal = credit_asset.balance_of(setup.borrower.contract_address);
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+//     let curr_bal = credit_asset.balance_of(setup.borrower.contract_address);
+//     assert_eq!(prev_bal, curr_bal, "BORROWER balance mismatch!");
+// }
+
+// //#[test]
+// //#[ignore]
+// //fn test_fuzz_should_try_claim_repaid_loan_full_amount_when_should_transfer_common(
+// //    _loan_owner: u128
+// //) {
+// //    let setup = setup();
+// //    let mut _loan_owner: felt252 = _loan_owner.into();
+// //    let mut loan_owner: ContractAddress = _loan_owner.try_into().unwrap();
+// //    while loan_owner == starknet::contract_address_const::<0>()
+// //        || loan_owner == setup
+// //            .lender
+// //            .contract_address {
+// //                _loan_owner += 1;
+// //                loan_owner = _loan_owner.try_into().unwrap();
+// //            };
+// //    let mut simple_loan = setup.simple_loan;
+// //    simple_loan.original_lender = loan_owner;
+// //    store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
+// //    mock_call(setup.loan_token.contract_address, selector!("owner_of"), loan_owner, 1);
+// //    let original_balance = setup.t20.balance_of(loan_owner);
+// //    setup
+// //        .loan
+// //        .create_loan(
+// //            setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
+// //        );
+// //    let current_balance = setup.t20.balance_of(loan_owner);
+// //    assert_eq!(original_balance, current_balance);
+// //}
+
+// #[test]
+// fn test_fuzz_should_try_claim_repaid_loan_shortage_amount_when_should_not_transfer_common(
+//     mut shortage: u256
+// ) {
+//     let setup = setup();
+//     let mut simple_loan = setup.simple_loan;
+//     simple_loan.principal_amount = setup.refinanced_loan_terms.credit.amount + 1;
+//     store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
+//     let loan_repayment_amount = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
+//     shortage = bound(shortage, 0, loan_repayment_amount - 1);
+//     erc20_mint(setup.t20.contract_address, setup.borrower.contract_address, shortage);
+//     let mut terms = setup.refinanced_loan_terms;
+//     terms.credit.amount = loan_repayment_amount - shortage;
+//     mock_call(
+//         setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+//     );
+//     let original_balance = setup.t20.balance_of(setup.borrower.contract_address);
+//     let original_balance_lender = setup.t20.balance_of(setup.lender.contract_address);
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, setup.lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+//     let current_balance = setup.t20.balance_of(setup.borrower.contract_address);
+//     let current_balance_lender = setup.t20.balance_of(setup.lender.contract_address);
+//     assert_eq!(
+//         original_balance_lender + shortage, current_balance_lender, "Lender balance mismatch!"
+//     );
+//     assert_eq!(original_balance - shortage, current_balance, "Shortage not transferred");
+// }
+
+// // #[test]
+// // #[ignore]
+// // fn test_should_not_fail_when_try_claim_repaid_loan_fails() {
+// //     assert(true, '');
+// // }
+
+// #[test]
+// fn test_fuzz_should_repay_original_loan(
+//     mut days: u64,
+//     mut principal: u256,
+//     mut fixed_interest: u256,
+//     mut interest_APR: u32,
+//     mut refinance_amount: u256
+// ) {
+//     let setup = setup();
+//     days = bound(days, 0, setup.loan_duration_days - 1);
+//     principal = bound(principal, 1, E40);
+//     fixed_interest = bound(fixed_interest, 0, E40);
+//     interest_APR = bound(interest_APR, 1, 16_000_000);
+
+//     let mut simple_loan = setup.simple_loan;
+//     simple_loan.principal_amount = principal;
+//     simple_loan.fixed_interest_amount = fixed_interest;
+//     simple_loan.accruing_interest_APR = interest_APR;
+//     store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
+
+//     cheat_block_timestamp_global(simple_loan.start_timestamp + days * DAY);
+//     let loan_repayment_amount = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
+//     refinance_amount %= BoundedInt::max() - loan_repayment_amount - setup.t20.total_supply();
+//     if refinance_amount == 0 {
+//         refinance_amount = 1;
+//     }
+//     let new_lender = setup.lender2.contract_address;
+//     let mut lender_spec = setup.lender_spec;
+//     lender_spec.source_of_funds = new_lender;
+//     let mut terms = setup.refinanced_loan_terms;
+//     terms.credit.amount = refinance_amount;
+//     terms.lender = new_lender;
+//     terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
+//     mock_call(
+//         setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+//     );
+//     mock_call(
+//         setup.loan_token.contract_address,
+//         selector!("owner_of"),
+//         setup.lender.contract_address,
+//         1
+//     );
+//     erc20_mint(setup.t20.contract_address, new_lender, refinance_amount);
+
+//     if loan_repayment_amount > refinance_amount {
+//         erc20_mint(
+//             setup.t20.contract_address,
+//             setup.borrower.contract_address,
+//             loan_repayment_amount - refinance_amount
+//         );
+//     }
+
+//     let original_balance = setup.t20.balance_of(setup.lender.contract_address);
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+//     let current_balance = setup.t20.balance_of(setup.lender.contract_address);
+//     assert_eq!(current_balance, original_balance + loan_repayment_amount);
+// }
+
+// #[test]
+// fn test_fuzz_should_collect_protocol_fee(
+//     mut days: u64,
+//     mut principal: u256,
+//     mut fixed_interest: u256,
+//     mut interest_APR: u32,
+//     mut refinance_amount: u256,
+//     mut fee: u16
+// ) {
+//     let setup = setup();
+//     days = bound(days, 0, setup.loan_duration_days - 1);
+//     principal = bound(principal, 1, E40);
+//     fixed_interest = bound(fixed_interest, 0, E40);
+//     interest_APR = bound(interest_APR, 1, 16_000_000);
+
+//     let mut simple_loan = setup.simple_loan;
+//     simple_loan.principal_amount = principal;
+//     simple_loan.fixed_interest_amount = fixed_interest;
+//     simple_loan.accruing_interest_APR = interest_APR;
+//     store_loan(setup.loan.contract_address, REFINANCING_LOAN_ID, simple_loan);
+
+//     cheat_block_timestamp_global(simple_loan.start_timestamp + days * DAY);
+//     let loan_repayment_amount = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
+//     fee = bound(fee, 1, 9999);
+//     refinance_amount %= BoundedInt::max() - loan_repayment_amount - setup.t20.total_supply();
+//     if refinance_amount == 0 {
+//         refinance_amount += 1;
+//     }
+//     let new_lender = setup.lender2.contract_address;
+//     let (fee_amount, _) = fee_calculator::calculate_fee_amount(fee, refinance_amount);
+//     let lender_spec = types::LenderSpec { source_of_funds: new_lender };
+//     let mut terms = setup.refinanced_loan_terms;
+//     terms.credit.amount = refinance_amount;
+//     terms.lender = new_lender;
+//     terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
+//     mock_call(
+//         setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+//     );
+//     mock_call(
+//         setup.loan_token.contract_address,
+//         selector!("owner_of"),
+//         setup.lender.contract_address,
+//         1
+//     );
+//     mock_call(setup.config.contract_address, selector!("get_fee"), fee, 2);
+
+//     erc20_mint(setup.t20.contract_address, setup.lender2.contract_address, refinance_amount);
+
+//     if loan_repayment_amount > refinance_amount - fee_amount {
+//         erc20_mint(
+//             setup.t20.contract_address,
+//             setup.borrower.contract_address,
+//             loan_repayment_amount - (refinance_amount - fee_amount)
+//         );
+//     }
+
+//     let original_balance = setup.t20.balance_of(setup.fee_collector);
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+//     let current_balance = setup.t20.balance_of(setup.fee_collector);
+//     assert_eq!(original_balance + fee_amount, current_balance, "Protocol fees not collected");
+// }
+
+// #[test]
+// fn test_fuzz_should_transfer_surplus_to_borrower(mut refinance_amount: u256) {
+//     let setup = setup();
+//     let loan_repayment_amount = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
+//     refinance_amount =
+//         bound(
+//             refinance_amount,
+//             loan_repayment_amount + 1,
+//             BoundedInt::max() - loan_repayment_amount - setup.t20.total_supply()
+//         );
+
+//     let surplus = refinance_amount - loan_repayment_amount;
+//     let new_lender = setup.lender2.contract_address;
+//     let lender_spec = types::LenderSpec { source_of_funds: new_lender };
+//     let mut terms = setup.refinanced_loan_terms;
+//     terms.credit.amount = refinance_amount;
+//     terms.lender = new_lender;
+//     terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
+//     terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
+//     mock_call(
+//         setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+//     );
+//     mock_call(
+//         setup.loan_token.contract_address,
+//         selector!("owner_of"),
+//         setup.lender.contract_address,
+//         1
+//     );
+//     erc20_mint(setup.t20.contract_address, new_lender, refinance_amount);
+
+//     let original_balance = setup.t20.balance_of(setup.borrower.contract_address);
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+//     let current_balance = setup.t20.balance_of(setup.borrower.contract_address);
+//     assert_eq!(
+//         original_balance + surplus, current_balance, "Surplus not transfered to borrower"
+//     );
+// }
+
+// #[test]
+// fn test_fuzz_should_transfer_shortage_from_borrower(mut refinance_amount: u256) {
+//     let setup = setup();
+//     let loan_repayment_amount = setup.loan.get_loan_repayment_amount(REFINANCING_LOAN_ID);
+//     refinance_amount = bound(refinance_amount, 1, loan_repayment_amount - 1);
+//     let contribution = loan_repayment_amount - refinance_amount;
+//     let new_lender = setup.lender2.contract_address;
+//     let lender_spec = types::LenderSpec { source_of_funds: new_lender };
+//     let mut terms = setup.refinanced_loan_terms;
+//     terms.credit.amount = refinance_amount;
+//     terms.lender = new_lender;
+//     terms.lender_spec_hash = setup.loan.get_lender_spec_hash(lender_spec);
+//     mock_call(
+//         setup.proposal_contract, selector!("accept_proposal"), (setup.proposal_hash, terms), 1
+//     );
+//     mock_call(
+//         setup.loan_token.contract_address,
+//         selector!("owner_of"),
+//         setup.lender.contract_address,
+//         1
+//     );
+//     erc20_mint(setup.t20.contract_address, new_lender, refinance_amount);
+
+//     let original_balance = setup.t20.balance_of(setup.borrower.contract_address);
+//     setup
+//         .loan
+//         .create_loan(
+//             setup.proposal_spec, lender_spec, setup.caller_spec, Option::Some(array![])
+//         );
+//     let current_balance = setup.t20.balance_of(setup.borrower.contract_address);
+//     assert_eq!(
+//         original_balance - contribution, current_balance, "Shortage not taken from borrower"
+//     );
+// }
 }
 
 mod repay_loan {
@@ -2120,7 +2112,7 @@ mod repay_loan {
         let mut simple_loan = setup.simple_loan;
         simple_loan.status = 0;
         store_loan(setup.loan.contract_address, setup.loan_id, simple_loan);
-        setup.loan.repay_loan(setup.loan_id, 0);
+        setup.loan.repay_loan(setup.loan_id);
     }
 
     #[test]
@@ -2133,7 +2125,7 @@ mod repay_loan {
         let mut simple_loan = setup.simple_loan;
         simple_loan.status = status;
         store_loan(setup.loan.contract_address, setup.loan_id, simple_loan);
-        setup.loan.repay_loan(setup.loan_id, 0);
+        setup.loan.repay_loan(setup.loan_id);
     }
 
     #[test]
@@ -2141,26 +2133,8 @@ mod repay_loan {
     fn test_should_fail_when_loan_is_defaulted() {
         let setup = setup();
         cheat_block_timestamp_global(setup.simple_loan.default_timestamp);
-        setup.loan.repay_loan(setup.loan_id, 0);
+        setup.loan.repay_loan(setup.loan_id);
     }
-
-    // #[test]
-    // #[ignore]
-    // fn test_fuzz_should_fail_when_invalid_permit_owner_when_permit_provided() {
-    //     assert(true, '');
-    // }
-    // 
-    // #[test]
-    // #[ignore]
-    // fn test_fuzz_should_fail_when_invalid_permit_asset_when_permit_provided() {
-    //     assert(true, '');
-    // }
-    // 
-    // #[test]
-    // #[ignore]
-    // fn test_should_call_permit_when_permit_provided() {
-    //     assert(true, '');
-    // }
 
     #[test]
     fn test_fuzz_should_update_loan_data_when_loan_owner_is_not_original_lender(
@@ -2193,7 +2167,7 @@ mod repay_loan {
         cheat_caller_address(
             setup.loan.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
         );
-        setup.loan.repay_loan(setup.loan_id, 0);
+        setup.loan.repay_loan(setup.loan_id);
 
         simple_loan.status = 3;
         simple_loan.fixed_interest_amount = loan_repayment_amount - principal;
@@ -2201,31 +2175,31 @@ mod repay_loan {
         assert_loan_eq(setup.loan.contract_address, setup.loan_id, simple_loan);
     }
 
-    #[test]
-    fn test_should_delete_loan_data_when_loan_owner_is_original_lender() {
-        let setup = setup();
-        assert_loan_eq(setup.loan.contract_address, setup.loan_id, setup.simple_loan);
-        setup.loan.repay_loan(setup.loan_id, 0);
-        assert_loan_eq(setup.loan.contract_address, setup.loan_id, Default::default());
-    }
+    // #[test]
+    // fn test_should_delete_loan_data_when_loan_owner_is_original_lender() {
+    //     let setup = setup();
+    //     assert_loan_eq(setup.loan.contract_address, setup.loan_id, setup.simple_loan);
+    //     setup.loan.repay_loan(setup.loan_id);
+    //     assert_loan_eq(setup.loan.contract_address, setup.loan_id, Default::default());
+    // }
 
-    #[test]
-    fn test_should_burn_loan_token_when_loan_owner_is_original_lender() {
-        let setup = setup();
-        let original_owner = erc721_read_owner(
-            setup.loan_token.contract_address, setup.loan_id.into()
-        );
-        assert_eq!(
-            original_owner, setup.simple_loan.original_lender, "loan_owner is not original lender"
-        );
-        setup.loan.repay_loan(setup.loan_id, 0);
-        let current_owner = erc721_read_owner(
-            setup.loan_token.contract_address, setup.loan_id.into()
-        );
-        assert_eq!(
-            current_owner, starknet::contract_address_const::<0>(), "Loan token didn't burnt"
-        );
-    }
+    // #[test]
+    // fn test_should_burn_loan_token_when_loan_owner_is_original_lender() {
+    //     let setup = setup();
+    //     let original_owner = erc721_read_owner(
+    //         setup.loan_token.contract_address, setup.loan_id.into()
+    //     );
+    //     assert_eq!(
+    //         original_owner, setup.simple_loan.original_lender, "loan_owner is not original lender"
+    //     );
+    //     setup.loan.repay_loan(setup.loan_id);
+    //     let current_owner = erc721_read_owner(
+    //         setup.loan_token.contract_address, setup.loan_id.into()
+    //     );
+    //     assert_eq!(
+    //         current_owner, starknet::contract_address_const::<0>(), "Loan token didn't burnt"
+    //     );
+    // }
 
     #[test]
     fn test_fuzz_should_transfer_repaid_amount_to_vault(
@@ -2252,7 +2226,7 @@ mod repay_loan {
         cheat_caller_address(
             setup.loan.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
         );
-        setup.loan.repay_loan(setup.loan_id, 0);
+        setup.loan.repay_loan(setup.loan_id);
         let current_balance = setup.t20.balance_of(setup.borrower.contract_address);
         assert_eq!(
             original_balance - loan_repayment_amount,
@@ -2270,7 +2244,7 @@ mod repay_loan {
         assert_eq!(
             original_owner, setup.loan.contract_address, "Vault is not the owner of collateral"
         );
-        setup.loan.repay_loan(setup.loan_id, 0);
+        setup.loan.repay_loan(setup.loan_id);
         let current_owner = erc721_read_owner(
             setup.simple_loan.collateral.asset_address, setup.simple_loan.collateral.id.into()
         );
@@ -2285,7 +2259,7 @@ mod repay_loan {
     fn test_should_emit_loan_paid_back() {
         let setup = setup();
         let mut spy = spy_events();
-        setup.loan.repay_loan(setup.loan_id, 0);
+        setup.loan.repay_loan(setup.loan_id);
         spy
             .assert_emitted(
                 @array![
@@ -2298,24 +2272,23 @@ mod repay_loan {
                 ]
             );
     }
-
-    #[test]
-    fn test_should_emit_loan_claimed_when_loan_owner_is_original_lender() {
-        let setup = setup();
-        let mut spy = spy_events();
-        setup.loan.repay_loan(setup.loan_id, 0);
-        spy
-            .assert_emitted(
-                @array![
-                    (
-                        setup.loan.contract_address,
-                        PwnSimpleLoan::Event::LoanClaimed(
-                            PwnSimpleLoan::LoanClaimed { loan_id: setup.loan_id, defaulted: false }
-                        )
-                    )
-                ]
-            );
-    }
+// #[test]
+// fn test_should_emit_loan_claimed_when_loan_owner_is_original_lender() {
+//     let setup = setup();
+//     let mut spy = spy_events();
+//     setup.loan.repay_loan(setup.loan_id);
+//     spy
+//         .assert_emitted(
+//             @array![
+//                 (
+//                     setup.loan.contract_address,
+//                     PwnSimpleLoan::Event::LoanClaimed(
+//                         PwnSimpleLoan::LoanClaimed { loan_id: setup.loan_id, defaulted: false }
+//                     )
+//                 )
+//             ]
+//         );
+// }
 }
 
 mod loan_repayment_amount {
@@ -2968,7 +2941,6 @@ mod extend_loan {
     use core::option::OptionTrait;
     use core::traits::Into;
     use core::traits::TryInto;
-    use pwn::loan::lib::signature_checker;
     use pwn::loan::terms::simple::loan::pwn_simple_loan::PwnSimpleLoan;
     use snforge_std::{
         declare, ContractClassTrait, cheat_block_timestamp_global, cheat_caller_address_global,
@@ -2985,7 +2957,7 @@ mod extend_loan {
         types::{CallerSpec, LenderSpec, ProposalSpec}, ContractAddress, types::{ExtensionProposal},
         IPwnHubDispatcher, IPwnHubDispatcherTrait, mock_call, spy_events, EventSpy, EventSpyTrait,
         EventSpyAssertionsTrait, assert_loan_eq, setup, store_loan, Setup, cheat_caller_address,
-        erc20_mint
+        erc20_mint, BoundedInt
     };
 
     const MIN_EXTENSION_DURATION: u64 = 86400; // 1 day
@@ -2995,10 +2967,16 @@ mod extend_loan {
     #[should_panic]
     fn test_should_fail_when_loan_does_not_exist() {
         let setup = setup();
-        let mut extension = setup.extension;
-        extension.loan_id = 0;
 
-        setup.loan.extend_loan(extension, signature_checker::Signature { r: 0, s: 0 });
+        cheat_caller_address(
+            setup.loan.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
+        );
+        setup.loan.make_extension_proposal(setup.extension);
+
+        cheat_caller_address(
+            setup.loan.contract_address, setup.lender.contract_address, CheatSpan::TargetCalls(1)
+        );
+        setup.loan.extend_loan(setup.extension);
     }
 
     #[test]
@@ -3007,251 +2985,191 @@ mod extend_loan {
         let setup = setup();
         let mut loan = setup.simple_loan;
         loan.status = 3; // Repaid status
-        store_loan(setup.loan.contract_address, setup.extension.loan_id, loan);
-        setup.loan.extend_loan(setup.extension, signature_checker::Signature { r: 0, s: 0 });
+        store_loan(setup.loan.contract_address, setup.loan_id, loan);
+
+        cheat_caller_address(
+            setup.loan.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
+        );
+        setup.loan.make_extension_proposal(setup.extension);
+
+        cheat_caller_address(
+            setup.loan.contract_address, setup.lender.contract_address, CheatSpan::TargetCalls(1)
+        );
+        setup.loan.extend_loan(setup.extension);
     }
 
     #[test]
     #[should_panic]
-    fn test_fuzz_should_fail_when_invalid_signature_when_eoa(random_private_key: felt252) {
+    fn test_should_fail_when_proposal_expirated() {
         let setup = setup();
-        let hash = setup.loan.get_extension_hash(setup.extension);
-        let mut key_pair = KeyPairTrait::<felt252, felt252>::from_secret_key(random_private_key);
-        if key_pair.public_key.try_into().unwrap() == setup.borrower.contract_address {
-            key_pair = KeyPairTrait::<felt252, felt252>::from_secret_key(random_private_key + 1);
-        }
-        mock_call(setup.nonce.contract_address, selector!("is_nonce_usable"), true, 1);
-        let (r, s): (felt252, felt252) = key_pair.sign(hash).unwrap();
-        cheat_caller_address_global(setup.lender.contract_address);
-        store_loan(setup.loan.contract_address, setup.extension.loan_id, setup.simple_loan);
-        cheat_caller_address_global(setup.lender.contract_address);
-        setup.loan.extend_loan(setup.extension, signature_checker::Signature { r: r, s: s });
-    }
+        store_loan(setup.loan.contract_address, setup.loan_id, setup.simple_loan);
 
-    #[test]
-    #[should_panic]
-    fn test_fuzz_should_fail_when_offer_expirated(mut expiration: u64) {
-        let setup = setup();
+        let expiration: u64 = 200;
         let timestamp: u64 = 300;
 
         // Set block timestamp
         cheat_block_timestamp_global(timestamp);
 
-        // Bound expiration between 0 and timestamp
-        if expiration > timestamp {
-            expiration = timestamp;
-        }
-
         let mut extension = setup.extension;
         extension.expiration = expiration;
 
-        // Create a loan
-        store_loan(setup.loan.contract_address, setup.extension.loan_id, setup.simple_loan);
-
-        // Mock the extension proposal being made
-        mock_call(setup.loan.contract_address, selector!("extension_proposal_made"), true, 1);
-        mock_call(setup.nonce.contract_address, selector!("is_nonce_usable"), true, 1);
-        mock_call(
-            setup.extension.proposer, selector!("is_valid_signature"), starknet::VALIDATED, 1
+        // Make extension proposal
+        cheat_caller_address(
+            setup.loan.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
         );
+        setup.loan.make_extension_proposal(extension);
 
         // Expect the transaction to revert with 'Expired' error
         cheat_caller_address(
             setup.loan.contract_address, setup.lender.contract_address, CheatSpan::TargetCalls(1)
         );
-        setup.loan.extend_loan(extension, signature_checker::Signature { r: 0, s: 0 });
+        setup.loan.extend_loan(extension);
     }
 
     #[test]
     #[should_panic]
     fn test_should_fail_when_offer_nonce_not_usable() {
         let setup = setup();
-        let mut extension = setup.extension;
-        // Create a loan
-        store_loan(setup.loan.contract_address, setup.extension.loan_id, setup.simple_loan);
+        store_loan(setup.loan.contract_address, setup.loan_id, setup.simple_loan);
+
+        // Make extension proposal
+        cheat_caller_address(
+            setup.loan.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
+        );
+        setup.loan.make_extension_proposal(setup.extension);
+
+        mock_call(setup.nonce.contract_address, selector!("is_nonce_usable"), false, 1);
+
         // Expect the transaction to revert with 'Nonce not usable' error
-        let hash = setup.loan.get_extension_hash(setup.extension);
-        let (r, s): (felt252, felt252) = setup.borrower_key_pair.sign(hash).unwrap();
         cheat_caller_address(
             setup.loan.contract_address, setup.lender.contract_address, CheatSpan::TargetCalls(1)
         );
-        setup.loan.extend_loan(extension, signature_checker::Signature { r: r, s: s });
+        setup.loan.extend_loan(setup.extension);
     }
 
     #[test]
     #[should_panic]
-    fn test_fuzz_should_fail_when_caller_is_not_borrower_nor_loan_owner(_caller: u128) {
+    fn test_should_fail_when_caller_is_not_borrower_nor_loan_owner() {
         let setup = setup();
-        let mut extension = setup.extension;
-        let caller_spec: CallerSpec = Default::default();
-        let lender_spec = setup.lender_spec;
-        let proposal_spec = setup.proposal_spec;
-        let loan_id = setup
-            .loan
-            .create_loan(
-                proposal_spec, lender_spec, caller_spec, Option::Some(array!['lil extra'])
-            );
+        store_loan(setup.loan.contract_address, setup.loan_id, setup.simple_loan);
 
-        // Generate a caller address that's different from borrower and lender
-        let mut caller: ContractAddress = Into::<u128, felt252>::into(_caller).try_into().unwrap();
-        if caller == setup.borrower.contract_address || caller == setup.lender.contract_address {
-            caller = Into::<u128, felt252>::into(_caller + 1).try_into().unwrap();
-        }
-        extension.loan_id = loan_id;
-        mock_call(setup.nonce.contract_address, selector!("is_nonce_usable"), true, 1);
-        mock_call(extension.proposer, selector!("is_valid_signature"), starknet::VALIDATED, 1);
-        // Set the caller address for the next call
-        cheat_caller_address_global(caller);
-        setup.loan.extend_loan(extension, signature_checker::Signature { r: 0, s: 0 });
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_fuzz_should_fail_when_caller_is_borrower_and_proposer_is_not_loan_owner(_caller: u128) {
-        let setup = setup();
-        let mut extension = setup.extension;
-        let caller_spec: CallerSpec = Default::default();
-        let lender_spec = setup.lender_spec;
-        let proposal_spec = setup.proposal_spec;
-        let loan_id = setup
-            .loan
-            .create_loan(
-                proposal_spec, lender_spec, caller_spec, Option::Some(array!['lil extra'])
-            );
-
-        // Generate a caller address that's different from borrower and lender
-        let mut caller: ContractAddress = Into::<u128, felt252>::into(_caller).try_into().unwrap();
-        if caller == setup.lender.contract_address {
-            caller = Into::<u128, felt252>::into(_caller + 1).try_into().unwrap();
-        }
-        extension.loan_id = loan_id;
-        extension.proposer = caller;
-        mock_call(setup.nonce.contract_address, selector!("is_nonce_usable"), true, 1);
-        mock_call(caller, selector!("is_valid_signature"), starknet::VALIDATED, 1);
-        // Set the caller address for the next call
-        cheat_caller_address_global(setup.borrower.contract_address);
-        setup.loan.extend_loan(extension, signature_checker::Signature { r: 0, s: 0 });
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_fuzz_should_fail_when_caller_is_loan_owner_and_proposer_is_not_borrower(
-        _proposer: u128
-    ) {
-        let setup = setup();
-        let mut extension = setup.extension;
-        let caller_spec: CallerSpec = Default::default();
-        let lender_spec = setup.lender_spec;
-        let proposal_spec = setup.proposal_spec;
-        let loan_id = setup
-            .loan
-            .create_loan(
-                proposal_spec, lender_spec, caller_spec, Option::Some(array!['lil extra'])
-            );
-
-        // Generate a caller address that's different from borrower and lender
-        let mut proposer: ContractAddress = Into::<u128, felt252>::into(_proposer)
-            .try_into()
-            .unwrap();
-        if proposer == setup.borrower.contract_address {
-            proposer = Into::<u128, felt252>::into(_proposer + 1).try_into().unwrap();
-        }
-        extension.loan_id = loan_id;
-        extension.proposer = proposer;
-        mock_call(setup.nonce.contract_address, selector!("is_nonce_usable"), true, 1);
-        mock_call(proposer, selector!("is_valid_signature"), starknet::VALIDATED, 1);
-        // Set the caller address for the next call
-        cheat_caller_address_global(setup.lender.contract_address);
-        setup.loan.extend_loan(extension, signature_checker::Signature { r: 0, s: 0 });
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_fuzz_should_fail_when_extension_duration_less_than_min(duration: u64) {
-        let setup = setup();
-        let mut extension = setup.extension;
-        let caller_spec: CallerSpec = Default::default();
-        let lender_spec = setup.lender_spec;
-        let proposal_spec = setup.proposal_spec;
-        let loan_id = setup
-            .loan
-            .create_loan(
-                proposal_spec, lender_spec, caller_spec, Option::Some(array!['lil extra'])
-            );
-
-        extension.loan_id = loan_id;
-        extension
-            .duration =
-                if duration < MIN_EXTENSION_DURATION {
-                    duration
-                } else {
-                    MIN_EXTENSION_DURATION - 1
-                };
-        let hash = setup.loan.get_extension_hash(extension);
-        let (r, s): (felt252, felt252) = setup.borrower_key_pair.sign(hash).unwrap();
-        mock_call(setup.nonce.contract_address, selector!("is_nonce_usable"), true, 1);
+        // Make extension proposal
         cheat_caller_address(
             setup.loan.contract_address, setup.lender.contract_address, CheatSpan::TargetCalls(1)
         );
-        setup.loan.extend_loan(extension, signature_checker::Signature { r, s });
+        setup.loan.make_extension_proposal(setup.extension);
+
+        // Set the caller address for the next call
+        cheat_caller_address(
+            setup.loan.contract_address, setup.lender.contract_address, CheatSpan::TargetCalls(1)
+        );
+        setup.loan.extend_loan(setup.extension);
     }
 
     #[test]
     #[should_panic]
-    fn test_fuzz_should_fail_when_extension_duration_more_than_max(duration: u64) {
+    fn test_should_fail_when_caller_is_borrower_and_proposer_is_not_loan_owner() {
         let setup = setup();
-        let mut extension = setup.extension;
-        let caller_spec: CallerSpec = Default::default();
-        let lender_spec = setup.lender_spec;
-        let proposal_spec = setup.proposal_spec;
-        let loan_id = setup
-            .loan
-            .create_loan(
-                proposal_spec, lender_spec, caller_spec, Option::Some(array!['lil extra'])
-            );
+        store_loan(setup.loan.contract_address, setup.loan_id, setup.simple_loan);
 
-        extension.loan_id = loan_id;
-        extension
-            .duration =
-                if duration > MAX_EXTENSION_DURATION {
-                    duration
-                } else {
-                    MAX_EXTENSION_DURATION + 1
-                };
-        let hash = setup.loan.get_extension_hash(extension);
-        let (r, s): (felt252, felt252) = setup.borrower_key_pair.sign(hash).unwrap();
-        mock_call(setup.nonce.contract_address, selector!("is_nonce_usable"), true, 1);
+        let mut extension = setup.extension;
+        extension.proposer = setup.lender2.contract_address;
+
+        // Make extension proposal
+        cheat_caller_address(
+            setup.loan.contract_address, setup.lender2.contract_address, CheatSpan::TargetCalls(1)
+        );
+        setup.loan.make_extension_proposal(extension);
+
+        // Set the caller address for the next call
+        cheat_caller_address(
+            setup.loan.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
+        );
+        setup.loan.extend_loan(extension);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_should_fail_when_caller_is_loan_owner_and_proposer_is_not_borrower() {
+        let setup = setup();
+        store_loan(setup.loan.contract_address, setup.loan_id, setup.simple_loan);
+
+        let mut extension = setup.extension;
+        extension.proposer = setup.lender2.contract_address;
+
+        // Make extension proposal
+        cheat_caller_address(
+            setup.loan.contract_address, setup.lender2.contract_address, CheatSpan::TargetCalls(1)
+        );
+        setup.loan.make_extension_proposal(extension);
+
+        // Set the caller address for the next call
+        cheat_caller_address(
+            setup.loan.contract_address, setup.lender.contract_address, CheatSpan::TargetCalls(1)
+        );
+        setup.loan.extend_loan(extension);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_should_fail_when_extension_duration_less_than_min() {
+        let setup = setup();
+        store_loan(setup.loan.contract_address, setup.loan_id, setup.simple_loan);
+
+        let mut extension = setup.extension;
+        extension.duration = MIN_EXTENSION_DURATION - 1;
+
+        // Make extension proposal
+        cheat_caller_address(
+            setup.loan.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
+        );
+        setup.loan.make_extension_proposal(extension);
 
         cheat_caller_address(
             setup.loan.contract_address, setup.lender.contract_address, CheatSpan::TargetCalls(1)
         );
-        setup.loan.extend_loan(extension, signature_checker::Signature { r, s });
+        setup.loan.extend_loan(extension);
     }
 
     #[test]
-    fn test_fuzz_should_revoke_extension_nonce(nonce_space: felt252, nonce: felt252) {
+    #[should_panic]
+    fn test_should_fail_when_extension_duration_more_than_max() {
         let setup = setup();
-        let mut extension = setup.extension;
-        let caller_spec: CallerSpec = Default::default();
-        let lender_spec = setup.lender_spec;
-        let proposal_spec = setup.proposal_spec;
-        let loan_id = setup
-            .loan
-            .create_loan(
-                proposal_spec, lender_spec, caller_spec, Option::Some(array!['lil extra'])
-            );
+        store_loan(setup.loan.contract_address, setup.loan_id, setup.simple_loan);
 
-        extension.loan_id = loan_id;
-        extension.nonce_space = nonce_space;
-        extension.nonce = nonce;
+        let mut extension = setup.extension;
+        extension.duration = MAX_EXTENSION_DURATION + 1;
+
+        cheat_caller_address(
+            setup.loan.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
+        );
+        setup.loan.make_extension_proposal(extension);
+
+        cheat_caller_address(
+            setup.loan.contract_address, setup.lender.contract_address, CheatSpan::TargetCalls(1)
+        );
+        setup.loan.extend_loan(extension);
+    }
+
+    #[test]
+    fn test_should_revoke_extension_nonce() {
+        let setup = setup();
+        store_loan(setup.loan.contract_address, setup.loan_id, setup.simple_loan);
+
+        let mut extension = setup.extension;
+        extension.nonce = 50;
         extension.compensation_amount = 0;
-        let hash = setup.loan.get_extension_hash(extension);
-        let (r, s): (felt252, felt252) = setup.borrower_key_pair.sign(hash).unwrap();
-        setup.hub.set_tag(setup.lender.contract_address, pwn_hub_tags::ACTIVE_LOAN, true);
-        mock_call(setup.nonce.contract_address, selector!("is_nonce_usable"), true, 1);
 
-        cheat_caller_address_global(setup.lender.contract_address);
-        setup.loan.extend_loan(extension, signature_checker::Signature { r, s });
+        cheat_caller_address(
+            setup.loan.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
+        );
+        setup.loan.make_extension_proposal(extension);
+
+        cheat_caller_address(
+            setup.loan.contract_address, setup.lender.contract_address, CheatSpan::TargetCalls(1)
+        );
+        setup.loan.extend_loan(extension);
+
         // assert to check if the nonce was revoked
         assert!(
             setup
@@ -3262,46 +3180,35 @@ mod extend_loan {
     }
 
     #[test]
-    fn test_fuzz_should_update_loan_data(_duration: u64) {
+    fn test_should_update_loan_data() {
         let setup = setup();
+        store_loan(setup.loan.contract_address, setup.loan_id, setup.simple_loan);
+
         let mut extension = setup.extension;
-        let caller_spec: CallerSpec = Default::default();
-        let lender_spec = setup.lender_spec;
-        let proposal_spec = setup.proposal_spec;
-        let loan_id = setup
-            .loan
-            .create_loan(
-                proposal_spec, lender_spec, caller_spec, Option::Some(array!['lil extra'])
-            );
+        extension.duration = 172800; // 2 days
 
-        extension.loan_id = loan_id;
-        let extension_duration = if _duration > MAX_EXTENSION_DURATION {
-            MAX_EXTENSION_DURATION
-        } else if _duration < MIN_EXTENSION_DURATION {
-            MIN_EXTENSION_DURATION
-        } else {
-            _duration
-        };
-        extension.duration = extension_duration;
-        let hash = setup.loan.get_extension_hash(extension);
-        let (r, s): (felt252, felt252) = setup.borrower_key_pair.sign(hash).unwrap();
-        setup.hub.set_tag(setup.lender.contract_address, pwn_hub_tags::ACTIVE_LOAN, true);
-        mock_call(setup.nonce.contract_address, selector!("is_nonce_usable"), true, 1);
-
-        // Approve the loan contract to transfer the compensation amount to lender
         cheat_caller_address(
-            setup.t20.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
+            setup.loan.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
         );
-        setup.t20.approve(setup.loan.contract_address, extension.compensation_amount);
+        setup.loan.make_extension_proposal(extension);
 
-        let prev_loan_details = setup.loan.get_loan(loan_id);
+        mock_call(
+            setup.loan_token.contract_address,
+            selector!("owner_of"),
+            setup.lender.contract_address,
+            BoundedInt::<u32>::max()
+        );
+
+        let prev_loan_details = setup.loan.get_loan(extension.loan_id);
+
         let mut spy = spy_events();
         cheat_caller_address(
             setup.loan.contract_address, setup.lender.contract_address, CheatSpan::TargetCalls(1)
         );
-        setup.loan.extend_loan(extension, signature_checker::Signature { r, s });
+        setup.loan.extend_loan(extension);
+
         // Check event emmission
-        let loan_details = setup.loan.get_loan(loan_id);
+        let loan_details = setup.loan.get_loan(extension.loan_id);
         spy
             .assert_emitted(
                 @array![
@@ -3309,7 +3216,7 @@ mod extend_loan {
                         setup.loan.contract_address,
                         PwnSimpleLoan::Event::LoanExtended(
                             PwnSimpleLoan::LoanExtended {
-                                loan_id: loan_id,
+                                loan_id: extension.loan_id,
                                 original_default_timestamp: prev_loan_details.default_timestamp,
                                 extended_default_timestamp: loan_details.default_timestamp
                             }
@@ -3317,17 +3224,11 @@ mod extend_loan {
                     )
                 ]
             );
-        // assert to check if the nonce was revoked
-        assert!(
-            setup
-                .nonce
-                .is_nonce_revoked(extension.proposer, extension.nonce_space, extension.nonce),
-            "Nonce not revoked!"
-        );
+
         // Check using asserts that the loan data is updated
         assert!(
             loan_details.default_timestamp == prev_loan_details.default_timestamp
-                + extension_duration,
+                + extension.duration,
             "Updated timestamp"
         );
     }
@@ -3335,27 +3236,23 @@ mod extend_loan {
     #[test]
     fn test_should_not_transfer_credit_when_amount_zero() {
         let setup = setup();
-        let mut extension = setup.extension;
-        let caller_spec: CallerSpec = Default::default();
-        let lender_spec = setup.lender_spec;
-        let proposal_spec = setup.proposal_spec;
-        let loan_id = setup
-            .loan
-            .create_loan(
-                proposal_spec, lender_spec, caller_spec, Option::Some(array!['lil extra'])
-            );
+        store_loan(setup.loan.contract_address, setup.loan_id, setup.simple_loan);
 
-        extension.loan_id = loan_id;
+        let mut extension = setup.extension;
         extension.compensation_amount = 0;
-        let hash = setup.loan.get_extension_hash(extension);
-        let (r, s): (felt252, felt252) = setup.borrower_key_pair.sign(hash).unwrap();
-        mock_call(setup.nonce.contract_address, selector!("is_nonce_usable"), true, 1);
+
+        cheat_caller_address(
+            setup.loan.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
+        );
+        setup.loan.make_extension_proposal(extension);
 
         let prev_lender_balance = setup.t20.balance_of(setup.lender.contract_address);
+
         cheat_caller_address(
             setup.loan.contract_address, setup.lender.contract_address, CheatSpan::TargetCalls(1)
         );
-        setup.loan.extend_loan(extension, signature_checker::Signature { r, s });
+        setup.loan.extend_loan(extension);
+
         let curr_lender_balance = setup.t20.balance_of(setup.lender.contract_address);
         assert!(
             prev_lender_balance == curr_lender_balance, "Credit transferred when amount is zero!"
@@ -3365,28 +3262,24 @@ mod extend_loan {
     #[test]
     fn test_should_not_transfer_credit_when_address_zero() {
         let setup = setup();
-        let mut extension = setup.extension;
-        let caller_spec: CallerSpec = Default::default();
-        let lender_spec = setup.lender_spec;
-        let proposal_spec = setup.proposal_spec;
-        let loan_id = setup
-            .loan
-            .create_loan(
-                proposal_spec, lender_spec, caller_spec, Option::Some(array!['lil extra'])
-            );
+        store_loan(setup.loan.contract_address, setup.loan_id, setup.simple_loan);
 
-        extension.loan_id = loan_id;
+        let mut extension = setup.extension;
         // Set zero address for compensation is zero
         extension.compensation_address = starknet::contract_address_const::<0>();
-        let hash = setup.loan.get_extension_hash(extension);
-        let (r, s): (felt252, felt252) = setup.borrower_key_pair.sign(hash).unwrap();
-        mock_call(setup.nonce.contract_address, selector!("is_nonce_usable"), true, 1);
+
+        cheat_caller_address(
+            setup.loan.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
+        );
+        setup.loan.make_extension_proposal(extension);
 
         let prev_lender_balance = setup.t20.balance_of(setup.lender.contract_address);
+
         cheat_caller_address(
             setup.loan.contract_address, setup.lender.contract_address, CheatSpan::TargetCalls(1)
         );
-        setup.loan.extend_loan(extension, signature_checker::Signature { r, s });
+        setup.loan.extend_loan(extension);
+
         let curr_lender_balance = setup.t20.balance_of(setup.lender.contract_address);
         assert!(
             prev_lender_balance == curr_lender_balance, "Credit transferred when amount is zero!"
@@ -3397,65 +3290,35 @@ mod extend_loan {
     #[should_panic]
     fn test_should_fail_when_invalid_compensation_asset() {
         let setup = setup();
-        let mut extension = setup.extension;
-        let caller_spec: CallerSpec = Default::default();
-        let lender_spec = setup.lender_spec;
-        let proposal_spec = setup.proposal_spec;
-        let loan_id = setup
-            .loan
-            .create_loan(
-                proposal_spec, lender_spec, caller_spec, Option::Some(array!['lil extra'])
-            );
+        store_loan(setup.loan.contract_address, setup.loan_id, setup.simple_loan);
 
-        extension.loan_id = loan_id;
+        let mut extension = setup.extension;
         // Set zero address for compensation is zero
         extension.compensation_address = starknet::contract_address_const::<'incorrect_address'>();
-        let hash = setup.loan.get_extension_hash(extension);
-        let (r, s): (felt252, felt252) = setup.borrower_key_pair.sign(hash).unwrap();
-        mock_call(setup.nonce.contract_address, selector!("is_nonce_usable"), true, 1);
+
+        cheat_caller_address(
+            setup.loan.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
+        );
+        setup.loan.make_extension_proposal(extension);
+
         cheat_caller_address(
             setup.loan.contract_address, setup.lender.contract_address, CheatSpan::TargetCalls(1)
         );
-        setup.loan.extend_loan(extension, signature_checker::Signature { r, s });
+        setup.loan.extend_loan(extension);
     }
 
     #[test]
-    #[ignore]
-    fn test_fuzz_should_fail_when_invalid_permit_data_permit_owner() {
-        assert(true, '');
-    }
-
-    #[test]
-    #[ignore]
-    fn test_fuzz_should_fail_when_invalid_permit_data_permit_asset() {
-        assert(true, '');
-    }
-
-    #[test]
-    #[ignore]
-    fn test_should_call_permit_when_provided() {
-        assert(true, '');
-    }
-
-    #[test]
-    fn test_fuzz_should_transfer_compensation_when_defined(_amount: u128) {
+    fn test_should_transfer_compensation_when_defined() {
         let setup = setup();
-        let mut extension = setup.extension;
-        let caller_spec: CallerSpec = Default::default();
-        let lender_spec = setup.lender_spec;
-        let proposal_spec = setup.proposal_spec;
-        let loan_id = setup
-            .loan
-            .create_loan(
-                proposal_spec, lender_spec, caller_spec, Option::Some(array!['lil extra'])
-            );
+        store_loan(setup.loan.contract_address, setup.loan_id, setup.simple_loan);
 
-        extension.loan_id = loan_id;
-        extension.compensation_amount = _amount.try_into().unwrap();
-        let hash = setup.loan.get_extension_hash(extension);
-        let (r, s): (felt252, felt252) = setup.borrower_key_pair.sign(hash).unwrap();
-        setup.hub.set_tag(setup.lender.contract_address, pwn_hub_tags::ACTIVE_LOAN, true);
-        mock_call(setup.nonce.contract_address, selector!("is_nonce_usable"), true, 1);
+        let mut extension = setup.extension;
+        extension.compensation_amount = 500;
+
+        cheat_caller_address(
+            setup.loan.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
+        );
+        setup.loan.make_extension_proposal(extension);
 
         // Previous balance of the lender
         let prev_lender_balance = setup.t20.balance_of(setup.lender.contract_address);
@@ -3471,11 +3334,10 @@ mod extend_loan {
         );
         setup.t20.approve(setup.loan.contract_address, extension.compensation_amount);
 
-        let _ = setup.loan.get_loan(loan_id);
         cheat_caller_address(
             setup.loan.contract_address, setup.lender.contract_address, CheatSpan::TargetCalls(1)
         );
-        setup.loan.extend_loan(extension, signature_checker::Signature { r, s });
+        setup.loan.extend_loan(extension);
 
         // Current balance of the lender
         assert!(
@@ -3486,24 +3348,10 @@ mod extend_loan {
     }
 }
 
-mod get_extension_hash {
-    use pwn::loan::terms::simple::loan::interface::IPwnSimpleLoanDispatcherTrait;
-    use super::{setup, _get_extension_hash};
-
-    #[test]
-    fn test_should_return_extension_hash() {
-        let setup = setup();
-        let actual = setup.loan.get_extension_hash(setup.extension);
-        let expected = _get_extension_hash(setup.loan.contract_address, setup.extension);
-        assert_eq!(actual, expected, "extension hash does not match");
-    }
-}
-
 mod get_loan {
     use core::array::ArrayTrait;
     use core::option::OptionTrait;
     use core::traits::{Into, TryInto};
-    use pwn::loan::lib::signature_checker;
     use pwn::loan::terms::simple::loan::pwn_simple_loan::PwnSimpleLoan;
     use pwn::multitoken::library::{
         MultiToken, MultiToken::Asset, MultiToken::Category, MultiToken::AssetTrait

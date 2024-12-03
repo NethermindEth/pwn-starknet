@@ -51,8 +51,8 @@ pub trait IRevokedNonce<TState> {
 //!
 //! # Constants
 //! 
-//! - **CATEGORY_NOT_REGISTERED**: A constant used to denote a non-registered category in the 
-//!   category registry.
+//! This module does not define any constants but relies on secure and efficient internal logic 
+//! for its operations.
 //!
 //! The `RevokedNonce` module is critical for ensuring secure and reliable transaction processing 
 //! in decentralized applications built on Starknet, providing robust nonce management and 
@@ -138,7 +138,7 @@ pub mod RevokedNonce {
         /// 
         /// # Behavior
         /// 
-        /// - If the `nonce_space` is specified, the function will check if the caller has the necessary 
+        /// - If the `owner` is specified, the function will check if the caller has the necessary 
         ///   `access_tag` to revoke the nonce for the specified owner. If the caller lacks the required 
         ///   access, the function will trigger an error.
         /// - If the `nonce_space` is not specified, the function will use the current nonce space of the 
