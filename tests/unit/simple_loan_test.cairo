@@ -307,6 +307,7 @@ pub const E30: u256 = 1_000_000_000_000_000_000_000_000_000_000;
 pub const E20: u256 = 100_000_000_000_000_000_000;
 pub const E18: u256 = 1_000_000_000_000_000_000;
 pub const DAY: u64 = 86400;
+const CHAIN_ID: felt252 = 393402133025997798000961;
 
 pub(crate) fn erc20_mint(erc20: ContractAddress, receiver: ContractAddress, amount: u256) {
     let current_balance = ERC20ABIDispatcher { contract_address: erc20 }.balance_of(receiver);
@@ -2712,7 +2713,6 @@ mod try_claim_repaid_loan {
     #[test]
     fn test_should_burn_loan_token() {
         let (setup, mut contract_state) = setup();
-        println!("this address {:?}", starknet::get_contract_address());
         let curr_owner = erc721_read_owner(setup.loan_token.contract_address, setup.loan_id.into());
         assert_eq!(curr_owner, setup.lender.contract_address);
         contract_state

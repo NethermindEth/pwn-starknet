@@ -29,6 +29,7 @@
 //! integrating seamlessly with other components.
 #[starknet::contract]
 pub mod PwnSimpleLoan {
+    use core::box::BoxTrait;
     use core::poseidon::poseidon_hash_span;
 
     use openzeppelin::introspection::src5::SRC5Component;
