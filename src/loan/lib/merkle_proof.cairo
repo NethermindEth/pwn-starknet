@@ -2,17 +2,6 @@ use alexandria_data_structures::array_ext::ArrayTraitExt;
 use alexandria_math::{keccak256::keccak256, BitShift};
 use keccak::cairo_keccak;
 
-pub fn abi_encoded_packed(data: Array<u256>) -> Array<u8> {
-    let mut result: Array<u8> = array![];
-    let mut i = 0;
-    let len = data.len();
-    while i < len {
-        result = result.concat(@u256_to_be_bytes(*data.at(i)));
-        i += 1;
-    };
-    result
-}
-
 /// Converts a `u256` value to a big-endian byte array, removing leading zeroes.
 ///
 /// # Parameters

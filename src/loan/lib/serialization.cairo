@@ -1,7 +1,8 @@
 /// Concatenates two `Span<felt252>` slices into a single `Array<felt252>`.
 ///
-/// The output format includes the lengths of both slices at the beginning
-/// followed by the elements of each slice.
+/// The output format includes the length of the first slice at the beginning,
+/// followed by the elements of the first slice, then the length of the second slice,
+/// followed by the elements of the second slice.
 ///
 /// # Parameters
 ///
@@ -37,8 +38,9 @@ pub fn serde_concat(left: Span<felt252>, right: Span<felt252>) -> Array<felt252>
 
 /// Decomposes a single `Span<felt252>` into two separate spans.
 ///
-/// The input format should start with the lengths of the two components
-/// followed by their respective elements.
+/// The input format should start with the length of the first component,
+/// followed by the elements of the first component, then the length of the second component,
+/// followed by the elements of the second component.
 ///
 /// # Parameters
 ///

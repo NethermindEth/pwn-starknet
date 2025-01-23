@@ -87,10 +87,11 @@ pub mod PwnSimpleLoan {
 
     pub const ACCRUING_INTEREST_APR_DECIMALS: u16 = 100;
     pub const MIN_LOAN_DURATION: u64 = 600;
-    pub const MAX_ACCRUING_INTEREST_APR: u32 = 160000;
+    pub const MAX_ACCRUING_INTEREST_APR: u32 = 16000000;
     pub const MINUTE: u64 = 60;
     pub const MINUTES_IN_YEAR: u64 = 525_600;
-    pub const ACCRUING_INTEREST_APR_DENOMINATOR: u64 = 5256000000;
+    // @note: ACCRUING_INTEREST_APR_DECIMALS * MINUTES_IN_YEAR * 100
+    pub const ACCRUING_INTEREST_APR_DENOMINATOR: u64 = 100 * MINUTES_IN_YEAR * 100; // 5256000000
     pub const VERSION: felt252 = '1.2';
     // @note: duration in seconds
 
@@ -180,7 +181,20 @@ pub mod PwnSimpleLoan {
         revoked_nonce: ContractAddress,
         category_registry: ContractAddress,
     ) {
-        self.initializer(hub, loan_token, config, revoked_nonce, category_registry);
+        let hub_dispatcher = IPwnHubDispatcher { contract_address: hub };
+        let loan_token_dispatcher = IPwnLoanDispatcher { contract_address: loan_token };
+        let config_dispatcher = IPwnConfigDispatcher { contract_address: config };
+        let revoked_nonce_dispatcher = IRevokedNonceDispatcher { contract_address: revoked_nonce };
+        let category_registry_dispatcher = IMultiTokenCategoryRegistryDispatcher {
+            contract_address: category_registry
+        };
+        self.hub.write(hub_dispatcher);
+        self.loan_token.write(loan_token_dispatcher);
+        self.config.write(config_dispatcher);
+        self.revoked_nonce.write(revoked_nonce_dispatcher);
+        self.category_registry.write(category_registry_dispatcher);
+        self.src5.register_interface(IERC1155_RECEIVER_ID);
+        self.src5.register_interface(IERC721_RECEIVER_ID);
     }
 
     #[abi(embed_v0)]
@@ -406,6 +420,16 @@ pub mod PwnSimpleLoan {
                 Err::INVALID_EXTENSION_PROPOSER(allowed: extension.proposer, current: caller);
             }
 
+            let loan = self.loans.read(extension.loan_id);
+            let loan_owner = ERC721ABIDispatcher {
+                contract_address: self.loan_token.read().contract_address
+            }
+                .owner_of(extension.loan_id.try_into().expect('extend_loan'));
+
+            if (caller != loan_owner && caller != loan.borrower) {
+                Err::INVALID_EXTENSION_CALLER();
+            }
+
             let extension_hash = self.get_extension_hash(extension);
             self.extension_proposal_made.write(extension_hash, true);
             self
@@ -547,14 +571,14 @@ pub mod PwnSimpleLoan {
         ///
         /// # Arguments
         ///
-        /// - `calladata`: The lender's specifications.
+        /// - `lender_spec`: The lender's specifications.
         ///
         /// # Returns
         ///
         /// - The computed hash as `felt252`.
-        fn get_lender_spec_hash(self: @ContractState, calladata: LenderSpec) -> felt252 {
+        fn get_lender_spec_hash(self: @ContractState, lender_spec: LenderSpec) -> felt252 {
             let hash_elements: Array<felt252> = array![
-                calladata.source_of_funds.try_into().expect('get_lender_spec_hash')
+                lender_spec.source_of_funds.try_into().expect('get_lender_spec_hash')
             ];
             poseidon_hash_span(hash_elements.span())
         }
@@ -744,32 +768,6 @@ pub mod PwnSimpleLoan {
 
     #[generate_trait]
     pub impl Private of PrivateTrait {
-        fn initializer(
-            ref self: ContractState,
-            hub: ContractAddress,
-            loan_token: ContractAddress,
-            config: ContractAddress,
-            revoked_nonce: ContractAddress,
-            category_registry: ContractAddress
-        ) {
-            let hub_dispatcher = IPwnHubDispatcher { contract_address: hub };
-            let loan_token_dispatcher = IPwnLoanDispatcher { contract_address: loan_token };
-            let config_dispatcher = IPwnConfigDispatcher { contract_address: config };
-            let revoked_nonce_dispatcher = IRevokedNonceDispatcher {
-                contract_address: revoked_nonce
-            };
-            let category_registry_dispatcher = IMultiTokenCategoryRegistryDispatcher {
-                contract_address: category_registry
-            };
-            self.hub.write(hub_dispatcher);
-            self.loan_token.write(loan_token_dispatcher);
-            self.config.write(config_dispatcher);
-            self.revoked_nonce.write(revoked_nonce_dispatcher);
-            self.category_registry.write(category_registry_dispatcher);
-            self.src5.register_interface(IERC1155_RECEIVER_ID);
-            self.src5.register_interface(IERC721_RECEIVER_ID);
-        }
-
         fn _check_refinance_loan_terms(
             ref self: ContractState, loan_id: felt252, loan_terms: Terms
         ) {
@@ -941,7 +939,7 @@ pub mod PwnSimpleLoan {
             }
         }
 
-        fn _check_loan_can_be_repaid(ref self: ContractState, status: u8, default_timestamp: u64) {
+        fn _check_loan_can_be_repaid(self: @ContractState, status: u8, default_timestamp: u64) {
             if (status == 0) {
                 Err::NON_EXISTING_LOAN();
             }
@@ -968,13 +966,13 @@ pub mod PwnSimpleLoan {
                 return loan.fixed_interest_amount;
             }
             let current_timestamp = starknet::get_block_timestamp();
-            let accuring_minutes: u64 = (current_timestamp - loan.start_timestamp) / MINUTE;
-            let interest_amount: u256 = (accuring_minutes * loan.accruing_interest_APR.into())
+            let accruing_minutes: u64 = (current_timestamp - loan.start_timestamp) / MINUTE;
+            let interest_amount: u256 = (accruing_minutes * loan.accruing_interest_APR.into())
                 .into();
-            let accured_interest = math::mul_div(
+            let accrued_interest = math::mul_div(
                 loan.principal_amount, interest_amount, ACCRUING_INTEREST_APR_DENOMINATOR.into()
             );
-            loan.fixed_interest_amount + accured_interest
+            loan.fixed_interest_amount + accrued_interest
         }
 
         fn _settle_loan_claim(
@@ -1017,7 +1015,7 @@ pub mod PwnSimpleLoan {
             loan.status
         }
 
-        fn _check_valid_asset(ref self: ContractState, asset: Asset) {
+        fn _check_valid_asset(self: @ContractState, asset: Asset) {
             if (!self.get_is_valid_asset(asset)) {
                 Err::INVALID_MULTITOKEN_ASSET(
                     category: asset.category.into(),

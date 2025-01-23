@@ -40,6 +40,7 @@ pub mod PwnConfig {
     use openzeppelin::access::ownable::ownable::OwnableComponent;
     use openzeppelin::security::initializable::InitializableComponent;
     use openzeppelin::upgrades::{interface::IUpgradeable, upgradeable::UpgradeableComponent};
+    use pwn::ContractAddressDefault;
     use pwn::config::interface::IPwnConfig;
     use pwn::interfaces::{
         pool_adapter::IPoolAdapterDispatcher,
@@ -163,9 +164,7 @@ pub mod PwnConfig {
             fee: u16,
             fee_collector: ContractAddress
         ) {
-            assert!(
-                owner != starknet::contract_address_const::<0>(), "Owner cannot be zero address"
-            );
+            assert!(owner != Default::default(), "Owner cannot be zero address");
             self.ownable.initializer(owner);
             self._set_fee_collector(fee_collector);
             self._set_fee(fee);
@@ -238,7 +237,7 @@ pub mod PwnConfig {
         ) {
             self.ownable.assert_only_owner();
             let metadata_copy = metadata_uri.clone();
-            if loan_contract == starknet::contract_address_const::<0>() {
+            if loan_contract == Default::default() {
                 Err::ZERO_LOAN_CONTRACT();
             }
 
@@ -259,7 +258,7 @@ pub mod PwnConfig {
         fn set_default_loan_metadata_uri(ref self: ContractState, metadata_uri: ByteArray) {
             self.ownable.assert_only_owner();
             let metadata_copy = metadata_uri.clone();
-            self.loan_metadata_uri.write(starknet::contract_address_const::<0>(), metadata_uri);
+            self.loan_metadata_uri.write(Default::default(), metadata_uri);
 
             self.emit(DefaultLOANMetadataUriUpdated { new_uri: metadata_copy });
         }
@@ -279,7 +278,7 @@ pub mod PwnConfig {
             ref self: ContractState, asset: ContractAddress, computer: ContractAddress
         ) {
             self.ownable.assert_only_owner();
-            if computer != starknet::contract_address_const::<0>() {
+            if computer != Default::default() {
                 let computer_dispatcher = IStateFingerpringComputerDispatcher {
                     contract_address: computer
                 };
@@ -353,7 +352,7 @@ pub mod PwnConfig {
             let uri = self.loan_metadata_uri.read(loan_contract);
 
             if uri.len() == 0 {
-                return self.loan_metadata_uri.read(starknet::contract_address_const::<0>());
+                return self.loan_metadata_uri.read(Default::default());
             }
 
             uri
@@ -393,7 +392,7 @@ pub mod PwnConfig {
         }
 
         fn _set_fee_collector(ref self: ContractState, fee_collector: ContractAddress) {
-            if fee_collector == starknet::contract_address_const::<0>() {
+            if fee_collector == Default::default() {
                 Err::ZERO_FEE_COLLECTOR();
             }
 

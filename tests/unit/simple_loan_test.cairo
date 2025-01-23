@@ -256,7 +256,7 @@ pub fn setup() -> Setup {
         BoundedInt::<u32>::max()
     );
 
-    mock_call(loan_token_address, selector!("owner_of"), lender_address, 1);
+    mock_call(loan_token_address, selector!("owner_of"), lender_address, BoundedInt::<u32>::max());
 
     let loan_id = 42;
     let extension = types::ExtensionProposal {
@@ -269,6 +269,8 @@ pub fn setup() -> Setup {
         nonce_space: 0,
         nonce: 1,
     };
+
+    store_loan(loan.contract_address, loan_id, simple_loan);
 
     Setup {
         hub,
@@ -2305,7 +2307,7 @@ mod loan_repayment_amount {
     #[test]
     fn test_should_return_zero_when_loan_does_not_exist() {
         let setup = setup();
-        assert_eq!(setup.loan.get_loan_repayment_amount(setup.loan_id), 0);
+        assert_eq!(setup.loan.get_loan_repayment_amount(setup.loan_id + 1), 0);
     }
 
     #[test]
@@ -2893,6 +2895,18 @@ mod make_extension_proposal {
     }
 
     #[test]
+    #[should_panic]
+    fn test_should_fail_when_proposer_not_loan_owner_nor_borrower() {
+        let setup = setup();
+        let mut extension = setup.extension;
+        extension.proposer = starknet::contract_address_const::<'randomProposer'>();
+        cheat_caller_address(
+            setup.loan.contract_address, extension.proposer, CheatSpan::TargetCalls(1)
+        );
+        setup.loan.make_extension_proposal(extension);
+    }
+
+    #[test]
     fn test_should_store_made_flag() {
         let setup = setup();
         cheat_caller_address(
@@ -2968,15 +2982,18 @@ mod extend_loan {
     fn test_should_fail_when_loan_does_not_exist() {
         let setup = setup();
 
+        let mut extension = setup.extension;
+        extension.loan_id += 1;
+
         cheat_caller_address(
             setup.loan.contract_address, setup.borrower.contract_address, CheatSpan::TargetCalls(1)
         );
-        setup.loan.make_extension_proposal(setup.extension);
+        setup.loan.make_extension_proposal(extension);
 
         cheat_caller_address(
             setup.loan.contract_address, setup.lender.contract_address, CheatSpan::TargetCalls(1)
         );
-        setup.loan.extend_loan(setup.extension);
+        setup.loan.extend_loan(extension);
     }
 
     #[test]
@@ -3576,7 +3593,7 @@ mod get_state_fingerprint {
     #[test]
     fn test_should_return_zero_if_loan_does_not_exist() {
         let setup = super::setup();
-        let fingerprint = setup.loan.get_state_fingerprint(setup.loan_id);
+        let fingerprint = setup.loan.get_state_fingerprint(setup.loan_id + 1);
         assert_eq!(fingerprint, 0, "State fingerprint not zero");
     }
 

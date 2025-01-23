@@ -25,7 +25,7 @@ pub trait IPwnSimpleLoan<TState> {
     fn MIN_EXTENSION_DURATION(self: @TState) -> u64;
     fn MIN_LOAN_DURATION(self: @TState) -> u64;
     fn VERSION(self: @TState) -> felt252;
-    fn get_lender_spec_hash(self: @TState, calladata: types::LenderSpec) -> felt252;
+    fn get_lender_spec_hash(self: @TState, lender_spec: types::LenderSpec) -> felt252;
     fn get_loan_repayment_amount(self: @TState, loan_id: felt252) -> u256;
     fn get_extension_hash(self: @TState, extension: types::ExtensionProposal) -> felt252;
     fn get_loan(self: @TState, loan_id: felt252) -> types::GetLoanReturnValue;

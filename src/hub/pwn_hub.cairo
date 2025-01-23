@@ -3,9 +3,6 @@ use starknet::ContractAddress;
 #[starknet::interface]
 pub trait IPwnHub<TState> {
     fn set_tag(ref self: TState, address: ContractAddress, tag: felt252, has_tag: bool);
-    fn set_tags(
-        ref self: TState, addresses: Array<ContractAddress>, tags: Array<felt252>, has_tag: bool
-    );
     fn has_tag(self: @TState, address: ContractAddress, tag: felt252) -> bool;
 }
 
@@ -113,43 +110,6 @@ pub mod PwnHub {
             self.tags.write((address, tag), has_tag);
 
             self.emit(TagSet { contract: address, tag, has_tag, });
-        }
-
-        /// Sets multiple tags for multiple contract addresses.
-        ///
-        /// # Arguments
-        ///
-        /// - `addresses`: An array of contract addresses to be tagged.
-        /// - `tags`: An array of tags to be set.
-        /// - `has_tag`: A boolean indicating if the tags should be set or removed.
-        ///
-        /// # Requirements
-        ///
-        /// - Only the contract owner can call this function.
-        /// - The length of `addresses` and `tags` must be equal.
-        fn set_tags(
-            ref self: ContractState,
-            addresses: Array<ContractAddress>,
-            tags: Array<felt252>,
-            has_tag: bool
-        ) {
-            self.ownable.assert_only_owner();
-            let tags_len = tags.len();
-
-            if addresses.len() != tags_len {
-                Err::INVALID_INPUT_DATA(addresses.len(), tags_len);
-            }
-
-            let mut i = 0;
-            while i < tags_len {
-                let contract = *addresses.at(i);
-                let tag = *tags.at(i);
-                self.set_tag(contract, tag, has_tag);
-
-                self.emit(TagSet { contract, tag, has_tag, });
-
-                i += 1;
-            };
         }
 
         /// Checks if a specific contract address has a given tag.

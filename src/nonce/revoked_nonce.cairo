@@ -8,7 +8,6 @@ pub trait IRevokedNonce<TState> {
         nonce_space: Option<felt252>,
         nonce: felt252
     );
-    fn revoke_nonces(ref self: TState, nonces: Array<felt252>);
     fn revoke_nonce_space(ref self: TState) -> felt252;
     fn is_nonce_revoked(
         self: @TState, owner: ContractAddress, nonce_space: felt252, nonce: felt252
@@ -185,32 +184,6 @@ pub mod RevokedNonce {
                         },
                     }
                 },
-            }
-        }
-
-        /// Revokes a list of nonces for the caller in the current nonce space.
-        /// This function iterates through the provided array of nonces and revokes each one, ensuring
-        /// they cannot be reused in future transactions.
-        ///
-        /// # Parameters
-        ///
-        /// - `nonces`: An array of nonces to be revoked.
-        ///
-        /// # Behavior
-        ///
-        /// - The function retrieves the current nonce space for the caller and revokes each nonce
-        ///   provided in the array. If a nonce is already revoked, it will trigger an error.
-        /// 
-        /// This function is useful for revoking multiple nonces in a single transaction.
-        fn revoke_nonces(ref self: ContractState, nonces: Array<felt252>) {
-            let caller = starknet::get_caller_address();
-            let nonce_space = self.nonce_space.read(caller);
-
-            let len = nonces.len();
-            let mut i = 0;
-            while i < len {
-                self._revoke_nonce(caller, nonce_space, *nonces.at(i));
-                i += 1;
             }
         }
 

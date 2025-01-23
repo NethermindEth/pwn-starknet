@@ -50,7 +50,8 @@ pub trait IPwnLoadMetadataProvider<TState> {
 pub mod PwnLoan {
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc721::{
-        erc721::{ERC721Component, ERC721HooksEmptyImpl}, interface::IERC721_ID
+        erc721::{ERC721Component, ERC721HooksEmptyImpl},
+        interface::{IERC721_ID, IERC721_METADATA_ID}
     };
     use pwn::hub::{pwn_hub_tags, pwn_hub::{IPwnHubDispatcher, IPwnHubDispatcherTrait}};
 
@@ -129,6 +130,7 @@ pub mod PwnLoan {
         self.erc721.ERC721_symbol.write("LOAN");
 
         self.src5.register_interface(IERC721_ID);
+        self.src5.register_interface(IERC721_METADATA_ID);
         self.src5.register_interface(IERC5646_ID);
     }
 
@@ -151,8 +153,8 @@ pub mod PwnLoan {
             let caller = get_caller_address();
             only_active_loan(ref self, caller);
 
-            self.last_loan_id.write(self.last_loan_id.read() + 1);
-            let loan_id: felt252 = self.last_loan_id.read();
+            let loan_id: felt252 = self.last_loan_id.read() + 1;
+            self.last_loan_id.write(loan_id);
 
             self.loan_contract.write(loan_id, caller);
 
@@ -209,7 +211,7 @@ pub mod PwnLoan {
         /// A `ByteArray` containing the metadata URI of the token.
         ///
         /// # Errors
-        /// - `TOKEN_NOT_OWNED`: If the specified token is not owned by the caller.
+        /// - `INVALID_TOKEN_ID`: If the specified token id does not exist.
         fn token_uri(self: @ContractState, loan_id: felt252) -> ByteArray {
             self.erc721._require_owned(loan_id.into());
 
@@ -230,14 +232,9 @@ pub mod PwnLoan {
         /// A `ByteArray` containing the metadata URI of the token.
         ///
         /// # Errors
-        /// - `TOKEN_NOT_OWNED`: If the specified token is not owned by the caller.
+        /// - `INVALID_TOKEN_ID`: If the specified token id does not exist.
         fn tokenUri(self: @ContractState, loan_id: felt252) -> ByteArray {
-            self.erc721._require_owned(loan_id.into());
-
-            IPwnLoadMetadataProviderDispatcher {
-                contract_address: self.loan_contract.read(loan_id)
-            }
-                .loan_metadata_uri()
+            self.token_uri(loan_id)
         }
 
         fn hub(self: @ContractState) -> ContractAddress {
