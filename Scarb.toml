@@ -6,8 +6,8 @@ edition = "2023_11"
 [dependencies]
 starknet = "2.6.4"
 openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v0.14.0" }
-alexandria_math = { git = "https://github.com/keep-starknet-strange/alexandria.git" }
-alexandria_data_structures = { git = "https://github.com/keep-starknet-strange/alexandria.git" }
+alexandria_math = { git = "https://github.com/keep-starknet-strange/alexandria.git", rev = "0aa7cca8a1acb1f35cff32420614f7f58e38de5e" }
+alexandria_data_structures = { git = "https://github.com/keep-starknet-strange/alexandria.git", rev = "0aa7cca8a1acb1f35cff32420614f7f58e38de5e" }
 
 [dev-dependencies]
 snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.26.0" }
