@@ -47,12 +47,13 @@ pub mod MultiToken {
     use starknet::ContractAddress;
     use super::{CategoryIntoU8, CategoryEq};
 
-    // NOTE: tokens standard interface id are pretty inconsistent on Starknet at the moment due to frequent updates
-    // the interface_id below are based on the full OpenZeppelin interfaces (named as ABI)
+    // The below interface is WRONG, ERC20 does not implement introspection on Starknet
     const ERC20_INTERFACE_ID: felt252 =
         0x3d21dcd478803698af065a01681e1f1801a5b80c367ecb5561fbf10b416756e;
+    // Source: https://github.com/OpenZeppelin/cairo-contracts/blob/82d77bec96889d8c830647812e53259710c72151/packages/token/src/erc721/interface.cairo#L6
     const ERC721_INTERFACE_ID: felt252 =
         0x2c8b9553a387f54d6021766166528967ac9bb9393acf1c47678b9eea63dda07;
+    // Source: https://github.com/OpenZeppelin/cairo-contracts/blob/82d77bec96889d8c830647812e53259710c72151/packages/token/src/erc1155/interface.cairo#L6
     const ERC1155_INTERFACE_ID: felt252 =
         0xcd38fd6bb8f64dd3988ff3ae65d0cd040c95aaad81b509a1f4f0b3e40adf88;
 
