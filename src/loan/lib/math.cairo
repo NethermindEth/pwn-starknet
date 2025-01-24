@@ -21,6 +21,12 @@ pub fn mul_div(a: u256, b: u256, c: u256) -> u256 {
     if c == 0 {
         panic!("mul_div division by zero");
     }
+
     let (q, _) = u512_safe_div_rem_by_u256(u256_wide_mul(a, b), c.try_into().unwrap());
-    q.try_into().unwrap()
+
+    // Add explicit check for u512 to u256 conversion
+    match q.try_into() {
+        Option::Some(result) => result,
+        Option::None => panic!("mul_div result exceeds u256 max value")
+    }
 }
