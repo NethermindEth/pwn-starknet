@@ -50,10 +50,28 @@ pub fn serde_concat(left: Span<felt252>, right: Span<felt252>) -> Array<felt252>
 ///
 /// # Panics
 ///
-/// - Panics if the conversion of lengths from `felt252` fails.
+/// - Panics if the input span is empty
+/// - Panics if the conversion of lengths from `felt252` fails
+/// - Panics if either the left or right length is zero or negative
+/// - Panics if the input is too short to contain both length indicators
+/// - Panics if the total input length doesn't match exactly (left_len + right_len + 2)
 pub fn serde_decompose(input: Span<felt252>) -> (Span<felt252>, Span<felt252>) {
+    // Check if input is empty
+    assert(!input.is_empty(), 'Input span cannot be empty');
+
+    // Get and validate left length
     let left_len: usize = (*input.at(0)).try_into().expect('serde failed to convert');
+    assert(left_len > 0, 'Left length must be positive');
+
+    // Ensure input has enough elements for left_len and right_len
+    assert(input.len() >= left_len + 2, 'Input too short for lengths');
+
+    // Get and validate right length
     let right_len: usize = (*input.at(left_len + 1)).try_into().expect('serde failed to convert');
+    assert(right_len > 0, 'Right length must be positive');
+
+    // Validate total length matches expected
+    assert(input.len() == left_len + right_len + 2, 'Input length mismatch');
 
     let mut left: Array<felt252> = array![];
     let mut i = 1;
@@ -112,5 +130,42 @@ mod tests {
         ];
 
         assert_eq!(serialized_proposal, expected);
+    }
+
+    #[test]
+    #[should_panic(expected: ('Input span cannot be empty',))]
+    fn test_serde_decompose_empty_input() {
+        let input: Array<felt252> = array![];
+        let (_, _) = serde_decompose(input.span());
+    }
+
+    #[test]
+    #[should_panic(expected: ('Left length must be positive',))]
+    fn test_serde_decompose_zero_left_length() {
+        let input: Array<felt252> = array![0, 1, 2, 3];
+        let (_, _) = serde_decompose(input.span());
+    }
+
+    #[test]
+    #[should_panic(expected: ('Input too short for lengths',))]
+    fn test_serde_decompose_insufficient_length() {
+        // Claims left_len is 3 but only has 2 elements after the length
+        let input: Array<felt252> = array![3, 1, 2];
+        let (_, _) = serde_decompose(input.span());
+    }
+
+    #[test]
+    #[should_panic(expected: ('Input length mismatch',))]
+    fn test_serde_decompose_length_mismatch() {
+        // Claims left_len=2, right_len=2, but has extra elements
+        let input: Array<felt252> = array![2, 1, 2, 2, 3, 4, 5];
+        let (_, _) = serde_decompose(input.span());
+    }
+
+    #[test]
+    #[should_panic(expected: ('Right length must be positive',))]
+    fn test_serde_decompose_zero_right_length() {
+        let input: Array<felt252> = array![1, 42, 0];
+        let (_, _) = serde_decompose(input.span());
     }
 }
