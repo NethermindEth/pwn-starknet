@@ -65,6 +65,7 @@ pub mod SimpleLoanSimpleProposal {
     impl SimpleLoanProposalInternal = SimpleLoanProposalComponent::InternalImpl<ContractState>;
 
     pub const VERSION: felt252 = '1.2';
+    pub const SIMPLE_PROPOSAL_DATA_LEN: usize = 25;
 
     #[derive(Copy, Debug, Default, Drop, Serde)]
     pub struct Proposal {
@@ -134,6 +135,16 @@ pub mod SimpleLoanSimpleProposal {
         pub proposal: Proposal,
     }
 
+    mod Err {
+        pub fn INVALID_PROPOSAL_DATA(len: usize) {
+            panic!(
+                "Invalid proposal data length: {}, expected: {}",
+                len,
+                super::SIMPLE_PROPOSAL_DATA_LEN
+            );
+        }
+    }
+
     #[constructor]
     fn constructor(
         ref self: ContractState,
@@ -177,6 +188,10 @@ pub mod SimpleLoanSimpleProposal {
             refinancing_loan_id: felt252,
             proposal_data: Array<felt252>,
         ) -> (felt252, super::Terms) {
+            if proposal_data.len() != SIMPLE_PROPOSAL_DATA_LEN {
+                Err::INVALID_PROPOSAL_DATA(proposal_data.len());
+            }
+
             let proposal = self.decode_proposal_data(proposal_data);
 
             let mut serialized_proposal = array![];
