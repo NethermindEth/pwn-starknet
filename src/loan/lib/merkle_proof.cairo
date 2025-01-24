@@ -36,16 +36,25 @@ fn u256_to_be_bytes(a: u256) -> Array<u8> {
         i += 1;
     };
     bytes = bytes.reversed();
+    let bytes_cloned = bytes.clone();
 
-    let mut significant_bytes: Array<u8> = array![];
-    while bytes
-        .len() > 0 {
-            let byte = bytes.pop_front().expect('u256_to_be_bytes');
-
-            if byte != 0 {
-                significant_bytes.append(byte);
-            };
+    // Find index of first non-zero byte
+    let mut start_index = 0;
+    let len = bytes.len();
+    while start_index < len {
+        if *bytes.at(start_index) != 0 {
+            break;
         };
+        start_index += 1;
+    };
+
+    // Copy all bytes from first non-zero byte to end
+    let mut significant_bytes: Array<u8> = array![];
+    let mut i = start_index;
+    while i < len {
+        significant_bytes.append(*bytes_cloned.at(i));
+        i += 1;
+    };
     significant_bytes
 }
 
@@ -201,6 +210,34 @@ mod tests {
         let result = verify(proof, root, leaf);
 
         assert_eq!(result, true);
+    }
+
+    #[test]
+    fn test_u256_to_be_bytes() {
+        // Test case 1: Number with leading zeros
+        let input1: u256 = 0x0000ABCD;
+        let result1 = super::u256_to_be_bytes(input1);
+        assert_eq!(*result1.at(0), 0xAB, "wrong byte 0");
+        assert_eq!(*result1.at(1), 0xCD, "wrong byte 1");
+        assert_eq!(result1.len(), 2, "wrong length 1");
+
+        // Test case 2: Number with internal zeros
+        let input2: u256 = 0x1200340056;
+        let result2 = super::u256_to_be_bytes(input2);
+        assert_eq!(*result2.at(0), 0x12, "wrong byte 2");
+        assert_eq!(*result2.at(1), 0x00, "wrong byte 3");
+        assert_eq!(*result2.at(2), 0x34, "wrong byte 4");
+        assert_eq!(*result2.at(3), 0x00, "wrong byte 5");
+        assert_eq!(*result2.at(4), 0x56, "wrong byte 6");
+        assert_eq!(result2.len(), 5, "wrong length 2");
+
+        // Test case 3: Number with trailing zeros
+        let input3: u256 = 0x123400;
+        let result3 = super::u256_to_be_bytes(input3);
+        assert_eq!(*result3.at(0), 0x12, "wrong byte 7");
+        assert_eq!(*result3.at(1), 0x34, "wrong byte 8");
+        assert_eq!(*result3.at(2), 0x00, "wrong byte 9");
+        assert_eq!(result3.len(), 3, "wrong length 3");
     }
 }
 
